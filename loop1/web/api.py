@@ -632,6 +632,25 @@ def _save_session_uploads(data: dict) -> None:
     _db_save("session_uploads", data)
 
 
+# ── Session report DB storage (survives server restarts / ephemeral filesystems) ─
+def _save_session_report(session_id: str, report: dict) -> None:
+    _db_save(f"session_report:{session_id}", report)
+
+
+def _load_session_report_from_db(session_id: str) -> dict | None:
+    return _db_load(f"session_report:{session_id}", None)
+
+
+# ── File data stored separately from appointments (keeps appointments blob small) ─
+def _save_file_data(appt_id: str, filename: str, data_b64: str) -> None:
+    _db_save(f"file:{appt_id}:{filename}", {"data_b64": data_b64})
+
+
+def _load_file_data(appt_id: str, filename: str) -> str | None:
+    rec = _db_load(f"file:{appt_id}:{filename}", None)
+    return rec["data_b64"] if rec else None
+
+
 _DOCTOR_SEED = [
     {
         "doctor_id": "dr_001",
@@ -713,13 +732,19 @@ def _seed_doctor_accounts() -> None:
 
 
 def _load_report_from_disk(session_id: str) -> dict | None:
+    # 1. Try DB first (works on Render where filesystem is ephemeral)
+    db_report = _load_session_report_from_db(session_id)
+    if db_report:
+        return db_report
+
+    # 2. Fall back to local disk (local dev)
     path = _repo_root / "logs" / "final_records" / f"final_{session_id}.json"
     if not path.exists():
         return None
     try:
         rec = json.loads(path.read_text(encoding="utf-8"))
         fp = rec.get("final_profile", {})
-        return {
+        report = {
             "schema_version": "0.7.0",
             "session_id": session_id,
             "patient": {
@@ -748,6 +773,9 @@ def _load_report_from_disk(session_id: str) -> dict | None:
             ],
             "_from_disk": True,
         }
+        # Cache to DB so future calls (after server restart) can find it
+        _save_session_report(session_id, report)
+        return report
     except Exception:
         return None
 
@@ -1143,6 +1171,8 @@ def get_report(session_id: str, request: Request):
     report = session.get_report()
     if report is None:
         raise HTTPException(status_code=500, detail="Report generation failed.")
+    # Persist to DB so report survives server restarts / deploys
+    _save_session_report(session_id, report)
     user = _get_user_from_request(request)
     if user:
         _update_session_in_user(
@@ -1866,7 +1896,10 @@ async def doctor_download_patient_file(appt_id: str, request: Request, filename:
     rec = next((f for f in appt.get("patient_files", []) if f.get("filename") == filename), None)
     if rec is None:
         raise HTTPException(status_code=404, detail="File not found.")
-    data = base64.b64decode(rec["data_b64"])
+    raw_b64 = _load_file_data(appt_id, filename) or rec.get("data_b64", "")
+    if not raw_b64:
+        raise HTTPException(status_code=404, detail="File data not found.")
+    data = base64.b64decode(raw_b64)
     safe_name = filename.encode("ascii", "replace").decode("ascii")
     return Response(
         content=data,
@@ -1998,17 +2031,20 @@ async def get_doctor_appointment_detail(appt_id: str, request: Request):
             "final_confidence": rd.final_confidence,
         }
 
-    # Load full turn history from disk for the transcript + differential evolution
+    # Load full turn history — prefer DB report (works on Render), fall back to disk
     turn_history = []
-    jsonl_path = _repo_root / "logs" / f"session_{session_id}.jsonl"
-    if jsonl_path.exists():
-        try:
-            lines = jsonl_path.read_text(encoding="utf-8").splitlines()
-            for line in lines:
-                if line.strip():
-                    turn_history.append(json.loads(line))
-        except Exception:
-            pass
+    if report and report.get("turn_history"):
+        turn_history = report["turn_history"]
+    else:
+        jsonl_path = _repo_root / "logs" / f"session_{session_id}.jsonl"
+        if jsonl_path.exists():
+            try:
+                lines = jsonl_path.read_text(encoding="utf-8").splitlines()
+                for line in lines:
+                    if line.strip():
+                        turn_history.append(json.loads(line))
+            except Exception:
+                pass
 
     # Include doctor's available slots so the frontend can open a reschedule calendar
     # without needing a separate API call (avoids StaticFiles catch-all conflicts)
@@ -2598,11 +2634,13 @@ async def upload_patient_file(
     raw = await file.read()
     if len(raw) > _MAX_FILE_BYTES:
         raise HTTPException(status_code=413, detail="File too large (max 10 MB).")
+    data_b64 = base64.b64encode(raw).decode("ascii")
+    # Store file bytes separately so appointments JSON stays small
+    _save_file_data(appt_id, file.filename, data_b64)
     record = {
         "filename": file.filename,
         "size_bytes": len(raw),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
-        "data_b64": base64.b64encode(raw).decode("ascii"),
         "mime_type": file.content_type or "application/octet-stream",
         "test_order_id": test_order_id or None,
         "suggested_test_id": suggested_test_id or None,
@@ -2686,7 +2724,10 @@ async def download_patient_file(appt_id: str, filename: str, request: Request):
     rec = next((f for f in appt.get("patient_files", []) if f.get("filename") == filename), None)
     if rec is None:
         raise HTTPException(status_code=404, detail="File not found.")
-    data = base64.b64decode(rec["data_b64"])
+    raw_b64 = _load_file_data(appt_id, filename) or rec.get("data_b64", "")
+    if not raw_b64:
+        raise HTTPException(status_code=404, detail="File data not found.")
+    data = base64.b64decode(raw_b64)
     return Response(
         content=data,
         media_type=rec.get("mime_type", "application/octet-stream"),
