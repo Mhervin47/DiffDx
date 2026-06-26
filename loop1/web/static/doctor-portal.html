@@ -5213,6 +5213,11 @@ function renderTestList(apptId) {
           <span class="result-badge ${res.status}" id="result-badge-${o.id}">
             ${res.status.charAt(0).toUpperCase() + res.status.slice(1)}
           </span>
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;white-space:nowrap;"
+            onclick="doctorUploadTestFile('${apptId}','${o.id}')">⬆ Upload</button>
+          <input type="file" id="doc-file-${o.id}" style="display:none"
+            accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,image/*,application/pdf"
+            onchange="onDoctorFilePicked('${apptId}','${o.id}',this)">
         </div>
       </div>`;
   }).join('');
@@ -5235,6 +5240,42 @@ async function saveTestOrders(apptId) {
   } catch {
     alert('Failed to save test orders. Please try again.');
   }
+}
+
+function doctorUploadTestFile(apptId, testOrderId) {
+  const input = document.getElementById(`doc-file-${testOrderId}`);
+  if (input) input.click();
+}
+
+async function onDoctorFilePicked(apptId, testOrderId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const btn = input.previousElementSibling;
+  const origText = btn.textContent;
+  btn.textContent = 'Uploading…';
+  btn.disabled = true;
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const res = await fetch(`${API}/api/doctor/appointments/${apptId}/files?test_order_id=${encodeURIComponent(testOrderId)}`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: fd,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Upload failed');
+    }
+    btn.textContent = '✓ Uploaded';
+    btn.style.color = '#4edea3';
+    // Refresh appointment detail to show badge
+    await selectAppointment(apptId);
+  } catch (e) {
+    alert(e.message || 'Upload failed. Please try again.');
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+  input.value = '';
 }
 
 // ---- Reschedule ----

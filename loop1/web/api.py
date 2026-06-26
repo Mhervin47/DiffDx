@@ -1600,6 +1600,50 @@ async def update_test_orders(appt_id: str, req: TestOrdersRequest, request: Requ
     return {"saved": True, "count": len(req.test_orders)}
 
 
+@app.post("/api/doctor/appointments/{appt_id}/files")
+async def doctor_upload_file(
+    appt_id: str, request: Request,
+    file: UploadFile = File(...),
+    test_order_id: str | None = None,
+):
+    """Doctor uploads a result file for an appointment (e.g. lab report PDF)."""
+    doctor = _require_doctor(request)
+    appointments = _load_appointments()
+    appt = appointments.get(appt_id)
+    if appt is None:
+        raise HTTPException(status_code=404, detail="Appointment not found.")
+    if appt.get("doctor_id") != doctor.get("doctor_id"):
+        raise HTTPException(status_code=403, detail="Not your appointment.")
+    _ALLOWED = {"application/pdf", "image/jpeg", "image/png", "image/gif", "image/webp", "image/heic"}
+    ct = (file.content_type or "").split(";")[0].strip().lower()
+    if ct not in _ALLOWED:
+        raise HTTPException(status_code=415, detail="Only PDF and image files are allowed.")
+    raw = await file.read()
+    if len(raw) > _MAX_FILE_BYTES:
+        raise HTTPException(status_code=413, detail="File too large (max 10 MB).")
+    data_b64 = base64.b64encode(raw).decode("ascii")
+    _save_file_data(appt_id, file.filename, data_b64)
+    record = {
+        "filename": file.filename,
+        "size_bytes": len(raw),
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+        "mime_type": file.content_type or "application/octet-stream",
+        "uploaded_by": "doctor",
+        "test_order_id": test_order_id or None,
+    }
+    files = appt.setdefault("patient_files", [])
+    files[:] = [f for f in files if f.get("filename") != file.filename]
+    files.append(record)
+    if test_order_id:
+        for t in appt.get("test_orders", []):
+            if t.get("id") == test_order_id:
+                t["results_uploaded"] = True
+                t["results_filename"] = file.filename
+                break
+    _save_appointments(appointments)
+    return {"saved": True, "filename": file.filename, "size_bytes": len(raw)}
+
+
 @app.post("/api/doctor/appointments/{appt_id}/referral")
 async def save_referral(appt_id: str, req: ReferralRequest, request: Request):
     """Save a referral issued by the doctor for this appointment."""
