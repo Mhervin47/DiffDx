@@ -1342,7 +1342,7 @@ async function loadTestOrders() {
     }
     const refEl = document.getElementById('referral-section');
     if (refEl && appt.referral) {
-      refEl.innerHTML = buildReferralBlock(appt.referral, appt.id);
+      refEl.innerHTML = buildReferralBlock(appt.referral, appt.appointment_id);
     }
     if (summaryEl && appt.doctor_summary) {
       summaryEl.innerHTML = `
@@ -1754,8 +1754,11 @@ function buildReferralBlock(ref, apptId) {
     ? `<div class="ref-pt-to">Referred to: <strong>Dr. ${escHtml(ref.to_doctor)}</strong></div>`
     : `<div class="ref-pt-to">Referred to: <strong>Any Available ${escHtml(ref.specialty)} Specialist</strong></div>`;
 
-  const chooserSection = hasSpecificDoc ? '' : `
-    <div class="ref-pt-chooser" id="ref-pt-chooser-${apptId}">
+  const bookUrl = `/find-doctors.html?specialty=${encodeURIComponent(ref.specialty||'')}&referral=1${hasSpecificDoc ? '&doctor=' + encodeURIComponent(ref.to_doctor) : ''}`;
+
+  const chooserSection = hasSpecificDoc
+    ? `<a href="${escHtml(bookUrl)}" class="btn btn-primary btn-sm" style="margin-top:10px;display:inline-block;text-decoration:none;">Book with Dr. ${escHtml(ref.to_doctor)}</a>`
+    : `<div class="ref-pt-chooser" id="ref-pt-chooser-${apptId}">
       <div class="ref-pt-chooser-label">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0113 0"/></svg>
         Your doctor has left the specialist choice to you. Select a ${escHtml(ref.specialty)} specialist below:

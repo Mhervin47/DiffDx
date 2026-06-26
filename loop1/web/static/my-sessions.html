@@ -883,7 +883,7 @@ async function loadSessions() {
           const ref = appt.referral;
           const urg = (ref.urgency || 'routine').toLowerCase();
           const urgClass = urg === 'urgent' ? 'referral-urgency-urgent' : urg === 'soon' ? 'referral-urgency-soon' : 'referral-urgency-routine';
-          const bookUrl = `/find-doctors.html?specialty=${encodeURIComponent(ref.specialty || '')}`;
+          const bookUrl = `/find-doctors.html?specialty=${encodeURIComponent(ref.specialty || '')}&referral=1${ref.to_doctor ? '&doctor=' + encodeURIComponent(ref.to_doctor) : ''}`;
           return `
         <div class="patient-panel" id="ref-panel-${apptId}">
           <button class="patient-panel-toggle" onclick="togglePatientPanel('ref-panel-${apptId}')">
