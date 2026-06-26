@@ -14,7 +14,7 @@ The system is built in three layers:
 
 ## How the Actor works
 
-The actor is a Groq-hosted **Llama 3.3 70B** model prompted to behave as a diagnostic physician. Every turn it receives the patient's structured profile, the (compressed) conversation history, 3 retrieved few-shot exemplars, and the current differential with probabilities. It outputs strict JSON every turn:
+The actor is a Groq-hosted **llama-3.1-8b-instant** model prompted to behave as a diagnostic physician. Every turn it receives the patient's structured profile, the (compressed) conversation history, 3 retrieved few-shot exemplars, and the current differential with probabilities. It outputs strict JSON every turn:
 
 ```json
 {
