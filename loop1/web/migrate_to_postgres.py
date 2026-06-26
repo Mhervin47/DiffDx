@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent / "data"
-SQLITE_DB = DATA_DIR / "medicalconvo.db"
+SQLITE_DB = DATA_DIR / "diffdx.db"
 
 COLLECTIONS = [
     ("users",           DATA_DIR / "users.json",           {}),

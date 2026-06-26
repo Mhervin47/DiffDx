@@ -1,5 +1,5 @@
 """
-One-time migration: read existing JSON flat files → medicalconvo.db
+One-time migration: read existing JSON flat files → diffdx.db
 
 Run once before starting the server with the new SQLite backend:
     python loop1/web/migrate_to_sqlite.py
@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent / "data"
-DB_FILE  = DATA_DIR / "medicalconvo.db"
+DB_FILE  = DATA_DIR / "diffdx.db"
 
 MIGRATIONS = [
     ("users",           DATA_DIR / "users.json",           {}),

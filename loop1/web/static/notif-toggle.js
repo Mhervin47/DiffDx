@@ -112,7 +112,7 @@
     }
     localStorage.setItem(PREF_KEY, '1');
     window._updateNotifBtn();
-    new Notification('MedicalConvo', {
+    new Notification('DiffDx', {
       body: "You'll get desktop alerts for appointments, messages, and test results.",
       icon: '/favicon.ico', tag: 'welcome-patient',
     });

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MedicalConvo — Session Report</title>
+  <title>DiffDx — Session Report</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
@@ -783,7 +783,7 @@
 
       /* ── Print header watermark ─────────────────────────── */
       body::before {
-        content: 'MedicalConvo — Session Report';
+        content: 'DiffDx — Session Report';
         display: block;
         font-size: 10px; font-weight: 700; letter-spacing: .1em;
         text-transform: uppercase; color: #94a3b8;
@@ -1288,7 +1288,7 @@ function _printTestList() {
   <h2 style="margin-bottom:4px;">Recommended Test Checklist</h2>
   <p style="color:#777;font-size:13px;margin-top:0;">Bring this list to your diagnostic centre. Complete before your specialist appointment.</p>
   <table><thead><tr><th>Status / Test</th><th>Why Needed</th><th>Preparation</th></tr></thead><tbody>${cards}</tbody></table>
-  <p style="font-size:11px;color:#aaa;margin-top:24px;">AI-generated suggestion — confirm with your doctor. Printed from MedicalConvo.</p>
+  <p style="font-size:11px;color:#aaa;margin-top:24px;">AI-generated suggestion — confirm with your doctor. Printed from DiffDx.</p>
   <script>window.onload=()=>window.print();<\/script>
   </body></html>`);
   w.document.close();
@@ -2407,7 +2407,7 @@ async function sendReportToDoctor() {
   const r = _reportData;
   const dx = r?.primary_diagnosis || r?.final_differential?.[0]?.dx || 'Pending';
   const complaint = r?.final_profile?.chief_complaint || '';
-  const msg = `📋 AI Diagnostic Report shared\n\nChief complaint: ${complaint}\nPrimary diagnosis: ${dx}\n\nFull session details are in your MedicalConvo portal. Please review before our appointment.`;
+  const msg = `📋 AI Diagnostic Report shared\n\nChief complaint: ${complaint}\nPrimary diagnosis: ${dx}\n\nFull session details are in your DiffDx portal. Please review before our appointment.`;
   const btn = document.getElementById('btn-send-doctor');
   btn.disabled = true; btn.textContent = 'Sending…';
   try {

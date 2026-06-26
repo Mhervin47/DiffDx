@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>MedicalConvo — Doctor Portal</title>
+  <title>DiffDx — Doctor Portal</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles.css">
@@ -2446,7 +2446,7 @@ async function toggleBrowserNotif() {
   localStorage.setItem(_NOTIF_PREF_KEY, '1');
   _updateNotifBtn();
   // Fire a welcome notification
-  new Notification('MedicalConvo', {
+  new Notification('DiffDx', {
     body: 'Desktop notifications are now enabled.',
     icon: '/favicon.ico',
     tag: 'welcome',

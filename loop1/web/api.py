@@ -1,5 +1,5 @@
 """
-MedicalConvo Web API — FastAPI backend wrapping APISession.
+DiffDx Web API — FastAPI backend wrapping APISession.
 
 Endpoints:
   GET  /api/cases                        → list available test cases
@@ -58,7 +58,7 @@ _log = logging.getLogger(__name__)
 # App
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="MedicalConvo API", version="0.10.0")
+app = FastAPI(title="DiffDx API", version="0.10.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -95,7 +95,7 @@ def _on_startup():
 def _send_reminder_email(to_email: str, patient_name: str, doctor_name: str, slot: str) -> bool:
     """Send a 24h appointment reminder via Resend. Returns True on success."""
     resend_key = os.environ.get("RESEND_API_KEY", "")
-    from_addr  = os.environ.get("RESEND_FROM", "reminders@medicalconvo.app")
+    from_addr  = os.environ.get("RESEND_FROM", "reminders@diffdx.app")
     if not resend_key:
         _log.info("RESEND_API_KEY not set — skipping reminder email to %s", to_email)
         return False
@@ -105,7 +105,7 @@ def _send_reminder_email(to_email: str, patient_name: str, doctor_name: str, slo
         html = f"""
         <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;background:#f8fafc;border-radius:12px;">
           <div style="background:#0a2540;border-radius:10px 10px 0 0;padding:24px 28px;">
-            <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">MedicalConvo</h1>
+            <h1 style="color:#fff;font-size:20px;margin:0;font-weight:800;">DiffDx</h1>
             <p style="color:rgba(255,255,255,.7);font-size:13px;margin:6px 0 0;">Appointment Reminder</p>
           </div>
           <div style="background:#fff;border-radius:0 0 10px 10px;padding:28px;border:1px solid #e2ecf4;border-top:none;">
@@ -121,9 +121,9 @@ def _send_reminder_email(to_email: str, patient_name: str, doctor_name: str, slo
             <p style="font-size:13px;color:#64748b;line-height:1.6;">
               Please ensure you have completed any required pre-appointment tests and bring all relevant documents.
             </p>
-            <a href="https://medicalconvo.app/my-sessions.html" style="display:inline-block;background:#0077a8;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;margin-top:8px;">View My Sessions</a>
+            <a href="https://diffdx.app/my-sessions.html" style="display:inline-block;background:#0077a8;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:700;margin-top:8px;">View My Sessions</a>
           </div>
-          <p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;">MedicalConvo · This is an automated reminder</p>
+          <p style="font-size:11px;color:#94a3b8;text-align:center;margin-top:16px;">DiffDx · This is an automated reminder</p>
         </div>"""
         payload = json.dumps({
             "from": from_addr,
@@ -389,7 +389,7 @@ import os
 import sqlite3
 
 _DATA_DIR = _repo_root / "web" / "data"
-_DB_FILE   = _DATA_DIR / "medicalconvo.db"
+_DB_FILE   = _DATA_DIR / "diffdx.db"
 
 # Legacy JSON paths — kept so the migration script can find them
 _USERS_FILE           = _DATA_DIR / "users.json"
@@ -1678,7 +1678,7 @@ async def update_appointment_status(appt_id: str, req: StatusRequest, request: R
                     body=(
                         f"Hi {p_name},\n\n"
                         f"Good news! A slot has opened up with {first.get('doctor_name', 'your doctor')} ({first.get('specialty', '')}).\n"
-                        f"Please log in to MedicalConvo to book your appointment before it fills up.\n"
+                        f"Please log in to DiffDx to book your appointment before it fills up.\n"
                     ),
                 )
 
