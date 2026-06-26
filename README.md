@@ -63,7 +63,7 @@ The web app wraps this engine in a clinical workflow:
 | --- | --- |
 | Backend API | FastAPI (Python) |
 | Frontend | Vanilla HTML/CSS/JS |
-| Actor LLM | Groq — Llama 3.3 70B |
+| Actor LLM | Groq — llama-3.1-8b-instant |
 | Critic LLM | OpenRouter — Gemma 4 31B (free tier) |
 | Embeddings | Sentence Transformers + FAISS |
 | Database | PostgreSQL (Supabase) / SQLite locally |
