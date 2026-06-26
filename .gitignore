@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Environment & secrets
+.env
+.env.*
+*.key
+*.pem
+*.secret
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode/
+.idea/
+
+# Skills / agents (internal tooling, not part of the app)
+.agents/
+skills-lock.json

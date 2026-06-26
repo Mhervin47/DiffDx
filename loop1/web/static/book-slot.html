@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Book Appointment</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    .bs-page { max-width: 840px; margin: 0 auto; padding: 28px 24px 100px; }
+
+    /* ── Referral banner ───────────────────────────────── */
+    .ref-banner {
+      display: flex; align-items: center; gap: 12px;
+      background: rgba(0,180,216,.07); border: 1px solid rgba(0,180,216,.22);
+      border-radius: 12px; padding: 13px 16px; margin-bottom: 20px;
+      font-size: 13px; color: var(--text-dim); line-height: 1.5;
+    }
+
+    /* ── Search + filter ───────────────────────────────── */
+    .bs-toolbar {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .bs-search-wrap { position: relative; flex: 1; min-width: 200px; }
+    .bs-search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .bs-search {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font);
+      font-size: 14px; padding: 10px 12px 10px 38px; outline: none;
+      transition: border-color .15s;
+    }
+    .bs-search:focus { border-color: var(--primary); }
+    .bs-search::placeholder { color: var(--text-muted); }
+
+    .spec-chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 18px; }
+    .spec-chip {
+      font-size: 12px; font-weight: 600; padding: 5px 13px;
+      border-radius: 99px; cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface-3); color: var(--text-muted);
+      transition: all .13s; white-space: nowrap;
+    }
+    .spec-chip:hover { border-color: var(--primary); color: var(--text); }
+    .spec-chip.active { background: rgba(0,180,216,.12); border-color: rgba(0,180,216,.4); color: var(--primary); }
+
+    /* ── Doctor grid ───────────────────────────────────── */
+    .doc-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 14px; margin-bottom: 32px;
+    }
+    .doc-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: border-color .15s;
+    }
+    .doc-card:hover { border-color: rgba(0,180,216,.3); }
+    .doc-head { display: flex; align-items: center; gap: 12px; }
+    .doc-avatar {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; color: #fff;
+    }
+    .doc-name   { font-size: 14px; font-weight: 700; color: var(--text); }
+    .doc-spec   { font-size: 12px; color: var(--primary); font-weight: 600; margin-top: 1px; }
+    .doc-clinic { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .doc-rating { font-size: 12px; color: var(--warning); font-weight: 600; margin-top: 2px; }
+
+    .doc-slots-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 7px;
+    }
+    .slot-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+    .slot-chip {
+      font-size: 12px; font-weight: 600; padding: 5px 11px; border-radius: 8px;
+      cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface-3); color: var(--text-dim); transition: all .13s;
+    }
+    .slot-chip:hover { border-color: rgba(0,180,216,.45); color: var(--primary); background: rgba(0,180,216,.07); }
+    .slot-chip.selected { background: var(--primary); border-color: var(--primary); color: #000; font-weight: 700; }
+    .doc-no-slots { font-size: 12px; color: var(--text-muted); font-style: italic; }
+
+    /* ── Modals ────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7); backdrop-filter: blur(8px);
+      display: none; align-items: center; justify-content: center; z-index: 1000; padding: 24px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--surface-2); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 18px; padding: 24px; width: 460px; max-width: 100%;
+      box-shadow: 0 32px 80px rgba(0,0,0,.5);
+    }
+    .modal-title { font-size: 18px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
+    .modal-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; }
+    .field-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--text-muted); margin-bottom: 6px; display: block;
+    }
+    .modal-ta {
+      width: 100%; box-sizing: border-box; background: var(--surface-3);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; padding: 10px; outline: none;
+      font-family: var(--font); resize: vertical; min-height: 72px;
+    }
+    .modal-ta:focus { border-color: var(--primary); }
+    .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+
+    /* ── Confirmation screen ───────────────────────────── */
+    .confirm-screen {
+      display: none; flex-direction: column; align-items: center;
+      padding: 48px 24px; text-align: center;
+    }
+    .confirm-screen.show { display: flex; }
+    .confirm-checkmark {
+      width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(16,185,129,.12); border: 1px solid rgba(16,185,129,.3);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; animation: pop-in .4s cubic-bezier(.34,1.56,.64,1);
+    }
+    @keyframes pop-in { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .confirm-title { font-size: 22px; font-weight: 800; letter-spacing: -.03em; margin-bottom: 6px; }
+    .confirm-sub   { font-size: 14px; color: var(--text-muted); margin-bottom: 28px; max-width: 340px; }
+    .confirm-card  {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 22px; width: 100%; max-width: 380px;
+      text-align: left; margin-bottom: 24px;
+    }
+    .confirm-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; }
+    .confirm-row:last-child { border-bottom: none; }
+    .confirm-key   { color: var(--text-muted); font-size: 12px; }
+    .confirm-value { color: var(--text); font-weight: 600; }
+
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--text-muted); font-size: 14px; }
+
+    @media (max-width: 600px) {
+      .doc-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="bs-page">
+  <div class="patient-page-header" id="page-header">
+    <div>
+      <div class="patient-page-title">Book an Appointment</div>
+      <div class="patient-page-sub">Find a doctor and reserve a slot that works for you.</div>
+    </div>
+  </div>
+
+  <!-- Confirmation screen (shown after booking) -->
+  <div class="confirm-screen" id="confirm-screen">
+    <div class="confirm-checkmark">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <div class="confirm-title">Appointment Booked!</div>
+    <div class="confirm-sub" id="confirm-sub"></div>
+    <div class="confirm-card" id="confirm-card"></div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-ghost" onclick="resetBooking()">Book Another</button>
+      <button class="btn btn-primary" onclick="window.location.href='/my-sessions.html'">Go to My Sessions →</button>
+    </div>
+  </div>
+
+  <!-- Search area (hidden after booking) -->
+  <div id="search-area">
+    <div id="ref-banner-wrap"></div>
+
+    <div class="bs-toolbar">
+      <div class="bs-search-wrap">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input class="bs-search" id="bs-search" type="text" placeholder="Search by doctor or clinic…" oninput="renderDoctors()">
+      </div>
+    </div>
+
+    <div class="spec-chips" id="spec-chips"></div>
+
+    <div class="doc-grid" id="doc-grid">
+      <div class="thinking-row" style="grid-column:1/-1;"><div class="spinner"></div> Loading doctors…</div>
+    </div>
+  </div>
+</div>
+
+<!-- Booking confirm modal -->
+<div class="modal-overlay" id="book-modal" onclick="if(event.target===this)closeBook()">
+  <div class="modal-box">
+    <div class="modal-title">Confirm Booking</div>
+    <div class="modal-sub" id="book-sub"></div>
+    <label class="field-label">Selected Slot</label>
+    <div id="book-slot-display" style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;font-size:13px;color:var(--text);margin-bottom:14px;"></div>
+    <label class="field-label" for="book-note">Note to Doctor (optional)</label>
+    <textarea class="modal-ta" id="book-note" placeholder="Reason for visit, symptoms, urgency, etc."></textarea>
+    <div id="book-error" style="display:none;font-size:12px;color:var(--danger);margin-top:8px;padding:8px 10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeBook()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="book-confirm-btn" onclick="confirmBook()">Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<!-- Waitlist modal -->
+<div class="modal-overlay" id="waitlist-modal" onclick="if(event.target===this)closeWaitlist()">
+  <div class="modal-box">
+    <div class="modal-title">Join Waitlist</div>
+    <div class="modal-sub" id="wl-doctor-name"></div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.55;">You'll be notified by email when a slot opens with this doctor.</p>
+    <label class="field-label" for="wl-note">Note (optional)</label>
+    <textarea class="modal-ta" id="wl-note" placeholder="Reason for visit, urgency, etc."></textarea>
+    <div id="wl-error" style="display:none;font-size:12px;color:var(--danger);margin-top:8px;padding:8px 10px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeWaitlist()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="wl-confirm" onclick="confirmWaitlist()">Join Waitlist</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const user = getAuthUser();
+if (!user) window.location.replace('/login.html?next=/book-slot.html');
+
+let _doctors    = [];
+let _activeSpec = 'All';
+let _selected   = {}; // docId -> slot string
+let _myWaitlist = [];
+let _waitlistDoctor = null;
+let _bookingDoctor  = null;
+let _bookingSlot    = null;
+
+const SPEC_COLORS = ['#00b4d8','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#6366f1'];
+function specColor(spec) {
+  let h = 0;
+  for (const c of (spec || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return SPEC_COLORS[h % SPEC_COLORS.length];
+}
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtSlot(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB',{weekday:'long',day:'numeric',month:'long'}) +
+           ' at ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  } catch { return iso; }
+}
+function fmtSlotShort(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) +
+           ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  } catch { return iso; }
+}
+
+function renderChips() {
+  const specs = ['All', ...Array.from(new Set(_doctors.map(d => d.specialty).filter(Boolean))).sort()];
+  document.getElementById('spec-chips').innerHTML = specs.map(s =>
+    `<span class="spec-chip${s === _activeSpec ? ' active' : ''}" onclick="setSpec('${escHtml(s).replace(/'/g,"\\'")}')">${escHtml(s)}</span>`
+  ).join('');
+}
+function setSpec(s) { _activeSpec = s; renderChips(); renderDoctors(); }
+
+function renderDoctors() {
+  const grid = document.getElementById('doc-grid');
+  const q = (document.getElementById('bs-search').value || '').toLowerCase();
+  let list = _doctors;
+  if (_activeSpec !== 'All') list = list.filter(d => d.specialty === _activeSpec);
+  if (q) list = list.filter(d =>
+    (d.name||'').toLowerCase().includes(q) || (d.hospital||'').toLowerCase().includes(q));
+
+  if (!list.length) {
+    grid.innerHTML = '<div class="empty-state">No doctors match your search.</div>';
+    return;
+  }
+
+  grid.innerHTML = list.map(d => {
+    const color = specColor(d.specialty);
+    const upcoming = (d.available_slots || []).filter(s => new Date(s) >= new Date()).sort().slice(0, 4);
+    const sel = _selected[d.id];
+    const onWaitlist = _myWaitlist.some(e => e.doctor_id === d.id && (e.status === 'waiting' || e.status === 'notified'));
+
+    const slotsHtml = upcoming.length
+      ? `<div class="slot-chips">${upcoming.map(s =>
+          `<span class="slot-chip${sel === s ? ' selected' : ''}" onclick="selectSlot('${escHtml(d.id)}','${escHtml(s)}')">${fmtSlotShort(s)}</span>`
+        ).join('')}</div>`
+      : `<div class="doc-no-slots">No available slots right now</div>`;
+
+    const actionBtn = upcoming.length
+      ? `<button class="btn btn-primary btn-sm" ${!sel ? 'disabled' : ''} onclick="openBook('${escHtml(d.id)}')">Book Appointment</button>`
+      : `<button class="btn ${onWaitlist ? 'btn-secondary' : 'btn-ghost'} btn-sm" ${onWaitlist ? 'disabled' : ''} onclick="openWaitlist('${escHtml(d.id)}')">
+           ${onWaitlist ? '✓ On Waitlist' : 'Join Waitlist'}
+         </button>`;
+
+    return `<div class="doc-card" id="doc-${escHtml(d.id)}">
+      <div class="doc-head">
+        <div class="doc-avatar" style="background:${color};">${escHtml(d.avatar_initials || (d.name||'').slice(0,2).toUpperCase())}</div>
+        <div>
+          <div class="doc-name">${escHtml(d.name)}</div>
+          <div class="doc-spec">${escHtml(d.specialty||'')}</div>
+          <div class="doc-clinic">${escHtml(d.hospital||'')}</div>
+          ${d.rating ? `<div class="doc-rating">★ ${d.rating}</div>` : ''}
+        </div>
+      </div>
+      <div>
+        <div class="doc-slots-label">Next Available</div>
+        ${slotsHtml}
+      </div>
+      ${actionBtn}
+    </div>`;
+  }).join('');
+}
+
+function selectSlot(docId, slot) {
+  _selected[docId] = (_selected[docId] === slot) ? null : slot;
+  renderDoctors();
+}
+
+// ── Booking modal ─────────────────────────────────────────────────────────
+function openBook(docId) {
+  const slot = _selected[docId];
+  if (!slot) return;
+  _bookingDoctor = _doctors.find(d => d.id === docId);
+  _bookingSlot   = slot;
+  document.getElementById('book-sub').textContent = `${_bookingDoctor.name} · ${_bookingDoctor.specialty || ''}`;
+  document.getElementById('book-slot-display').textContent = fmtSlot(slot);
+  document.getElementById('book-note').value = '';
+  document.getElementById('book-error').style.display = 'none';
+  document.getElementById('book-modal').classList.add('open');
+}
+function closeBook() { document.getElementById('book-modal').classList.remove('open'); }
+
+async function confirmBook() {
+  const btn = document.getElementById('book-confirm-btn');
+  const errEl = document.getElementById('book-error');
+  btn.disabled = true; btn.textContent = 'Booking…';
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(`${API}/api/patient/book-direct`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({
+        doctor_id: _bookingDoctor.id,
+        slot: _bookingSlot,
+        note: document.getElementById('book-note').value.trim(),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Booking failed');
+    }
+    closeBook();
+    showConfirmation(_bookingDoctor, _bookingSlot);
+  } catch (e) {
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Confirm Booking';
+  }
+}
+
+function showConfirmation(doc, slot) {
+  document.getElementById('search-area').style.display = 'none';
+  document.getElementById('page-header').style.display = 'none';
+  const screen = document.getElementById('confirm-screen');
+  screen.classList.add('show');
+  document.getElementById('confirm-sub').textContent =
+    `Your appointment with ${doc.name} has been confirmed.`;
+  document.getElementById('confirm-card').innerHTML = `
+    <div class="confirm-row"><span class="confirm-key">Doctor</span><span class="confirm-value">${escHtml(doc.name)}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Specialty</span><span class="confirm-value">${escHtml(doc.specialty||'—')}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Clinic</span><span class="confirm-value">${escHtml(doc.hospital||'—')}</span></div>
+    <div class="confirm-row"><span class="confirm-key">Date & Time</span><span class="confirm-value">${escHtml(fmtSlot(slot))}</span></div>
+  `;
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function resetBooking() {
+  document.getElementById('search-area').style.display = '';
+  document.getElementById('page-header').style.display = '';
+  document.getElementById('confirm-screen').classList.remove('show');
+  _selected = {};
+  init();
+}
+
+// ── Waitlist ──────────────────────────────────────────────────────────────
+function openWaitlist(docId) {
+  _waitlistDoctor = _doctors.find(d => d.id === docId);
+  if (!_waitlistDoctor) return;
+  document.getElementById('wl-doctor-name').textContent =
+    `${_waitlistDoctor.name} · ${_waitlistDoctor.specialty || ''}`;
+  document.getElementById('wl-note').value = '';
+  document.getElementById('wl-error').style.display = 'none';
+  document.getElementById('waitlist-modal').classList.add('open');
+}
+function closeWaitlist() { document.getElementById('waitlist-modal').classList.remove('open'); }
+
+async function confirmWaitlist() {
+  const btn   = document.getElementById('wl-confirm');
+  const errEl = document.getElementById('wl-error');
+  btn.disabled = true; btn.textContent = 'Joining…';
+  errEl.style.display = 'none';
+  try {
+    const res = await fetch(`${API}/api/patient/waitlist`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({
+        doctor_id: _waitlistDoctor.id,
+        doctor_name: _waitlistDoctor.name,
+        specialty: _waitlistDoctor.specialty || '',
+        note: document.getElementById('wl-note').value.trim(),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      errEl.textContent = err.detail || 'Failed to join waitlist.';
+      errEl.style.display = ''; return;
+    }
+    const data = await res.json();
+    _myWaitlist.push(data.entry || { doctor_id: _waitlistDoctor.id, status: 'waiting' });
+    closeWaitlist();
+    renderDoctors();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Join Waitlist';
+  }
+}
+
+// ── Load & referral param support ─────────────────────────────────────────
+async function init() {
+  try {
+    const [docRes, wlRes] = await Promise.all([
+      fetch(`${API}/api/doctors`),
+      fetch(`${API}/api/patient/waitlist`, { headers: authHeaders() }),
+    ]);
+    if (!docRes.ok) throw new Error('Failed to load doctors');
+    _doctors    = (await docRes.json()).doctors || [];
+    _myWaitlist = wlRes.ok ? ((await wlRes.json()).waitlist || []) : [];
+
+    const params  = new URLSearchParams(location.search);
+    const refSpec = params.get('specialty');
+    const refDoc  = params.get('doctor');
+    const isRef   = params.get('referral') === '1';
+
+    if (refSpec) {
+      const specs = Array.from(new Set(_doctors.map(d => d.specialty).filter(Boolean)));
+      const match = specs.find(s =>
+        s.toLowerCase().includes(refSpec.toLowerCase()) ||
+        refSpec.toLowerCase().includes(s.toLowerCase().split(' ')[0])
+      );
+      if (match) _activeSpec = match;
+    }
+
+    if (isRef && refSpec) {
+      const wrap = document.getElementById('ref-banner-wrap');
+      const msg = refDoc
+        ? `Your doctor referred you to <strong style="color:var(--text);">Dr. ${escHtml(refDoc)}</strong>. Book your appointment below.`
+        : `Your doctor referred you to a <strong style="color:var(--text);">${escHtml(refSpec)} specialist</strong>. Choose a doctor and book your appointment below.`;
+      wrap.innerHTML = `<div class="ref-banner">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" style="flex-shrink:0;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        <span style="font-size:13px;">${msg}</span>
+      </div>`;
+    }
+
+    renderChips();
+    renderDoctors();
+
+    if (refDoc) {
+      setTimeout(() => {
+        document.querySelectorAll('.doc-card').forEach(c => {
+          if (c.textContent.includes(refDoc)) {
+            c.style.border = '1.5px solid rgba(0,180,216,.6)';
+            c.style.boxShadow = '0 0 0 4px rgba(0,180,216,.1)';
+            c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }, 150);
+    }
+  } catch (e) {
+    document.getElementById('doc-grid').innerHTML =
+      `<div class="empty-state">Could not load doctors: ${escHtml(e.message)}</div>`;
+  }
+}
+
+init();
+</script>
+</body>
+</html>

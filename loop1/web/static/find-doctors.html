@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>window.location.replace('/book-slot.html' + window.location.search);</script>
+  <title>MedicalConvo — Find Doctors</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <style>
+    .search-row { display:flex; gap:10px; margin-bottom:14px; }
+    .fd-search {
+      flex:1; background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); color:var(--text); font-size:14px;
+      padding:11px 14px; outline:none; font-family:var(--font);
+    }
+    .fd-search:focus { border-color:var(--primary); }
+    .fd-search::placeholder { color:var(--text-muted); }
+    .chip-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
+    .spec-chip {
+      padding:5px 14px; border-radius:99px; font-size:12px; font-weight:600;
+      cursor:pointer; border:1px solid var(--border); background:var(--surface-3);
+      color:var(--text-muted); transition:all .12s;
+    }
+    .spec-chip:hover { color:var(--text); border-color:var(--text-muted); }
+    .spec-chip.active { background:var(--primary); color:#000; border-color:var(--primary); }
+
+    .doc-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+    @media (max-width:900px){ .doc-grid { grid-template-columns:repeat(2,1fr); } }
+    @media (max-width:620px){ .doc-grid { grid-template-columns:1fr; } }
+    .doc-card {
+      background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+      padding:18px; display:flex; flex-direction:column;
+    }
+    .doc-head { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .doc-avatar {
+      width:48px; height:48px; border-radius:50%; flex-shrink:0;
+      display:flex; align-items:center; justify-content:center;
+      font-size:16px; font-weight:700; color:#000d1a;
+    }
+    .doc-name { font-size:15px; font-weight:700; color:var(--text); }
+    .doc-spec { font-size:12px; color:var(--primary); font-weight:600; }
+    .doc-clinic { font-size:12px; color:var(--text-muted); margin-top:1px; }
+    .doc-slots-label {
+      font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--text-muted); margin-bottom:8px;
+    }
+    .slot-chips { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px; }
+    .slot-chip {
+      background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius);
+      color:var(--text); font-size:11px; padding:6px 9px; cursor:pointer; transition:all .12s;
+    }
+    .slot-chip:hover { border-color:var(--primary); color:var(--primary); }
+    .slot-chip.selected { background:var(--primary); border-color:var(--primary); color:#000; font-weight:700; }
+    .doc-no-slots { font-size:12px; color:var(--text-muted); margin-bottom:16px; }
+    .doc-card .book-btn { margin-top:auto; }
+
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+      display:none; align-items:center; justify-content:center; z-index:1000;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+      padding:24px; max-height:90vh; overflow:auto; width:440px;
+    }
+    .modal-title { font-size:18px; font-weight:700; margin-bottom:4px; }
+    .modal-sub { font-size:13px; color:var(--text-muted); margin-bottom:18px; }
+    .field-label {
+      font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--text-muted); margin-bottom:6px; display:block;
+    }
+    .modal-ta {
+      width:100%; box-sizing:border-box; background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); color:var(--text); font-size:13px; padding:10px;
+      outline:none; font-family:var(--font); resize:vertical; min-height:72px;
+    }
+    .modal-ta:focus { border-color:var(--primary); }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+    .empty-state { text-align:center; padding:60px 24px; color:var(--text-muted); font-size:14px; grid-column:1/-1; }
+
+    /* ── premium find-doctors overrides ── */
+    .fd-search {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px; font-size: 14px;
+      transition: all .15s;
+    }
+    .fd-search:focus {
+      border-color: rgba(0,180,216,.55);
+      background: rgba(0,180,216,.04);
+      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
+    }
+    .spec-chip {
+      border-radius: 99px; font-size: 11px; font-weight: 700;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      color: var(--text-muted); transition: all .15s;
+    }
+    .spec-chip:hover { color: var(--text); border-color: rgba(255,255,255,.18); }
+    .spec-chip.active {
+      background: rgba(0,180,216,.15); color: var(--primary);
+      border-color: rgba(0,180,216,.5);
+      box-shadow: 0 0 10px rgba(0,180,216,.12);
+    }
+    .doc-card {
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 20px;
+      transition: border-color .18s, background .18s, transform .18s;
+      position: relative; overflow: hidden;
+    }
+    .doc-card::before {
+      content: ''; position: absolute; top: -40px; right: -40px;
+      width: 120px; height: 120px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,180,216,.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .doc-card:hover {
+      border-color: rgba(0,180,216,.3); background: rgba(0,180,216,.03);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 32px rgba(0,0,0,.3);
+    }
+    .doc-avatar {
+      width: 50px; height: 50px; border-radius: 14px;
+      background: linear-gradient(135deg, #0077a8, #00b4d8);
+      box-shadow: 0 0 0 1px rgba(0,180,216,.3), 0 4px 12px rgba(0,180,216,.2);
+    }
+    .doc-name { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+    .doc-spec { font-size: 11px; font-weight: 700; letter-spacing: .02em; }
+    .slot-chip {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px; font-size: 11px; font-weight: 600;
+      transition: all .12s;
+    }
+    .slot-chip:hover { border-color: rgba(0,180,216,.45); color: var(--primary); background: rgba(0,180,216,.07); }
+    .slot-chip.selected {
+      background: rgba(0,180,216,.18); border-color: rgba(0,180,216,.55);
+      color: var(--primary); font-weight: 800;
+      box-shadow: 0 0 10px rgba(0,180,216,.1);
+    }
+    .modal-overlay { background: rgba(0,0,0,.75); backdrop-filter: blur(12px) saturate(1.5); }
+    .modal-box {
+      background: #0d1120;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 18px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .modal-title { font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
+    .modal-ta {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+    }
+    .modal-ta:focus { border-color: rgba(0,180,216,.5); box-shadow: 0 0 0 3px rgba(0,180,216,.1); outline: none; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.href='/'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Home
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page">
+  <div style="margin-bottom:20px;">
+    <div class="section-title" style="margin-bottom:2px;">Find Doctors</div>
+    <div style="font-size:13px;color:var(--text-muted);">Search specialists and book an appointment directly.</div>
+  </div>
+
+  <div class="search-row">
+    <input class="fd-search" id="fd-search" type="text" placeholder="Search by doctor name or clinic…" oninput="render()">
+  </div>
+  <div class="chip-row" id="spec-chips"></div>
+
+  <div class="doc-grid" id="doc-grid">
+    <div class="thinking-row"><div class="spinner"></div> Loading doctors…</div>
+  </div>
+</div>
+
+<!-- Waitlist modal -->
+<div class="modal-overlay" id="waitlist-modal">
+  <div class="modal-box" style="background:var(--surface-2);border:1px solid rgba(255,255,255,.08);border-radius:20px;backdrop-filter:blur(14px);">
+    <div class="modal-title">Join Waitlist</div>
+    <div class="modal-sub" id="wl-doctor-name"></div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.55;">We'll notify you by email when a slot opens up with this doctor.</p>
+    <label class="field-label" for="wl-note">Note (optional)</label>
+    <textarea class="modal-ta" id="wl-note" placeholder="Reason for visit, urgency, etc."></textarea>
+    <div id="wl-error" style="display:none;font-size:12px;color:var(--danger);margin-top:10px;padding:8px 12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeWaitlist()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="wl-confirm" onclick="confirmWaitlist()">Join Waitlist</button>
+    </div>
+  </div>
+</div>
+
+<!-- Booking modal -->
+<div class="modal-overlay" id="book-modal">
+  <div class="modal-box">
+    <div class="modal-title">Book Appointment</div>
+    <div class="modal-sub" id="book-sub"></div>
+    <label class="field-label">Selected Slot</label>
+    <div id="book-slot" style="background:var(--surface-3);border:1px solid var(--border);border-radius:var(--radius);padding:10px;font-size:13px;color:var(--text);margin-bottom:16px;"></div>
+    <div id="book-for-wrap" style="margin-bottom:14px;display:none;">
+      <label class="field-label">Booking for</label>
+      <select id="book-for-select" style="width:100%;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--text);font-size:13px;">
+        <option value="">Myself</option>
+      </select>
+    </div>
+    <label class="field-label" for="book-note">Note to Doctor (optional)</label>
+    <textarea class="modal-ta" id="book-note" placeholder="Reason for visit, symptoms, etc."></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeBook()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="book-confirm" onclick="confirmBook()">Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const user = getAuthUser();
+if (!user) window.location.replace('/login.html?next=/find-doctors.html');
+
+let _doctors = [];
+let _activeSpec = 'All';
+let _selected = {}; // doctorId -> slot
+let _bookingDoctor = null;
+let _bookingSlot = null;
+let _dependents = [];
+let _myWaitlist = []; // array of waitlist entries
+let _waitlistDoctor = null;
+
+const SPEC_COLORS = ['#00b4d8','#8b5cf6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6','#6366f1'];
+function specColor(spec) {
+  let h = 0;
+  for (const c of (spec || '')) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return SPEC_COLORS[h % SPEC_COLORS.length];
+}
+function escHtml(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function fmtSlot(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'}) + ' ' +
+           d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  } catch { return iso; }
+}
+
+function renderChips() {
+  const specs = ['All', ...Array.from(new Set(_doctors.map(d => d.specialty).filter(Boolean)))];
+  document.getElementById('spec-chips').innerHTML = specs.map(s =>
+    `<span class="spec-chip ${s === _activeSpec ? 'active' : ''}" onclick="setSpec('${escHtml(s).replace(/'/g,"\\'")}')">${escHtml(s)}</span>`
+  ).join('');
+}
+function setSpec(s) { _activeSpec = s; renderChips(); render(); }
+
+function render() {
+  const grid = document.getElementById('doc-grid');
+  const q = (document.getElementById('fd-search').value || '').toLowerCase();
+  let list = _doctors;
+  if (_activeSpec !== 'All') list = list.filter(d => d.specialty === _activeSpec);
+  if (q) list = list.filter(d =>
+    (d.name || '').toLowerCase().includes(q) || (d.hospital || '').toLowerCase().includes(q));
+
+  if (list.length === 0) {
+    grid.innerHTML = `<div class="empty-state">No doctors match your search.</div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(d => {
+    const color = specColor(d.specialty);
+    const upcoming = (d.available_slots || [])
+      .filter(s => new Date(s) >= new Date())
+      .sort().slice(0, 3);
+    const sel = _selected[d.id];
+    const onWaitlist = _myWaitlist.some(e => e.doctor_id === d.id && e.status === 'waiting');
+    const slotsHtml = upcoming.length
+      ? `<div class="slot-chips">${upcoming.map(s =>
+          `<span class="slot-chip ${sel === s ? 'selected' : ''}" onclick="selectSlot('${d.id}','${s}')">${fmtSlot(s)}</span>`).join('')}</div>`
+      : `<div class="doc-no-slots">No available slots right now</div>`;
+    const waitlistBtn = !upcoming.length
+      ? `<button class="btn ${onWaitlist ? 'btn-secondary' : 'btn-ghost'} btn-sm" style="margin-top:auto;" ${onWaitlist ? 'disabled' : ''} onclick="openWaitlist('${d.id}')">
+          ${onWaitlist ? '✓ On Waitlist' : 'Join Waitlist'}
+        </button>`
+      : '';
+    return `
+    <div class="doc-card">
+      <div class="doc-head">
+        <div class="doc-avatar" style="background:${color};">${escHtml(d.avatar_initials || (d.name||'').slice(0,2).toUpperCase())}</div>
+        <div>
+          <div class="doc-name">${escHtml(d.name)}</div>
+          <div class="doc-spec">${escHtml(d.specialty || '')}</div>
+          <div class="doc-clinic">${escHtml(d.hospital || '')}</div>
+        </div>
+      </div>
+      <div class="doc-slots-label">Next Available</div>
+      ${slotsHtml}
+      ${upcoming.length ? `<button class="btn btn-primary btn-sm book-btn" ${(!sel) ? 'disabled' : ''} onclick="openBook('${d.id}')">Book Appointment</button>` : ''}
+      ${waitlistBtn}
+    </div>`;
+  }).join('');
+}
+
+function selectSlot(docId, slot) {
+  _selected[docId] = (_selected[docId] === slot) ? null : slot;
+  render();
+}
+
+async function openBook(docId) {
+  const slot = _selected[docId];
+  if (!slot) return;
+  _bookingDoctor = _doctors.find(d => d.id === docId);
+  _bookingSlot = slot;
+  document.getElementById('book-sub').textContent = `${_bookingDoctor.name} · ${_bookingDoctor.specialty}`;
+  document.getElementById('book-slot').textContent = fmtSlot(slot);
+  document.getElementById('book-note').value = '';
+  // Load dependents for "booking for" selector
+  try {
+    const res = await fetch('/api/auth/dependents', { headers: { ...authHeaders() } });
+    if (res.ok) {
+      const data = await res.json();
+      _dependents = data.dependents || [];
+      const sel = document.getElementById('book-for-select');
+      sel.innerHTML = '<option value="">Myself</option>' +
+        _dependents.map(d => `<option value="${escHtml(d.id)}">${escHtml(d.name)} (${escHtml(d.relationship||'')})</option>`).join('');
+      document.getElementById('book-for-wrap').style.display = _dependents.length ? '' : 'none';
+    }
+  } catch {}
+  document.getElementById('book-modal').classList.add('open');
+}
+function closeBook() { document.getElementById('book-modal').classList.remove('open'); }
+
+async function confirmBook() {
+  const btn = document.getElementById('book-confirm');
+  btn.disabled = true; btn.textContent = 'Booking…';
+  try {
+    const res = await fetch('/api/patient/book-direct', {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify({
+        doctor_id: _bookingDoctor.id,
+        slot: _bookingSlot,
+        note: document.getElementById('book-note').value,
+        dependent_id: document.getElementById('book-for-select').value || null,
+        patient_name_override: (() => {
+          const depId = document.getElementById('book-for-select').value;
+          const dep = _dependents.find(d => d.id === depId);
+          return dep ? dep.name : null;
+        })(),
+      }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Booking failed');
+    closeBook();
+    delete _selected[_bookingDoctor.id];
+    await load();
+    alert('Appointment booked successfully.');
+  } catch (e) {
+    alert('Could not book: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Confirm Booking';
+  }
+}
+
+async function load() {
+  const grid = document.getElementById('doc-grid');
+  try {
+    // Load waitlist in parallel
+    fetch('/api/patient/waitlist', { headers: { ...authHeaders() } })
+      .then(r => r.ok ? r.json() : {waitlist:[]})
+      .then(d => { _myWaitlist = d.waitlist || []; render(); })
+      .catch(() => {});
+    const res = await fetch('/api/doctors', { headers: { ...authHeaders() } });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    _doctors = data.doctors || [];
+    // Pre-filter by specialty from referral link
+    const params = new URLSearchParams(location.search);
+    const refSpec = params.get('specialty');
+    const refDoc  = params.get('doctor');
+    const isRef   = params.get('referral') === '1';
+    if (isRef && refSpec) {
+      // Find closest matching specialty in the list
+      const specs = Array.from(new Set(_doctors.map(d => d.specialty).filter(Boolean)));
+      const match = specs.find(s => s.toLowerCase().includes(refSpec.toLowerCase()) || refSpec.toLowerCase().includes(s.toLowerCase().split(' ')[0]));
+      if (match) _activeSpec = match;
+      // Show referral banner
+      showReferralBanner(refSpec, refDoc);
+    }
+    renderChips();
+    render();
+    // Scroll highlight to specific doctor if named
+    if (refDoc) {
+      setTimeout(() => {
+        const cards = document.querySelectorAll('.doc-card');
+        cards.forEach(c => {
+          if (c.textContent.includes(refDoc)) {
+            c.style.border = '1.5px solid rgba(0,180,216,.6)';
+            c.style.boxShadow = '0 0 0 4px rgba(0,180,216,.1)';
+            c.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        });
+      }, 100);
+    }
+  } catch (e) {
+    grid.innerHTML = `<div class="error-msg">Error loading doctors: ${escHtml(e.message)}</div>`;
+  }
+}
+
+function showReferralBanner(specialty, doctorName) {
+  const existing = document.getElementById('ref-banner');
+  if (existing) existing.remove();
+  const banner = document.createElement('div');
+  banner.id = 'ref-banner';
+  banner.style.cssText = 'background:rgba(0,180,216,.07);border:1px solid rgba(0,180,216,.22);border-radius:12px;padding:12px 16px;margin-bottom:18px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text-dim);line-height:1.5;';
+  const icon = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2.5" style="flex-shrink:0;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`;
+  const msg = doctorName
+    ? `${icon}<span>Your doctor referred you to <strong style="color:var(--text);">Dr. ${escHtml(doctorName)}</strong>. Book your appointment below.</span>`
+    : `${icon}<span>Your doctor referred you to a <strong style="color:var(--text);">${escHtml(specialty)} specialist</strong>. Choose a doctor and book your appointment below.</span>`;
+  banner.innerHTML = msg;
+  const grid = document.getElementById('doc-grid');
+  grid.parentNode.insertBefore(banner, grid);
+}
+
+document.getElementById('book-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'book-modal') closeBook();
+});
+
+// ---- Waitlist ----
+function openWaitlist(docId) {
+  _waitlistDoctor = _doctors.find(d => d.id === docId);
+  if (!_waitlistDoctor) return;
+  document.getElementById('wl-doctor-name').textContent = _waitlistDoctor.name + ' · ' + (_waitlistDoctor.specialty || '');
+  document.getElementById('wl-note').value = '';
+  document.getElementById('wl-error').style.display = 'none';
+  document.getElementById('waitlist-modal').classList.add('open');
+}
+function closeWaitlist() { document.getElementById('waitlist-modal').classList.remove('open'); }
+
+async function confirmWaitlist() {
+  const btn = document.getElementById('wl-confirm');
+  btn.disabled = true; btn.textContent = 'Joining…';
+  try {
+    const res = await fetch('/api/patient/waitlist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({
+        doctor_id: _waitlistDoctor.id,
+        doctor_name: _waitlistDoctor.name,
+        specialty: _waitlistDoctor.specialty || '',
+        note: document.getElementById('wl-note').value.trim(),
+      }),
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      document.getElementById('wl-error').textContent = err.detail || 'Failed to join waitlist.';
+      document.getElementById('wl-error').style.display = '';
+      return;
+    }
+    const data = await res.json();
+    _myWaitlist.push(data.entry);
+    closeWaitlist();
+    render();
+  } catch (e) {
+    document.getElementById('wl-error').textContent = e.message;
+    document.getElementById('wl-error').style.display = '';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Join Waitlist';
+  }
+}
+
+document.getElementById('waitlist-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'waitlist-modal') closeWaitlist();
+});
+
+load();
+</script>
+</body>
+</html>

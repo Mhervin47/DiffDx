@@ -1,0 +1,50 @@
+{
+  "session_id": "d7f3a9b2-6c8e-4e93-b4a0-1a4f8f0f2101",
+  "patient_summary": "58yo M, chest pain + leg swelling after Mexico trip. DVT confirmed at turn 6. Terminated at turn 8 on confidence_threshold with ACS as primary diagnosis despite PE risk factors.",
+  "expected_failure_modes": [
+    {
+      "failure_id": 1,
+      "description": "Differential ordering wrong: ACS ranked above PE despite confirmed DVT + travel history",
+      "evidence": [
+        "Turn 1: patient confirms recent Mexico trip — PE risk factor",
+        "Turn 2: patient confirms left leg swelling after trip — DVT risk factor",
+        "Turn 6: patient confirms blood clots in left leg — DVT confirmed",
+        "Final differential: ACS=0.55, PE=0.30 — ACS wrongly ranked above PE"
+      ],
+      "expected_critic_signals": {
+        "differential_quality_score": "< 0.5",
+        "weakness_category": "poor_differential"
+      },
+      "relevant_turns": [1, 2, 3, 6, 8]
+    },
+    {
+      "failure_id": 2,
+      "description": "Suboptimal screening question: asked hemoptysis (late PE finding) instead of dyspnea/pleurisy",
+      "evidence": [
+        "Turn 7: doctor asks 'Have you experienced any recent symptoms of a pulmonary embolism, such as coughing up blood?'",
+        "Hemoptysis is a LATE PE finding with low sensitivity",
+        "More appropriate PE screening at this stage: sudden dyspnea onset, pleuritic chest pain, tachycardia, leg tenderness"
+      ],
+      "expected_critic_signals": {
+        "question_quality_score": "< 0.5",
+        "weakness_category": "missed_red_flag",
+        "would_have_asked": "mentions dyspnea or pleuritic chest pain"
+      },
+      "relevant_turns": [7]
+    },
+    {
+      "failure_id": 3,
+      "description": "Redundant questions: chest pain character asked three times",
+      "evidence": [
+        "Turn 0: 'Can you describe the nature of your chest pain in more detail?'",
+        "Turn 4: 'Can you describe the pain in your chest in more detail, such as its severity and any factors that make it better or worse?'",
+        "Turn 8: 'Can you describe the character of your chest pain in more detail?'"
+      ],
+      "expected_critic_signals": {
+        "weakness_category": "redundant_question"
+      },
+      "relevant_turns": [4, 8]
+    }
+  ],
+  "pass_threshold": "3/3 failure modes caught before running on 20 DDXPlus patients"
+}

@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Notifications</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    /* notifications.html uses standard .page + patient-page-header */
+
+    .notif-filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+    .notif-filter {
+      padding: 5px 14px; border-radius: 99px; font-size: 12px; font-weight: 700;
+      border: 1px solid rgba(255,255,255,.1); color: var(--text-muted);
+      background: rgba(255,255,255,.03); cursor: pointer; transition: all .15s;
+    }
+    .notif-filter:hover { border-color: rgba(0,180,216,.3); color: var(--text); }
+    .notif-filter.active {
+      background: rgba(0,180,216,.12); color: var(--primary);
+      border-color: rgba(0,180,216,.4);
+    }
+
+    .notif-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .notif-card {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 14px 16px; border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.07);
+      background: rgba(255,255,255,.025);
+      transition: border-color .15s, background .15s;
+      text-decoration: none; color: inherit;
+      position: relative;
+    }
+    .notif-card:hover { border-color: rgba(0,180,216,.3); background: rgba(0,180,216,.04); }
+    .notif-card.unread { border-left: 3px solid var(--primary); padding-left: 14px; }
+    .notif-card.unread .notif-icon { box-shadow: 0 0 0 3px rgba(0,180,216,.15); }
+    .notif-card .notif-dismiss { opacity: 0; transition: opacity .15s; }
+    .notif-card:hover .notif-dismiss { opacity: 1; }
+
+    .notif-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .notif-icon svg { width: 18px; height: 18px; }
+    .ni-test     { background: rgba(245,158,11,.1); border: 1px solid rgba(245,158,11,.2); color:#f59e0b; }
+    .ni-referral { background: rgba(0,180,216,.1);  border: 1px solid rgba(0,180,216,.2);  color:#00b4d8; }
+    .ni-rx       { background: rgba(139,92,246,.1); border: 1px solid rgba(139,92,246,.2); color:#8b5cf6; }
+    .ni-appt     { background: rgba(78,222,163,.1); border: 1px solid rgba(78,222,163,.2); color:#4edea3; }
+    .ni-message  { background: rgba(255,107,107,.1);border: 1px solid rgba(255,107,107,.2);color:#ff6b6b; }
+    .ni-results  { background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.2); color:#10b981; }
+
+    .notif-body { flex: 1; min-width: 0; }
+    .notif-heading { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .notif-detail  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+    .notif-time    { font-size: 11px; color: var(--text-muted); flex-shrink: 0; margin-top: 2px; white-space: nowrap; }
+    .notif-badge   {
+      display: inline-block; font-size: 10px; font-weight: 700;
+      padding: 2px 8px; border-radius: 99px; margin-left: 6px; vertical-align: middle;
+    }
+
+    .notif-empty {
+      text-align: center; padding: 60px 20px;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .notif-empty svg { margin-bottom: 12px; opacity: .35; }
+
+    .mark-all-btn {
+      font-size: 12px; color: var(--primary); background: none; border: none;
+      cursor: pointer; padding: 0; font-weight: 600;
+    }
+    .mark-all-btn:hover { text-decoration: underline; }
+
+    .notif-dismiss {
+      flex-shrink: 0; width: 26px; height: 26px; border-radius: 7px;
+      border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.03);
+      color: var(--text-muted); display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .15s; font-size: 13px; line-height: 1;
+      margin-left: 8px; text-decoration: none;
+    }
+    .notif-dismiss:hover { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.3); color: #ef4444; }
+
+    .notif-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: var(--surface-2); border: 1px solid rgba(0,180,216,.3); border-radius: 10px;
+      padding: 10px 18px; font-size: 13px; color: var(--text); font-weight: 600;
+      box-shadow: 0 8px 24px rgba(0,0,0,.4); z-index: 9999;
+      opacity: 0; transition: opacity .2s; pointer-events: none;
+    }
+    .notif-toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;"></div>
+</nav>
+
+<div class="page" style="max-width:840px;">
+  <div class="patient-page-header">
+    <div>
+      <div class="patient-page-title">Notifications</div>
+      <div class="patient-page-sub" id="notif-sub">Loading…</div>
+    </div>
+    <button class="mark-all-btn" onclick="markAllSeen()">Clear all</button>
+  </div>
+
+  <div class="notif-filters">
+    <div class="notif-filter active" data-f="all"      onclick="setFilter('all')">All</div>
+    <div class="notif-filter"       data-f="referral"  onclick="setFilter('referral')">Referrals</div>
+    <div class="notif-filter"       data-f="test"      onclick="setFilter('test')">Test Orders</div>
+    <div class="notif-filter"       data-f="rx"        onclick="setFilter('rx')">Prescriptions</div>
+    <div class="notif-filter"       data-f="appt"      onclick="setFilter('appt')">Appointments</div>
+    <div class="notif-filter"       data-f="message"   onclick="setFilter('message')">Messages</div>
+    <div class="notif-filter"       data-f="refill"    onclick="setFilter('refill')">Refills</div>
+    <div class="notif-filter"       data-f="reschedule" onclick="setFilter('reschedule')">Reschedule</div>
+  </div>
+
+  <div class="notif-list" id="notif-list">
+    <div class="notif-empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <div>Loading…</div>
+    </div>
+  </div>
+</div>
+<div class="notif-toast" id="notif-toast"></div>
+
+<script>
+const API = '';
+const user = getAuthUser();
+if (!user) window.location.replace('/login.html?next=/notifications.html');
+
+let _allNotifs = [];
+let _activeFilter = 'all';
+let _seenIds = new Set();
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function relTime(iso) {
+  if (!iso) return '';
+  try {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    const d = Math.floor(h / 24);
+    if (d < 7) return `${d}d ago`;
+    return new Date(iso).toLocaleDateString('en-GB', {day:'numeric',month:'short'});
+  } catch { return ''; }
+}
+
+function setFilter(f) {
+  _activeFilter = f;
+  document.querySelectorAll('.notif-filter').forEach(el => el.classList.toggle('active', el.dataset.f === f));
+  render();
+}
+
+function getSeenIds() {
+  try { return new Set(JSON.parse(localStorage.getItem('notif_seen_ids') || '[]')); } catch { return new Set(); }
+}
+function _saveSeenIds(seen) {
+  localStorage.setItem('notif_seen_ids', JSON.stringify([...seen]));
+}
+function markSeen(id) {
+  const seen = getSeenIds();
+  seen.add(id);
+  _saveSeenIds(seen);
+}
+function dismissNotif(id, event) {
+  event.preventDefault();
+  event.stopPropagation();
+  markSeen(id);
+  render();
+  showToast('Notification dismissed');
+}
+async function respondReschedule(apptId, action, notifId) {
+  try {
+    const r = await fetch(`/api/patient/appointments/${apptId}/reschedule-response`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ action }),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    markSeen(notifId);
+    render();
+    if (action === 'accept') {
+      showToast('New slot accepted — your appointment has been updated.');
+    } else {
+      showToast('Redirecting to find a new doctor…');
+      setTimeout(() => { window.location.href = '/find-doctors.html'; }, 1200);
+    }
+  } catch (e) { showToast('Error: ' + e.message); }
+}
+
+function markAllSeen() {
+  const seen = getSeenIds();
+  // Never mark message notifications as seen — they clear when the user reads messages
+  _allNotifs.filter(n => n.type !== 'message').forEach(n => seen.add(n.id));
+  _saveSeenIds(seen);
+  render();
+  showToast('All notifications cleared');
+}
+function showToast(msg) {
+  const t = document.getElementById('notif-toast');
+  if (!t) return;
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._tid);
+  t._tid = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function render() {
+  const list = document.getElementById('notif-list');
+  const seen = getSeenIds();
+
+  // Only show unseen notifications; message-type always visible if count > 0
+  const byType = _activeFilter === 'all' ? _allNotifs : _allNotifs.filter(n => n.type === _activeFilter);
+  const visible = byType.filter(n => n.type === 'message' ? true : !seen.has(n.id));
+  const totalUnseen = _allNotifs.filter(n => n.type === 'message' ? true : !seen.has(n.id)).length;
+
+  document.getElementById('notif-sub').textContent =
+    _allNotifs.length === 0 ? 'No notifications' :
+    totalUnseen > 0 ? `${totalUnseen} unread notification${totalUnseen !== 1 ? 's' : ''}` :
+    'All caught up — no new notifications';
+
+  if (!visible.length) {
+    list.innerHTML = `<div class="notif-empty">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      <div>${totalUnseen === 0 ? 'You\'re all caught up!' : 'No unread ' + (_activeFilter === 'all' ? '' : _activeFilter + ' ') + 'notifications'}</div>
+    </div>`;
+    return;
+  }
+
+  const _svgTest       = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 3h6"/><path d="M10 3v6.5L6.5 16A4 4 0 0 0 10 22h4a4 4 0 0 0 3.5-5.5L14 9.5V3"/><line x1="6" y1="14" x2="18" y2="14"/></svg>`;
+  const _svgReferral   = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>`;
+  const _svgRx         = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 12h6"/><path d="M12 9v6"/><circle cx="12" cy="12" r="3.5" stroke-dasharray="2 2"/></svg>`;
+  const _svgPill       = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.5 20.5 3.5 13.5a5 5 0 0 1 7.07-7.07l7 7a5 5 0 0 1-7.07 7.07z"/><line x1="8.5" y1="11.5" x2="15.5" y2="11.5"/></svg>`;
+  const _svgAppt       = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+  const _svgMsg        = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+  const _svgResults    = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><polyline points="9 9 10 9 11 9"/></svg>`;
+  const _svgRefill     = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg>`;
+  const typeIcons = { test:_svgTest, referral:_svgReferral, rx:_svgPill, appt:_svgAppt, message:_svgMsg, results:_svgResults, refill:_svgRefill, reschedule:_svgAppt };
+  const niClass   = { test:'ni-test', referral:'ni-referral', rx:'ni-rx', appt:'ni-appt', message:'ni-message', results:'ni-results', refill:'ni-rx', reschedule:'ni-appt' };
+
+  list.innerHTML = visible.map(n => {
+    if (n.type === 'reschedule' && n.appt_id) {
+      return `<div class="notif-card unread" style="flex-direction:column;align-items:flex-start;gap:10px;cursor:default;">
+        <div style="display:flex;align-items:flex-start;gap:10px;width:100%;">
+          <div class="notif-icon ni-appt">${_svgAppt}</div>
+          <div class="notif-body" style="flex:1;">
+            <div class="notif-heading">${escHtml(n.title)}</div>
+            <div class="notif-detail">${escHtml(n.detail)}</div>
+          </div>
+          <div class="notif-time">${relTime(n.date)}</div>
+          <button class="notif-dismiss" title="Dismiss" onclick="dismissNotif('${escHtml(n.id)}',event)">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div style="display:flex;gap:8px;padding-left:42px;">
+          <button onclick="respondReschedule('${escHtml(n.appt_id)}','accept','${escHtml(n.id)}')" style="background:rgba(0,180,216,.15);border:1px solid rgba(0,180,216,.3);color:var(--primary);border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">✓ Accept New Slot</button>
+          <button onclick="respondReschedule('${escHtml(n.appt_id)}','decline','${escHtml(n.id)}')" style="background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);color:#ef4444;border-radius:8px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;">Book Another Doctor</button>
+        </div>
+      </div>`;
+    }
+    if (n.type === 'message') {
+      return `<div class="notif-card unread" style="cursor:pointer;" onclick="window.location.href='${escHtml(n.link||'/messages.html')}';">
+        <div class="notif-icon ${niClass[n.type]||'ni-appt'}">${typeIcons[n.type]||_svgAppt}</div>
+        <div class="notif-body">
+          <div class="notif-heading">${escHtml(n.title)}</div>
+          <div class="notif-detail">${escHtml(n.detail)}</div>
+        </div>
+        <div style="font-size:11px;font-weight:700;color:var(--primary);white-space:nowrap;margin-left:auto;padding-left:8px;">View →</div>
+      </div>`;
+    }
+    return `<div class="notif-card unread" style="cursor:pointer;" onclick="markSeen('${escHtml(n.id)}');window.location.href='${escHtml(n.link||'#')}';">
+      <div class="notif-icon ${niClass[n.type]||'ni-appt'}">${typeIcons[n.type]||_svgAppt}</div>
+      <div class="notif-body">
+        <div class="notif-heading">${escHtml(n.title)}</div>
+        <div class="notif-detail">${escHtml(n.detail)}</div>
+      </div>
+      <div class="notif-time">${relTime(n.date)}</div>
+      <button class="notif-dismiss" title="Dismiss" onclick="dismissNotif('${escHtml(n.id)}',event)">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>`;
+  }).join('');
+}
+
+async function load() {
+  try {
+    const [apptRes, msgRes] = await Promise.all([
+      fetch('/api/appointments', { headers: { ...authHeaders() } }),
+      fetch('/api/messages/unread-count', { headers: { ...authHeaders() } }),
+    ]);
+    const apptData = apptRes.ok ? await apptRes.json() : { appointments: [] };
+    const appts = apptData.appointments || [];
+    const notifs = [];
+
+    for (const a of appts) {
+      const base = a.session_id ? `/report.html?session=${a.session_id}` : '/my-sessions.html';
+
+      // Referral
+      if (a.referral) {
+        notifs.push({
+          id: `ref-${a.appointment_id}`,
+          type: 'referral',
+          title: `Referral: ${a.referral.specialty}`,
+          detail: `${a.referral.to_doctor ? 'To Dr. ' + a.referral.to_doctor : 'Any available specialist'} · ${a.referral.urgency || 'Routine'}`,
+          date: a.referral.referred_at || a.slot,
+          link: base + '#referral-section',
+        });
+      }
+
+      // Test orders
+      if (a.test_orders && a.test_orders.length) {
+        const statCount = a.test_orders.filter(t => t.priority === 'stat').length;
+        notifs.push({
+          id: `tests-${a.appointment_id}`,
+          type: 'test',
+          title: `${a.test_orders.length} Test${a.test_orders.length > 1 ? 's' : ''} Ordered`,
+          detail: `From ${a.doctor_name || 'your doctor'}${statCount ? ` · ${statCount} STAT` : ''}`,
+          date: a.tests_updated_at || a.slot,
+          link: base + '#test-orders-section',
+        });
+
+        // Uploaded results
+        const uploadedTests = a.test_orders.filter(t => t.results_uploaded);
+        if (uploadedTests.length) {
+          notifs.push({
+            id: `results-${a.appointment_id}`,
+            type: 'results',
+            title: `Test Results Uploaded`,
+            detail: `You uploaded results for ${uploadedTests.length} test${uploadedTests.length > 1 ? 's' : ''} — your doctor will review them`,
+            date: a.slot,
+            link: base + '#test-orders-section',
+          });
+        }
+      }
+
+      // Prescriptions
+      if (a.prescriptions && a.prescriptions.length) {
+        notifs.push({
+          id: `rx-${a.appointment_id}`,
+          type: 'rx',
+          title: `${a.prescriptions.length} Prescription${a.prescriptions.length > 1 ? 's' : ''} Issued`,
+          detail: a.prescriptions.map(p => p.drug).join(', '),
+          date: a.prescriptions_updated_at || a.slot,
+          link: base + '#rx-section',
+        });
+      }
+
+      // Refill fulfilled
+      if (a.refill_request && a.refill_request.status === 'fulfilled') {
+        const drugs = (a.refill_request.medications || [])
+          .map(m => typeof m === 'string' ? m : m.drug || '').filter(Boolean).join(', ');
+        notifs.push({
+          id: `refill-${a.appointment_id}`,
+          type: 'refill',
+          title: 'Prescription Refill Approved',
+          detail: `${a.refill_request.fulfilled_by || a.doctor_name || 'Your doctor'} approved your refill${drugs ? ' · ' + drugs : ''}`,
+          date: a.refill_request.fulfilled_at || a.slot,
+          link: base + '#rx-section',
+        });
+      }
+
+      // Reschedule proposal from doctor
+      if (a.reschedule_proposal && a.reschedule_proposal.status === 'pending') {
+        const prop = a.reschedule_proposal;
+        const newSlot = prop.proposed_slot ? prop.proposed_slot.replace('T',' ').slice(0,16) : '';
+        notifs.push({
+          id: `reschedule-${a.appointment_id}`,
+          type: 'reschedule',
+          title: 'Reschedule Proposed by Doctor',
+          detail: `${a.doctor_name || 'Your doctor'} proposes: ${newSlot}${prop.reason ? ' · ' + prop.reason : ''}`,
+          date: prop.proposed_at || a.slot,
+          link: '/my-sessions.html',
+          appt_id: a.appointment_id,
+        });
+      }
+
+      // Appointment status changes
+      if (a.status && a.status !== 'upcoming') {
+        const statusLabels = { completed: 'Appointment Completed', cancelled: 'Appointment Cancelled', no_show: 'Marked as No-show', rescheduled: 'Appointment Rescheduled' };
+        if (statusLabels[a.status]) {
+          notifs.push({
+            id: `status-${a.appointment_id}-${a.status}`,
+            type: 'appt',
+            title: statusLabels[a.status],
+            detail: `With ${a.doctor_name || 'your doctor'} · ${a.slot ? new Date(a.slot).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) : ''}`,
+            date: a.slot,
+            link: '/my-sessions.html',
+          });
+        }
+      }
+
+      // Follow-up booked
+      if (a.followup_slot) {
+        notifs.push({
+          id: `followup-${a.appointment_id}`,
+          type: 'appt',
+          title: 'Follow-up Appointment Scheduled',
+          detail: `${new Date(a.followup_slot).toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} with ${a.doctor_name || 'your doctor'}`,
+          date: a.followup_slot,
+          link: '/find-doctors.html',
+        });
+      }
+    }
+
+    // Unread messages
+    if (msgRes.ok) {
+      const msgData = await msgRes.json();
+      if (msgData.count > 0) {
+        const today = new Date().toISOString().slice(0, 10);
+        notifs.push({
+          id: `unread-messages-${today}-${msgData.count}`,
+          type: 'message',
+          title: `${msgData.count} Unread Message${msgData.count > 1 ? 's' : ''}`,
+          detail: 'You have unread messages from your care team',
+          date: new Date().toISOString(),
+          link: '/messages.html',
+        });
+      }
+    }
+
+    // Sort newest first
+    notifs.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+    _allNotifs = notifs;
+    render();
+  } catch (e) {
+    document.getElementById('notif-list').innerHTML = `<div class="notif-empty">Failed to load notifications.</div>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

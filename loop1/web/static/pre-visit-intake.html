@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Pre-visit Check-in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <style>
+    .wiz { max-width:680px; margin:0 auto; }
+    .steps-bar { display:flex; gap:8px; margin-bottom:28px; }
+    .step-pip { flex:1; height:5px; border-radius:99px; background:var(--surface-4); transition:background .2s; }
+    .step-pip.active { background:var(--primary); }
+    .step-pip.done { background:var(--primary-dim); }
+    .step-label { font-size:11px; font-weight:700; letter-spacing:.08em; text-transform:uppercase; color:var(--primary); margin-bottom:6px; }
+    .step-title { font-size:20px; font-weight:700; margin-bottom:20px; }
+
+    .field { margin-bottom:24px; }
+    .field-label {
+      font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--text-muted); margin-bottom:10px; display:block;
+    }
+
+    .feeling-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+    @media (max-width:560px){ .feeling-grid { grid-template-columns:repeat(2,1fr); } }
+    .feel-card {
+      background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+      padding:14px 8px; text-align:center; cursor:pointer; transition:all .12s;
+    }
+    .feel-card:hover { border-color:var(--text-muted); }
+    .feel-card.active { border-color:var(--primary); background:rgba(0,180,216,.08); }
+    .feel-card svg { margin-bottom:8px; }
+    .feel-label { font-size:11px; font-weight:600; color:var(--text); }
+
+    .chip-input {
+      background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius);
+      padding:8px; display:flex; flex-wrap:wrap; gap:6px; align-items:center;
+    }
+    .chip-input input {
+      flex:1; min-width:120px; background:none; border:none; outline:none;
+      color:var(--text); font-size:13px; font-family:var(--font); padding:4px;
+    }
+    .tag-chip {
+      display:inline-flex; align-items:center; gap:6px; background:var(--primary); color:#000;
+      border-radius:99px; font-size:12px; font-weight:600; padding:4px 8px 4px 11px;
+    }
+    .tag-chip button { background:none; border:none; color:#000; cursor:pointer; font-size:14px; line-height:1; padding:0; }
+
+    .slider-row { display:flex; align-items:center; gap:14px; }
+    input[type=range] { flex:1; accent-color:var(--primary); }
+    .sev-val { font-size:22px; font-weight:700; color:var(--primary); min-width:32px; text-align:center; }
+
+    .radio-row { display:flex; gap:10px; flex-wrap:wrap; }
+    .radio-pill {
+      padding:8px 16px; border-radius:99px; border:1px solid var(--border); background:var(--surface-3);
+      color:var(--text-muted); font-size:13px; font-weight:600; cursor:pointer; transition:all .12s;
+    }
+    .radio-pill:hover { color:var(--text); }
+    .radio-pill.active { background:var(--primary); color:#000; border-color:var(--primary); }
+
+    .list-add { display:flex; gap:8px; margin-bottom:10px; }
+    .list-add input {
+      flex:1; background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius);
+      color:var(--text); font-size:13px; padding:9px 11px; outline:none; font-family:var(--font);
+    }
+    .list-add input:focus { border-color:var(--primary); }
+    .med-item {
+      display:flex; align-items:center; justify-content:space-between;
+      background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+      padding:8px 12px; font-size:13px; margin-bottom:6px;
+    }
+    .med-item button { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:16px; line-height:1; }
+    .med-item button:hover { color:var(--danger); }
+
+    .ta {
+      width:100%; box-sizing:border-box; background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); color:var(--text); font-size:13px; padding:10px;
+      outline:none; font-family:var(--font); resize:vertical; min-height:60px;
+    }
+    .ta:focus { border-color:var(--primary); }
+
+    .check-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:8px; }
+    .check-pill {
+      display:flex; align-items:center; gap:8px; padding:10px 12px; cursor:pointer;
+      background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius);
+      font-size:13px; color:var(--text); transition:all .12s;
+    }
+    .check-pill.active { border-color:var(--primary); background:rgba(0,180,216,.08); }
+    .check-box {
+      width:16px; height:16px; border-radius:4px; border:1.5px solid var(--text-muted);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .check-pill.active .check-box { background:var(--primary); border-color:var(--primary); }
+
+    .review-card { background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius); padding:18px; }
+    .review-row { display:flex; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .review-row:last-child { border-bottom:none; }
+    .review-key { width:160px; flex-shrink:0; color:var(--text-muted); font-weight:600; }
+    .review-val { color:var(--text); }
+
+    .wiz-actions { display:flex; justify-content:space-between; margin-top:28px; }
+    .success-box { text-align:center; padding:48px 24px; }
+    .success-icon {
+      width:64px; height:64px; border-radius:50%; background:rgba(78,222,163,.12);
+      display:flex; align-items:center; justify-content:center; margin:0 auto 18px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.href='/my-sessions.html'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    My Sessions
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page">
+  <div class="wiz">
+    <div style="margin-bottom:18px;">
+      <div class="section-title" style="margin-bottom:2px;">Pre-visit Check-in</div>
+      <div style="font-size:13px;color:var(--text-muted);">Help your doctor prepare for your appointment.</div>
+    </div>
+
+    <div class="steps-bar">
+      <div class="step-pip active" id="pip-1"></div>
+      <div class="step-pip" id="pip-2"></div>
+      <div class="step-pip" id="pip-3"></div>
+    </div>
+
+    <div id="wiz-body"></div>
+  </div>
+</div>
+
+<script>
+const user = getAuthUser();
+const params = new URLSearchParams(location.search);
+const apptId = params.get('appt');
+if (!user) window.location.replace('/login.html?next=' + encodeURIComponent(location.pathname + location.search));
+
+let step = 1;
+const state = {
+  feeling: '', symptoms: [], severity: 5, changes: '',
+  medications: [], allergies: '', tests_done: [],
+};
+
+const FEELINGS = [
+  { key:'Very Good', path:'M8 14s1.5 2 4 2 4-2 4-2', extra:'happy' },
+  { key:'Good', path:'M8 13s1.5 1.5 4 1.5 4-1.5 4-1.5', extra:'happy' },
+  { key:'Neutral', path:'M8 15h8', extra:'flat' },
+  { key:'Poor', path:'M16 16s-1.5-1.5-4-1.5-4 1.5-4 1.5', extra:'sad' },
+  { key:'Very Poor', path:'M16 17s-1.5-2-4-2-4 2-4 2', extra:'sad' },
+];
+const TESTS = ['Blood Work','X-ray','MRI','ECG','Urine Test'];
+
+function escHtml(s) { return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function faceSvg(path) {
+  return `<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+    <circle cx="12" cy="12" r="10"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/>
+    <path d="${path}"/></svg>`;
+}
+
+function renderPips() {
+  for (let i = 1; i <= 3; i++) {
+    const p = document.getElementById('pip-' + i);
+    if (!p) continue;
+    p.className = 'step-pip' + (i === step ? ' active' : (i < step ? ' done' : ''));
+  }
+}
+
+function render() {
+  renderPips();
+  const body = document.getElementById('wiz-body');
+  if (step === 1) body.innerHTML = renderStep1();
+  else if (step === 2) body.innerHTML = renderStep2();
+  else if (step === 3) body.innerHTML = renderStep3();
+  else body.innerHTML = renderSuccess();
+}
+
+function renderStep1() {
+  return `
+    <div class="step-label">Step 1 of 3</div>
+    <div class="step-title">How are you feeling?</div>
+
+    <div class="field">
+      <label class="field-label">Overall Feeling</label>
+      <div class="feeling-grid">
+        ${FEELINGS.map(f => `
+          <div class="feel-card ${state.feeling === f.key ? 'active' : ''}" onclick="setFeeling('${f.key}')"
+            style="color:${state.feeling === f.key ? 'var(--primary)' : 'var(--text-muted)'};">
+            ${faceSvg(f.path)}
+            <div class="feel-label">${f.key}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Symptoms (type and press Enter)</label>
+      <div class="chip-input" onclick="document.getElementById('sym-input').focus()">
+        ${state.symptoms.map((s,i) => `<span class="tag-chip">${escHtml(s)}<button onclick="removeSymptom(${i});event.stopPropagation()">&times;</button></span>`).join('')}
+        <input id="sym-input" type="text" placeholder="e.g. headache" onkeydown="symKey(event)">
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Symptom Severity (1–10)</label>
+      <div class="slider-row">
+        <input type="range" min="1" max="10" value="${state.severity}" oninput="setSeverity(this.value)">
+        <span class="sev-val">${state.severity}</span>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Changes Since Last Visit</label>
+      <div class="radio-row">
+        ${['Better','Same','Worse','First Visit'].map(c =>
+          `<span class="radio-pill ${state.changes === c ? 'active' : ''}" onclick="setChanges('${c}')">${c}</span>`).join('')}
+      </div>
+    </div>
+
+    <div class="wiz-actions">
+      <span></span>
+      <button class="btn btn-primary" onclick="next()">Continue</button>
+    </div>`;
+}
+
+function renderStep2() {
+  return `
+    <div class="step-label">Step 2 of 3</div>
+    <div class="step-title">Medications & history</div>
+
+    <div class="field">
+      <label class="field-label">Current Medications</label>
+      <div class="list-add">
+        <input id="med-input" type="text" placeholder="e.g. Lisinopril 10mg" onkeydown="if(event.key==='Enter')addMed()">
+        <button class="btn btn-ghost btn-sm" onclick="addMed()">Add</button>
+      </div>
+      <div>${state.medications.map((m,i) => `<div class="med-item"><span>${escHtml(m)}</span><button onclick="removeMed(${i})">&times;</button></div>`).join('')}</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Known Allergies</label>
+      <textarea class="ta" id="allergy-ta" placeholder="e.g. Penicillin, peanuts" oninput="state.allergies=this.value">${escHtml(state.allergies)}</textarea>
+    </div>
+
+    <div class="field">
+      <label class="field-label">Recent Tests Done</label>
+      <div class="check-grid">
+        ${TESTS.map(t => `
+          <div class="check-pill ${state.tests_done.includes(t) ? 'active' : ''}" onclick="toggleTest('${t}')">
+            <span class="check-box">${state.tests_done.includes(t) ? '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</span>
+            ${t}
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div class="wiz-actions">
+      <button class="btn btn-ghost" onclick="back()">Back</button>
+      <button class="btn btn-primary" onclick="next()">Continue</button>
+    </div>`;
+}
+
+function renderStep3() {
+  const row = (k, v) => `<div class="review-row"><div class="review-key">${k}</div><div class="review-val">${v || '<span style="color:var(--text-muted)">—</span>'}</div></div>`;
+  return `
+    <div class="step-label">Step 3 of 3</div>
+    <div class="step-title">Review & submit</div>
+
+    <div class="review-card">
+      ${row('Overall Feeling', escHtml(state.feeling))}
+      ${row('Symptoms', escHtml(state.symptoms.join(', ')))}
+      ${row('Severity', state.severity + ' / 10')}
+      ${row('Changes', escHtml(state.changes))}
+      ${row('Medications', escHtml(state.medications.join(', ')))}
+      ${row('Allergies', escHtml(state.allergies))}
+      ${row('Recent Tests', escHtml(state.tests_done.join(', ')))}
+    </div>
+
+    <div class="wiz-actions">
+      <button class="btn btn-ghost" onclick="back()">Back</button>
+      <button class="btn btn-primary" id="submit-btn" onclick="submit()">Submit to Doctor</button>
+    </div>`;
+}
+
+function renderSuccess() {
+  return `
+    <div class="success-box">
+      <div class="success-icon">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div style="font-size:20px;font-weight:700;margin-bottom:8px;">Check-in Submitted</div>
+      <p style="color:var(--text-muted);max-width:360px;margin:0 auto 22px;">Your doctor will review your pre-visit notes before your appointment.</p>
+      <a class="btn btn-primary" href="/my-sessions.html">Return to My Sessions</a>
+    </div>`;
+}
+
+// ---- State setters ----
+function setFeeling(k) { state.feeling = k; render(); }
+function symKey(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const v = e.target.value.trim();
+    if (v && !state.symptoms.includes(v)) { state.symptoms.push(v); render(); document.getElementById('sym-input').focus(); }
+    else e.target.value = '';
+  }
+}
+function removeSymptom(i) { state.symptoms.splice(i,1); render(); }
+function setSeverity(v) { state.severity = parseInt(v); document.querySelector('.sev-val').textContent = v; }
+function setChanges(c) { state.changes = c; render(); }
+function addMed() {
+  const inp = document.getElementById('med-input');
+  const v = inp.value.trim();
+  if (v) { state.medications.push(v); render(); document.getElementById('med-input').focus(); }
+}
+function removeMed(i) { state.medications.splice(i,1); render(); }
+function toggleTest(t) {
+  const idx = state.tests_done.indexOf(t);
+  if (idx >= 0) state.tests_done.splice(idx,1); else state.tests_done.push(t);
+  render();
+}
+
+function next() {
+  if (step === 1 && !state.feeling) { alert('Please select how you are feeling.'); return; }
+  step++; render(); window.scrollTo(0,0);
+}
+function back() { step--; render(); window.scrollTo(0,0); }
+
+async function submit() {
+  if (!apptId) { alert('Missing appointment reference.'); return; }
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const res = await fetch(`/api/patient/appointments/${apptId}/intake`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify(state),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Submit failed');
+    step = 4; render(); window.scrollTo(0,0);
+  } catch (e) {
+    alert('Could not submit: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Submit to Doctor';
+  }
+}
+
+render();
+</script>
+</body>
+</html>

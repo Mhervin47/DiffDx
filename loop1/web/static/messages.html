@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Messages</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+
+    .msg-layout {
+      display: flex;
+      height: calc(100vh - 56px - 44px);
+      overflow: hidden;
+    }
+
+    /* ── Sidebar ─────────────────────────────────── */
+    .msg-sidebar {
+      width: 300px;
+      flex-shrink: 0;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      background: var(--surface-1);
+    }
+    .sidebar-hdr {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .sidebar-hdr-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .sidebar-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      flex: 1;
+    }
+    .sidebar-count {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+    .sidebar-search {
+      width: 100%;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 12px;
+      padding: 7px 10px;
+      outline: none;
+      transition: border-color .15s;
+    }
+    .sidebar-search:focus { border-color: var(--primary); }
+    .sidebar-search::placeholder { color: var(--text-muted); }
+
+    .threads-list { flex: 1; overflow-y: auto; }
+
+    /* Thread item — mirrors .appt-item exactly */
+    .thread-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      border-left: 3px solid transparent;
+      padding: 11px 14px;
+      cursor: pointer;
+      border-bottom: 1px solid rgba(255,255,255,.03);
+      transition: background .12s;
+    }
+    .thread-item:hover { background: rgba(0,180,216,.03); }
+    .thread-item.active {
+      border-left-color: var(--primary);
+      padding-left: 11px;
+      background: linear-gradient(90deg, rgba(0,180,216,.06) 0%, transparent 100%);
+    }
+    .thread-item.active .thread-name { color: var(--primary); }
+
+    /* Avatar — mirrors .appt-avatar */
+    .thread-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      flex-shrink: 0; margin-top: 1px;
+      letter-spacing: -.01em;
+    }
+    .thread-avatar.urg-emergency { background: rgba(239,68,68,.18);  color: #ef4444; }
+    .thread-avatar.urg-urgent    { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .thread-avatar.urg-routine   { background: rgba(16,185,129,.15); color: #10b981; }
+
+    /* Body */
+    .thread-body { flex: 1; min-width: 0; }
+    .thread-header-row {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 6px; margin-bottom: 2px;
+    }
+    .thread-name {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .thread-time {
+      font-size: 10px; color: var(--text-muted);
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .thread-preview {
+      font-size: 11px; color: var(--text-dim);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 5px;
+    }
+    .thread-chips {
+      display: flex; gap: 5px; flex-wrap: wrap; align-items: center;
+    }
+    .thread-unread {
+      background: var(--primary); color: #fff;
+      font-size: 9px; font-weight: 800;
+      border-radius: 99px; padding: 2px 6px; flex-shrink: 0;
+    }
+    .threads-empty {
+      padding: 32px 16px; text-align: center;
+      color: var(--text-muted); font-size: 12px; line-height: 1.6;
+    }
+
+    /* ── Chat pane ───────────────────────────────── */
+    .msg-chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: var(--surface-1);
+    }
+
+    /* Empty state */
+    .msg-no-thread {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      color: var(--text-muted);
+    }
+    .msg-no-thread svg { opacity: .3; }
+    .msg-no-thread-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+    .msg-no-thread-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* Chat content (visible when thread selected) */
+    #chat-content {
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    /* Chat header — mirrors brief-header */
+    .chat-hdr {
+      padding: 13px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-shrink: 0;
+      background: linear-gradient(90deg, rgba(0,180,216,.07) 0%, var(--surface-2) 100%);
+    }
+    /* Avatar in header — same as .appt-avatar */
+    .chat-hdr-avatar {
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      font-size: 13px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      letter-spacing: -.01em;
+    }
+    .chat-hdr-avatar.urg-emergency { background: rgba(239,68,68,.18);  color: #ef4444; }
+    .chat-hdr-avatar.urg-urgent    { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .chat-hdr-avatar.urg-routine   { background: rgba(16,185,129,.15); color: #10b981; }
+    .chat-hdr-info { flex: 1; min-width: 0; }
+    .chat-hdr-name {
+      font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px;
+    }
+    .chat-hdr-chips { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+
+    /* Messages */
+    .msg-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 24px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .msg-empty {
+      margin: auto;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Date separator */
+    .date-sep {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 14px 0 10px;
+    }
+    .date-sep-line {
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+    .date-sep-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--text-dim);
+      padding: 2px 8px;
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 99px;
+    }
+
+    /* Bubble rows */
+    .bubble-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 8px;
+      width: 100%;
+      margin-bottom: 1px;
+    }
+    .bubble-row.me { flex-direction: row-reverse; }
+    .bubble-row.group-first { margin-top: 8px; }
+
+    .bub-avatar {
+      width: 28px; height: 28px;
+      border-radius: 50%; flex-shrink: 0;
+      font-size: 10px; font-weight: 700; letter-spacing: -.01em;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .bub-avatar.hidden { visibility: hidden; }
+    /* Urgency tints — same values as .appt-avatar */
+    .bub-avatar.urg-emergency, .thread-avatar.urg-emergency { background: rgba(239,68,68,.18);  color: #ef4444; }
+    .bub-avatar.urg-urgent,    .thread-avatar.urg-urgent    { background: rgba(245,158,11,.18); color: #f59e0b; }
+    .bub-avatar.urg-routine,   .thread-avatar.urg-routine   { background: rgba(16,185,129,.15); color: #10b981; }
+    /* Own messages: slightly lighter tint */
+    .bub-avatar.bub-me.urg-emergency { background: rgba(239,68,68,.10);  }
+    .bub-avatar.bub-me.urg-urgent    { background: rgba(245,158,11,.10); }
+    .bub-avatar.bub-me.urg-routine   { background: rgba(16,185,129,.10); }
+
+    .bub-content { max-width: 68%; }
+    .bub-name {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-muted);
+      margin-bottom: 3px;
+      padding-left: 2px;
+    }
+    .bubble-row.me .bub-name { text-align: right; padding-left: 0; padding-right: 2px; }
+
+    .bubble {
+      padding: 10px 15px;
+      border-radius: 16px;
+      font-size: 15px;
+      line-height: 1.55;
+      word-break: break-word;
+    }
+    /* Other person: square bottom-left corner */
+    .bubble-row:not(.me) .bubble {
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 4px;
+    }
+    /* Me: square bottom-right corner */
+    .bubble-row.me .bubble {
+      background: rgba(0,180,216,.18);
+      border: 1px solid rgba(0,180,216,.28);
+      color: var(--text);
+      border-bottom-right-radius: 4px;
+    }
+    /* Grouped: remove tails for non-last messages */
+    .bubble-row.group-mid:not(.me) .bubble,
+    .bubble-row.group-first:not(.me) .bubble { border-bottom-left-radius: 16px; }
+    .bubble-row.group-mid.me .bubble,
+    .bubble-row.group-first.me .bubble { border-bottom-right-radius: 16px; }
+
+    .bub-meta {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 3px;
+      padding: 0 2px;
+    }
+    .bubble-row.me .bub-meta { flex-direction: row-reverse; }
+    .bub-time {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+    /* Tick states */
+    .bub-sent {
+      display: flex;
+      align-items: center;
+    }
+    .bub-sent.tick-pending  { color: var(--text-muted); opacity: .5; }
+    .bub-sent.tick-sent     { color: var(--text-dim); }
+    .bub-sent.tick-seen     { color: var(--primary); }
+
+    /* Composer */
+    .msg-composer {
+      padding: 12px 20px 10px;
+      border-top: 1px solid rgba(0,180,216,.12);
+      background: rgba(7,9,15,.95);
+      backdrop-filter: blur(20px);
+      flex-shrink: 0;
+    }
+    .composer-inner {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      padding: 10px 10px 10px 18px;
+      transition: border-color .15s, box-shadow .15s;
+      min-height: 54px;
+    }
+    .composer-inner:focus-within {
+      border-color: rgba(0,180,216,.55);
+      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
+    }
+    .msg-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      font-family: var(--font);
+      font-size: 15px;
+      resize: none;
+      outline: none;
+      min-height: 24px;
+      max-height: 140px;
+      overflow-y: auto;
+      line-height: 1.55;
+      padding: 0;
+      display: block;
+      align-self: center;
+    }
+    .msg-input::placeholder { color: var(--text-muted); }
+    .msg-send-btn {
+      background: linear-gradient(135deg, #0090b8, #00b4d8);
+      border: none;
+      border-radius: 12px;
+      color: #000d1a;
+      cursor: pointer;
+      width: 38px;
+      height: 38px;
+      min-width: 38px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 10px rgba(0,180,216,.35);
+      transition: all .15s;
+      align-self: center;
+    }
+    .msg-send-btn:hover { transform: scale(1.05); box-shadow: 0 4px 16px rgba(0,180,216,.5); }
+    .msg-send-btn:active { transform: scale(.93); }
+    .msg-send-btn:disabled { opacity: .35; cursor: default; transform: none; box-shadow: none; }
+    .composer-hint {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 5px;
+      padding-right: 4px;
+      letter-spacing: .02em;
+    }
+
+    /* Scroll-to-bottom button */
+    .scroll-btn {
+      position: absolute;
+      bottom: 80px;
+      right: 28px;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: var(--surface-3);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,.3);
+      transition: opacity .2s;
+    }
+    .scroll-btn.show { display: flex; }
+    .scroll-btn:hover { color: var(--text); border-color: var(--primary); }
+
+    /* Delete button in header */
+    .chat-hdr-del-btn {
+      background: none; border: 1px solid transparent;
+      border-radius: 10px; color: var(--text-muted);
+      cursor: pointer; padding: 7px 9px;
+      display: flex; align-items: center;
+      transition: all .15s; flex-shrink: 0;
+    }
+    .chat-hdr-del-btn:hover {
+      color: var(--danger); border-color: rgba(255,107,107,.3);
+      background: rgba(255,107,107,.08);
+    }
+
+    /* Delete confirmation dialog */
+    .del-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(0,0,0,.7); backdrop-filter: blur(12px);
+      display: none; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .del-overlay.open { display: flex; }
+    .del-box {
+      background: #0d1120;
+      border: 1px solid rgba(255,107,107,.25);
+      border-radius: 18px; padding: 28px 28px 24px;
+      width: 100%; max-width: 380px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
+      text-align: center;
+    }
+    .del-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      background: rgba(255,185,95,.1); border: 1px solid rgba(255,185,95,.28);
+      display: flex; align-items: center; justify-content: center;
+      color: #ffb95f; margin: 0 auto 16px;
+    }
+    .del-title { font-size: 17px; font-weight: 800; color: var(--text); letter-spacing: -.02em; margin-bottom: 8px; }
+    .del-sub { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 24px; }
+    .del-actions { display: flex; gap: 10px; }
+    .del-actions .btn { flex: 1; font-weight: 700; }
+    .btn-danger {
+      background: rgba(255,107,107,.15);
+      border: 1px solid rgba(255,107,107,.35);
+      color: var(--danger); border-radius: 10px;
+      padding: 10px 20px; font-size: 14px; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-danger:hover { background: rgba(255,107,107,.25); border-color: rgba(255,107,107,.6); }
+    .del-caution-bar {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,185,95,.07); border: 1px solid rgba(255,185,95,.22);
+      border-radius: 9px; padding: 9px 13px; margin-bottom: 20px;
+      font-size: 12px; font-weight: 600; color: #ffb95f; text-align: left;
+    }
+
+    /* Mobile */
+    @media (max-width: 640px) {
+      .msg-sidebar { width: 100%; position: absolute; z-index: 10; }
+      .msg-sidebar.hidden { display: none; }
+      .msg-chat { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;"></div>
+</nav>
+
+<div class="msg-layout">
+
+  <!-- Sidebar -->
+  <div class="msg-sidebar" id="msg-sidebar">
+    <div class="sidebar-hdr">
+      <div class="sidebar-hdr-row">
+        <span class="sidebar-title">Conversations</span>
+        <span class="sidebar-count" id="thread-count"></span>
+      </div>
+      <input class="sidebar-search" type="text" placeholder="Search conversations…"
+        oninput="filterThreads(this.value)" id="thread-search">
+    </div>
+    <div class="threads-list" id="threads-body">
+      <div class="threads-empty">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Chat pane -->
+  <div class="msg-chat" id="chat-pane" style="position:relative;">
+
+    <div class="msg-no-thread" id="no-thread-msg">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      <div class="msg-no-thread-title">No conversation selected</div>
+      <div class="msg-no-thread-sub">Choose a conversation from the left</div>
+    </div>
+
+    <div id="chat-content">
+      <div class="chat-hdr">
+        <div class="chat-hdr-avatar" id="chat-hdr-avatar"></div>
+        <div class="chat-hdr-info">
+          <div class="chat-hdr-name" id="chat-title">—</div>
+          <div class="chat-hdr-chips" id="chat-hdr-chips"></div>
+        </div>
+        <button class="chat-hdr-del-btn" id="chat-del-btn" onclick="confirmDeleteConvo()" title="Delete conversation">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="msg-body" id="msg-body" onscroll="onBodyScroll()"></div>
+
+      <button class="scroll-btn" id="scroll-btn" onclick="scrollToBottom(true)" title="Scroll to latest">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+
+      <div class="msg-composer">
+        <div class="composer-inner">
+          <textarea class="msg-input" id="msg-input" placeholder="Type a message…" rows="1"
+            oninput="autoResize(this)"
+            onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMessage();}"></textarea>
+          <button class="msg-send-btn" id="send-btn" onclick="sendMessage()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+        <div class="composer-hint">Enter to send &nbsp;·&nbsp; Shift+Enter for new line</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Delete confirmation -->
+<div class="del-overlay" id="del-overlay" onclick="if(event.target===this)closeDeleteConvo()">
+  <div class="del-box">
+    <div class="del-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+    </div>
+    <div class="del-title">Delete this conversation?</div>
+    <div class="del-sub">
+      This action <strong style="color:var(--danger);">cannot be undone</strong>. All messages in this thread will be permanently removed from your account.<br><br>
+      <span style="font-size:12px;opacity:.7;">The other person's copy will not be affected.</span>
+    </div>
+    <div class="del-caution-bar">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Caution: Deleted messages cannot be recovered
+    </div>
+    <div class="del-actions">
+      <button class="btn btn-secondary" onclick="closeDeleteConvo()">Keep Conversation</button>
+      <button class="btn-danger" id="del-confirm-btn" onclick="deleteConvo()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>
+        Yes, Delete
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+const _API = '';
+let _threads = [];
+let _filteredThreads = [];
+let _activeThreadId = null;   // thread_id (uid__docid)
+let _me = null;
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function fmtTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  const diffMs = now - d;
+  const diffMin = Math.floor(diffMs / 60000);
+  if (diffMin < 1) return 'just now';
+  if (diffMin < 60) return diffMin + 'm ago';
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (diffMs < 7 * 86400000) return d.toLocaleDateString([],{weekday:'short'});
+  return d.toLocaleDateString([],{month:'short',day:'numeric'});
+}
+
+function fmtMsgTime(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return d.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+}
+
+function fmtDateLabel(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return 'Today';
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString([],{weekday:'long', month:'short', day:'numeric'});
+}
+
+
+function initials(name) {
+  return (name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+async function init() {
+  const token = getAuthToken();
+  if (!token) { window.location.replace('/login.html'); return; }
+  try {
+    const r = await fetch(`${_API}/api/auth/me`, { headers: authHeaders() });
+    if (!r.ok) { clearAuth(); window.location.replace('/login.html'); return; }
+    _me = await r.json();
+  } catch { window.location.replace('/login.html'); return; }
+
+  await loadThreads();
+
+  const params = new URLSearchParams(location.search);
+  const apptParam = params.get('appt');
+  if (apptParam) {
+    // Find thread that contains this appointment_id
+    const match = _threads.find(t =>
+      t.thread_id === apptParam ||
+      (t.appointment_ids || []).includes(apptParam) ||
+      t.latest_appointment_id === apptParam
+    );
+    if (match) openThread(match.thread_id);
+  }
+}
+
+// ── Threads ─────────────────────────────────────────────────────────
+async function loadThreads() {
+  const r = await fetch(`${_API}/api/messages`, { headers: authHeaders() });
+  if (!r.ok) {
+    document.getElementById('threads-body').innerHTML =
+      '<div class="threads-empty">Failed to load conversations.</div>';
+    return;
+  }
+  const data = await r.json();
+  _threads = data.threads || [];
+  _filteredThreads = _threads;
+  renderThreads();
+}
+
+function filterThreads(q) {
+  const lq = q.toLowerCase().trim();
+  _filteredThreads = lq
+    ? _threads.filter(t =>
+        (t.patient_name||'').toLowerCase().includes(lq) ||
+        (t.doctor_name||'').toLowerCase().includes(lq) ||
+        (t.specialty||'').toLowerCase().includes(lq))
+    : _threads;
+  renderThreads();
+}
+
+function renderThreads() {
+  const el = document.getElementById('threads-body');
+  const count = document.getElementById('thread-count');
+  const isDoc = _me?.role === 'doctor';
+
+  if (!_filteredThreads.length) {
+    el.innerHTML = '<div class="threads-empty">No conversations yet.<br>Start by messaging from an appointment.</div>';
+    if (count) count.textContent = '';
+    return;
+  }
+
+  if (count) count.textContent = _filteredThreads.length + ' total';
+
+  el.innerHTML = _filteredThreads.map(t => {
+    const last     = t.messages[t.messages.length - 1] || {};
+    const name     = isDoc ? t.patient_name : t.doctor_name;
+    const urg      = t.urgency || 'routine';
+    const ini      = initials(name);
+    const isActive = _activeThreadId === t.thread_id;
+    const urgLabel = urg.charAt(0).toUpperCase() + urg.slice(1);
+    return `
+      <div class="thread-item${isActive ? ' active' : ''}" onclick="openThread('${t.thread_id}')">
+        <div class="thread-avatar urg-${urg}">${escHtml(ini)}</div>
+        <div class="thread-body">
+          <div class="thread-header-row">
+            <div class="thread-name">${escHtml(name)}</div>
+            <span class="thread-time">${fmtTime(last.sent_at)}</span>
+          </div>
+          <div class="thread-preview">${escHtml(last.body || 'No messages yet')}</div>
+          <div class="thread-chips">
+            <span class="urgency-badge urgency-${urg}" style="font-size:10px;padding:2px 7px;">${urgLabel}</span>
+            ${t.specialty ? `<span class="badge badge-dim" style="font-size:10px;">${escHtml(t.specialty)}</span>` : ''}
+            ${t.unread ? `<span class="thread-unread">${t.unread}</span>` : ''}
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// ── Open thread ──────────────────────────────────────────────────────
+async function openThread(threadId) {
+  _activeThreadId = threadId;
+  renderThreads();
+
+  const thread = _threads.find(t => t.thread_id === threadId);
+  const isDoc = _me?.role === 'doctor';
+  const name = isDoc ? (thread?.patient_name || 'Patient') : (thread?.doctor_name || 'Doctor');
+  const specialty = thread?.specialty || '';
+
+  const urgency  = thread?.urgency || 'routine';
+  const urgLabel = urgency.charAt(0).toUpperCase() + urgency.slice(1);
+
+  // Header avatar — same class pattern as .appt-avatar
+  const hdrAvatar = document.getElementById('chat-hdr-avatar');
+  hdrAvatar.className = `chat-hdr-avatar urg-${urgency}`;
+  hdrAvatar.style.cssText = '';
+  hdrAvatar.textContent = initials(name);
+
+  document.getElementById('chat-title').textContent = name;
+
+  // Chips row: urgency badge + specialty badge (mirrors .appt-chips)
+  const chipsEl = document.getElementById('chat-hdr-chips');
+  chipsEl.innerHTML =
+    `<span class="urgency-badge urgency-${urgency}" style="font-size:10px;padding:2px 8px;">${urgLabel}</span>` +
+    (specialty ? `<span class="badge badge-dim" style="font-size:10px;">${escHtml(specialty)}</span>` : '') +
+    `<span class="badge badge-dim" style="font-size:10px;">${isDoc ? 'Patient' : 'Doctor'}</span>`;
+
+  document.getElementById('no-thread-msg').style.display = 'none';
+  const cc = document.getElementById('chat-content');
+  cc.style.cssText = 'display:flex; flex-direction:column; overflow:hidden; flex:1;';
+
+  await fetch(`${_API}/api/messages/${threadId}/read`, { method:'PATCH', headers: authHeaders() });
+  if (thread) {
+    thread.unread = 0;
+    thread.messages.forEach(m => {
+      if (isDoc ? m.sender_role === 'patient' : m.sender_role === 'doctor') m.read = true;
+    });
+  }
+
+  renderMessages(thread?.messages || []);
+  document.getElementById('msg-input').focus();
+}
+
+// ── Tick helper: pending / sent / seen ───────────────────────────────
+function tickSvg(m) {
+  if (m._pending) {
+    // Single clock-style tick — not yet delivered
+    return `<span class="bub-sent tick-pending" title="Sending…">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 15"/>
+      </svg></span>`;
+  }
+  const seen = m.read === true;
+  const cls  = seen ? 'tick-seen' : 'tick-sent';
+  const title = seen ? 'Seen' : 'Delivered';
+  // Double tick — offset second check by 4px
+  return `<span class="bub-sent ${cls}" title="${title}">
+    <svg width="16" height="12" viewBox="0 0 28 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <polyline points="1,6 5,10 13,2"/>
+      <polyline points="8,6 12,10 20,2"/>
+    </svg></span>`;
+}
+
+// ── Render messages ──────────────────────────────────────────────────
+function renderMessages(msgs) {
+  const el = document.getElementById('msg-body');
+  if (!msgs.length) {
+    el.innerHTML = '<div class="msg-empty">No messages yet — send the first one.</div>';
+    return;
+  }
+
+  const thread = _threads.find(t => t.thread_id === _activeThreadId);
+  const threadUrgency = thread?.urgency || 'routine';
+  const isDoc = _me?.role === 'doctor';
+  let html = '';
+  let lastDate = '';
+  let lastSender = null;
+  let groupCount = 0;
+
+  msgs.forEach((m, i) => {
+    const msgDate = m.sent_at ? new Date(m.sent_at).toDateString() : '';
+    const isMe = isDoc ? m.sender_role === 'doctor' : m.sender_role === 'patient';
+    const ini = initials(m.sender_name);
+    const timeStr = fmtMsgTime(m.sent_at);
+
+    // Date separator
+    if (msgDate && msgDate !== lastDate) {
+      html += `<div class="date-sep">
+        <div class="date-sep-line"></div>
+        <div class="date-sep-label">${fmtDateLabel(m.sent_at)}</div>
+        <div class="date-sep-line"></div>
+      </div>`;
+      lastDate = msgDate;
+      lastSender = null; // reset grouping on date change
+      groupCount = 0;
+    }
+
+    const isSameSender = lastSender === m.sender_role;
+    const nextMsg = msgs[i + 1];
+    const isLastInGroup = !nextMsg || nextMsg.sender_role !== m.sender_role;
+    const isFirstInGroup = !isSameSender;
+
+    let groupClass = '';
+    if (isFirstInGroup && !isLastInGroup) groupClass = ' group-first';
+    else if (!isFirstInGroup && !isLastInGroup) groupClass = ' group-mid';
+
+    // Show name only for first in group (and only for the other person's messages)
+    const showName = isFirstInGroup && !isMe && msgs.length > 1;
+    // Show avatar only for last in group
+    const showAvatar = isLastInGroup;
+
+    html += `<div class="bubble-row${isMe ? ' me' : ''}${groupClass}${isFirstInGroup ? ' group-first' : ''}">
+      <div class="bub-avatar urg-${threadUrgency}${showAvatar ? '' : ' hidden'}${isMe ? ' bub-me' : ''}">
+        ${showAvatar ? ini : ''}
+      </div>
+      <div class="bub-content">
+        ${showName ? `<div class="bub-name">${escHtml(m.sender_name || '')}</div>` : ''}
+        <div class="bubble">${escHtml(m.body)}</div>
+        ${isLastInGroup ? `<div class="bub-meta">
+          <span class="bub-time">${timeStr}</span>
+          ${isMe ? tickSvg(m) : ''}
+        </div>` : ''}
+      </div>
+    </div>`;
+
+    lastSender = m.sender_role;
+    groupCount++;
+  });
+
+  el.innerHTML = html;
+  scrollToBottom(false);
+}
+
+// ── Scroll helpers ───────────────────────────────────────────────────
+function scrollToBottom(animate) {
+  const el = document.getElementById('msg-body');
+  el.scrollTo({ top: el.scrollHeight, behavior: animate ? 'smooth' : 'instant' });
+  document.getElementById('scroll-btn').classList.remove('show');
+}
+
+function onBodyScroll() {
+  const el = document.getElementById('msg-body');
+  const distFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+  const btn = document.getElementById('scroll-btn');
+  btn.classList.toggle('show', distFromBottom > 120);
+}
+
+// ── Auto-resize textarea ─────────────────────────────────────────────
+function autoResize(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+// ── Send ─────────────────────────────────────────────────────────────
+async function sendMessage() {
+  const input = document.getElementById('msg-input');
+  const body = input.value.trim();
+  if (!body || !_activeThreadId) return;
+
+  const btn = document.getElementById('send-btn');
+  btn.disabled = true;
+
+  // Optimistic: add bubble immediately
+  const thread = _threads.find(t => t.thread_id === _activeThreadId);
+  const sendApptId = thread?.latest_appointment_id || '';
+  const optimistic = {
+    body,
+    sender_role: _me?.role || 'patient',
+    sender_name: _me?.name || '',
+    sent_at: new Date().toISOString(),
+    _pending: true,
+  };
+  if (thread) thread.messages.push(optimistic);
+  renderMessages(thread?.messages || []);
+  input.value = '';
+  input.style.height = 'auto';
+  renderThreads();
+
+  try {
+    const r = await fetch(`${_API}/api/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify({ appointment_id: sendApptId, body }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed to send');
+    // Replace optimistic with real data
+    await loadThreads();
+    const updated = _threads.find(t => t.thread_id === _activeThreadId);
+    renderMessages(updated?.messages || []);
+  } catch (e) {
+    // Remove optimistic on failure
+    if (thread) thread.messages = thread.messages.filter(m => !m._pending);
+    renderMessages(thread?.messages || []);
+    alert('Could not send: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    input.focus();
+  }
+}
+
+// ── Delete conversation ───────────────────────────────────────────────
+function confirmDeleteConvo() {
+  if (!_activeThreadId) return;
+  document.getElementById('del-overlay').classList.add('open');
+}
+function closeDeleteConvo() {
+  document.getElementById('del-overlay').classList.remove('open');
+}
+async function deleteConvo() {
+  const btn = document.getElementById('del-confirm-btn');
+  btn.textContent = 'Deleting…'; btn.disabled = true;
+  try {
+    const r = await fetch(`${_API}/api/messages/${_activeThreadId}`, {
+      method: 'DELETE', headers: authHeaders()
+    });
+    if (!r.ok) throw new Error('Failed to delete');
+    _threads = _threads.filter(t => t.thread_id !== _activeThreadId);
+    _filteredThreads = _filteredThreads.filter(t => t.thread_id !== _activeThreadId);
+    _activeThreadId = null;
+    closeDeleteConvo();
+    renderThreads();
+    document.getElementById('chat-content').style.display = 'none';
+    document.getElementById('no-thread-msg').style.display = '';
+  } catch (e) {
+    alert('Could not delete: ' + e.message);
+  } finally {
+    btn.textContent = 'Delete'; btn.disabled = false;
+  }
+}
+
+// ── Poll for read-receipt updates every 5s ───────────────────────────
+setInterval(async () => {
+  if (!_activeThreadId) return;
+  try {
+    const r = await fetch(`${_API}/api/messages`, { headers: authHeaders() });
+    if (!r.ok) return;
+    const data = await r.json();
+    _threads = data.threads || [];
+    _filteredThreads = _threads;
+    const updated = _threads.find(t => t.thread_id === _activeThreadId);
+    if (updated) {
+      renderMessages(updated.messages || []);
+      renderThreads();
+    }
+  } catch (_) {}
+}, 5000);
+
+init();
+</script>
+</body>
+</html>

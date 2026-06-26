@@ -1,0 +1,5 @@
+sentence-transformers
+pydantic>=2.7.0
+pyyaml>=6.0
+numpy>=1.26.0
+faiss-cpu>=1.7.4

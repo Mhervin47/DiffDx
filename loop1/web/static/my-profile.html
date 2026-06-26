@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — My Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    /* Layout */
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 580px) { .profile-grid { grid-template-columns: 1fr; } }
+
+    .profile-section {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 16px;
+    }
+    .profile-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 7px;
+    }
+
+    /* Form base */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+
+    .form-control {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 9px 12px; width: 100%;
+      transition: border-color .15s; outline: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .form-control:focus { border-color: var(--primary); }
+    .form-control[readonly] { color: var(--text-muted); cursor: default; background: var(--surface-2); }
+    .form-control option { background: var(--surface-3); }
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px; cursor: pointer;
+    }
+
+    /* Phone row: fixed-width CC select + flex number input */
+    .phone-row { display: flex; }
+    .phone-cc {
+      flex: 0 0 110px; width: 110px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-right: none; border-radius: var(--radius) 0 0 var(--radius);
+      color: var(--text); font-family: var(--font); font-size: 13px;
+      padding: 9px 8px; outline: none; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .phone-cc:focus { border-color: var(--primary); z-index: 1; position: relative; }
+    .phone-num {
+      flex: 1; min-width: 0;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--text); font-family: var(--font); font-size: 14px;
+      padding: 9px 12px; outline: none;
+    }
+    .phone-num:focus { border-color: var(--primary); z-index: 1; position: relative; }
+    .phone-num::placeholder { color: var(--text-muted); }
+    .phone-cc option { background: var(--surface-3); }
+
+    .field-error { font-size: 11px; color: var(--danger); margin-top: 3px; display: none; }
+    .field-error.show { display: block; }
+
+    /* Avatar */
+    .avatar-block { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .avatar-large {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-dim), var(--primary));
+      color: #fff; font-size: 24px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .avatar-info { flex: 1; }
+    .avatar-name { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+    .avatar-since { font-size: 12px; color: var(--text-muted); }
+
+    /* Banners */
+    .complete-banner {
+      background: rgba(255,185,95,.08); border: 1px solid rgba(255,185,95,.25);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; color: var(--warning);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+    }
+
+    /* Save bar */
+    .save-bar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+      padding-top: 4px; margin-bottom: 32px;
+    }
+    .save-status { font-size: 13px; color: var(--success); opacity: 0; transition: opacity .3s; margin-right: auto; }
+    .save-status.show { opacity: 1; }
+
+    /* Select arrow for .form-control selects */
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    /* ── premium my-profile overrides ── */
+    .profile-section {
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 22px 24px;
+      transition: border-color .15s;
+    }
+    .profile-section:hover { border-color: rgba(255,255,255,.11); }
+    .profile-section-title { font-size: 10px; font-weight: 800; letter-spacing: .1em; }
+    .form-control {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px; font-size: 14px;
+    }
+    .form-control:focus {
+      border-color: rgba(0,180,216,.55);
+      background: rgba(0,180,216,.04);
+      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
+    }
+    .form-control[readonly] { background: rgba(255,255,255,.02); border-color: rgba(255,255,255,.05); }
+    .phone-cc, .phone-num {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+    }
+    .phone-cc { border-right: none; border-radius: 10px 0 0 10px; }
+    .phone-num { border-radius: 0 10px 10px 0; }
+    .phone-cc:focus, .phone-num:focus { border-color: rgba(0,180,216,.55); }
+    .avatar-large {
+      border-radius: 16px;
+      background: linear-gradient(135deg, #0077a8, #00b4d8);
+      box-shadow: 0 0 0 1px rgba(0,180,216,.3), 0 4px 20px rgba(0,180,216,.25);
+      font-weight: 900; font-size: 22px;
+    }
+    .avatar-name { font-size: 18px; font-weight: 900; letter-spacing: -.03em; }
+    .complete-banner { border-radius: 12px; font-size: 12px; }
+    .form-group label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page" style="max-width:840px;">
+  <div class="patient-page-header">
+    <div>
+      <div class="patient-page-title">My Profile</div>
+      <div class="patient-page-sub">Manage your personal and medical information</div>
+    </div>
+  </div>
+
+  <div id="incomplete-banner" class="complete-banner" style="display:none;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Complete your profile so doctors can serve you better during consultations.
+  </div>
+
+  <div id="profile-loading" class="thinking-row"><div class="spinner"></div> Loading profile…</div>
+
+  <form id="profile-form" style="display:none;" onsubmit="saveProfile(event)">
+
+    <!-- Avatar + Account info -->
+    <div class="profile-section">
+      <div class="avatar-block">
+        <div class="avatar-large" id="avatar-initials">?</div>
+        <div class="avatar-info">
+          <div class="avatar-name" id="display-name">—</div>
+          <div class="avatar-since" id="display-since">—</div>
+          <button type="button" onclick="downloadHealthSummary()" style="margin-top:8px;display:inline-flex;align-items:center;gap:6px;background:rgba(0,180,216,.12);border:1px solid rgba(0,180,216,.3);color:var(--primary);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:600;cursor:pointer;">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Health Summary PDF
+          </button>
+        </div>
+      </div>
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input class="form-control" type="text" id="field-name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input class="form-control" type="email" id="field-email" readonly tabindex="-1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Personal details -->
+    <div class="profile-section">
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        Personal Details
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <div class="phone-row">
+            <select class="phone-cc" id="field-mobile-cc"></select>
+            <input class="phone-num" type="tel" id="field-mobile" placeholder="10-digit number" maxlength="10" inputmode="numeric">
+          </div>
+          <span class="field-error" id="mobile-err">Enter exactly 10 digits</span>
+        </div>
+        <div class="form-group">
+          <label>Age</label>
+          <input class="form-control" type="number" id="field-age" min="1" max="120" placeholder="e.g. 28">
+        </div>
+        <div class="form-group">
+          <label>Gender</label>
+          <select class="form-control" id="field-gender">
+            <option value="">Select…</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+            <option value="Non-binary">Non-binary</option>
+            <option value="Prefer not to say">Prefer not to say</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Blood Type</label>
+          <select class="form-control" id="field-blood-type">
+            <option value="">Select…</option>
+            <option value="A+">A+</option>
+            <option value="A-">A-</option>
+            <option value="B+">B+</option>
+            <option value="B-">B-</option>
+            <option value="AB+">AB+</option>
+            <option value="AB-">AB-</option>
+            <option value="O+">O+</option>
+            <option value="O-">O-</option>
+            <option value="Unknown">Unknown</option>
+          </select>
+        </div>
+        <div class="form-group" style="grid-column: 1 / -1;">
+          <label>Address</label>
+          <input class="form-control" type="text" id="field-address" placeholder="Street, City, Country">
+        </div>
+      </div>
+    </div>
+
+    <!-- Medical info -->
+    <div class="profile-section">
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Medical Information
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Known Allergies</label>
+          <input class="form-control" type="text" id="field-allergies" placeholder="e.g. Penicillin, Peanuts">
+        </div>
+        <div class="form-group">
+          <label>Chronic Conditions</label>
+          <input class="form-control" type="text" id="field-chronic" placeholder="e.g. Diabetes, Hypertension">
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency contact -->
+    <div class="profile-section">
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 01-2.18 2A19.79 19.79 0 0112 18.5a19.79 19.79 0 01-7.82-3.58 19.45 19.45 0 01-3.58-7.82A2 2 0 012.72 5H5.7a2 2 0 012 1.72 12.5 12.5 0 00.7 2.81 2 2 0 01-.45 2.11L6.61 12a16 16 0 006.29 6.29l.36-.36a2 2 0 012.11-.45 12.5 12.5 0 002.81.7A2 2 0 0122 20.22z"/></svg>
+        Emergency Contact
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Contact Name</label>
+          <input class="form-control" type="text" id="field-ec-name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label>Contact Phone</label>
+          <div class="phone-row">
+            <select class="phone-cc" id="field-ec-phone-cc"></select>
+            <input class="phone-num" type="tel" id="field-ec-phone" placeholder="10-digit number" maxlength="10" inputmode="numeric">
+          </div>
+          <span class="field-error" id="ec-phone-err">Enter exactly 10 digits</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-bar">
+      <span class="save-status" id="save-status">Saved</span>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="window.location.href='/my-sessions.html'">Cancel</button>
+      <button type="submit" class="btn btn-primary" id="save-btn">Save Changes</button>
+    </div>
+  </form>
+
+  <!-- Dependents section (outside form, managed separately) -->
+  <div class="profile-section" id="dependents-section" style="display:none;margin-top:0;">
+    <div class="profile-section-title">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      Dependents &amp; Family Members
+    </div>
+    <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5;">Manage profiles for family members whose appointments you oversee.</p>
+    <div id="dependents-list" style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px;"></div>
+    <button class="btn btn-secondary btn-sm" onclick="openAddDependent()">+ Add Family Member</button>
+  </div>
+</div>
+
+<!-- Add/Edit Dependent Modal -->
+<div style="display:none;position:fixed;inset:0;z-index:300;background:rgba(0,4,18,.75);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);align-items:center;justify-content:center;padding:20px;" id="dep-overlay" onclick="if(event.target===this)closeDepModal()">
+  <div style="background:var(--surface-2);border:1px solid rgba(255,255,255,.08);border-radius:20px;padding:28px 28px 24px;width:100%;max-width:440px;box-shadow:0 32px 64px rgba(0,0,0,.6),0 0 0 1px rgba(0,180,216,.06);">
+    <!-- Header -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(0,180,216,.1);border:1px solid rgba(0,180,216,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      </div>
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--text);letter-spacing:-.02em;" id="dep-modal-title">Add Family Member</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">Manage dependent profiles under your account</div>
+      </div>
+    </div>
+
+    <!-- Fields -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+      <div style="grid-column:1/-1;" class="form-group">
+        <label>Full Name *</label>
+        <input id="dep-name" class="form-control" placeholder="Jane Doe">
+      </div>
+      <div class="form-group">
+        <label>Relationship *</label>
+        <select id="dep-rel" class="form-control">
+          <option value="child">Child</option>
+          <option value="spouse">Spouse / Partner</option>
+          <option value="parent">Parent</option>
+          <option value="sibling">Sibling</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Age</label>
+        <input id="dep-age" type="number" min="0" max="120" class="form-control" placeholder="—">
+      </div>
+      <div class="form-group">
+        <label>Gender</label>
+        <select id="dep-gender" class="form-control">
+          <option value="">Prefer not to say</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Blood Type</label>
+        <select id="dep-blood" class="form-control">
+          <option value="">Unknown</option>
+          <option>A+</option><option>A−</option><option>B+</option><option>B−</option>
+          <option>AB+</option><option>AB−</option><option>O+</option><option>O−</option>
+        </select>
+      </div>
+      <div style="grid-column:1/-1;" class="form-group">
+        <label>Known Allergies</label>
+        <input id="dep-allergies" class="form-control" placeholder="e.g. Penicillin, Peanuts">
+      </div>
+      <div style="grid-column:1/-1;" class="form-group">
+        <label>Chronic Conditions</label>
+        <input id="dep-chronic" class="form-control" placeholder="e.g. Asthma, Type 1 Diabetes">
+      </div>
+    </div>
+
+    <div id="dep-error" style="font-size:12px;color:var(--danger);margin-top:12px;padding:8px 12px;background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.2);border-radius:8px;display:none;"></div>
+
+    <div style="display:flex;gap:10px;margin-top:20px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="closeDepModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1;" onclick="saveDependent()" id="dep-save-btn">Save Member</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const _user = getAuthUser();
+if (!_user) window.location.replace('/login.html?next=/my-profile.html');
+
+const _COUNTRY_CODES = [
+  {c:'IN',name:'India',dial:'+91'},
+  {c:'US',name:'United States',dial:'+1'},
+  {c:'GB',name:'United Kingdom',dial:'+44'},
+  {c:'AU',name:'Australia',dial:'+61'},
+  {c:'CA',name:'Canada',dial:'+1'},
+  {c:'AE',name:'UAE',dial:'+971'},
+  {c:'SG',name:'Singapore',dial:'+65'},
+  {c:'MY',name:'Malaysia',dial:'+60'},
+  {c:'NZ',name:'New Zealand',dial:'+64'},
+  {c:'ZA',name:'South Africa',dial:'+27'},
+  {c:'NG',name:'Nigeria',dial:'+234'},
+  {c:'KE',name:'Kenya',dial:'+254'},
+  {c:'PK',name:'Pakistan',dial:'+92'},
+  {c:'BD',name:'Bangladesh',dial:'+880'},
+  {c:'LK',name:'Sri Lanka',dial:'+94'},
+  {c:'PH',name:'Philippines',dial:'+63'},
+  {c:'DE',name:'Germany',dial:'+49'},
+  {c:'FR',name:'France',dial:'+33'},
+  {c:'IT',name:'Italy',dial:'+39'},
+  {c:'ES',name:'Spain',dial:'+34'},
+  {c:'NL',name:'Netherlands',dial:'+31'},
+  {c:'SE',name:'Sweden',dial:'+46'},
+  {c:'NO',name:'Norway',dial:'+47'},
+  {c:'DK',name:'Denmark',dial:'+45'},
+  {c:'CH',name:'Switzerland',dial:'+41'},
+  {c:'JP',name:'Japan',dial:'+81'},
+  {c:'CN',name:'China',dial:'+86'},
+  {c:'KR',name:'South Korea',dial:'+82'},
+  {c:'BR',name:'Brazil',dial:'+55'},
+  {c:'MX',name:'Mexico',dial:'+52'},
+];
+
+function _buildCCSelect(selectId, savedDial) {
+  const sel = document.getElementById(selectId);
+  _COUNTRY_CODES.forEach(({c, name, dial}) => {
+    const o = document.createElement('option');
+    o.value = dial;
+    o.textContent = `${c} ${dial}`;
+    o.title = name;
+    if (dial === savedDial) o.selected = true;
+    sel.appendChild(o);
+  });
+  if (!savedDial) sel.value = '+91'; // default India
+}
+
+function _parsePhone(stored) {
+  if (!stored) return { dial: '', number: '' };
+  const match = stored.match(/^(\+\d{1,4})\s*(\d+)$/);
+  if (match) return { dial: match[1], number: match[2] };
+  if (/^\d+$/.test(stored)) return { dial: '', number: stored };
+  return { dial: '', number: stored };
+}
+
+function _getPhone(ccId, inputId) {
+  const dial = document.getElementById(ccId).value;
+  const num = document.getElementById(inputId).value.trim();
+  return num ? `${dial} ${num}` : '';
+}
+
+function _validatePhone(inputId, errId) {
+  const val = document.getElementById(inputId).value.trim();
+  const err = document.getElementById(errId);
+  if (val && !/^\d{10}$/.test(val)) {
+    err.classList.add('show'); return false;
+  }
+  err.classList.remove('show'); return true;
+}
+
+// Restrict phone inputs to digits only — wire up after DOM ready
+document.addEventListener('DOMContentLoaded', () => {
+  ['field-mobile','field-ec-phone'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', e => {
+      e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+    });
+  });
+});
+
+async function loadProfile() {
+  try {
+    const res = await fetch('/api/auth/profile', { headers: { ...authHeaders() } });
+    if (!res.ok) { if (res.status === 401) { clearAuth(); window.location.replace('/login.html'); return; } throw new Error(); }
+    const p = await res.json();
+    fillForm(p);
+    document.getElementById('profile-loading').style.display = 'none';
+    document.getElementById('profile-form').style.display = 'block';
+    if (!p.profile_complete) {
+      document.getElementById('incomplete-banner').style.display = 'flex';
+    }
+  } catch {
+    document.getElementById('profile-loading').textContent = 'Failed to load profile.';
+  }
+}
+
+function fillForm(p) {
+  document.getElementById('field-name').value = p.name || '';
+  document.getElementById('field-email').value = p.email || '';
+  document.getElementById('field-age').value = p.age || '';
+  document.getElementById('field-gender').value = p.gender || '';
+  document.getElementById('field-blood-type').value = p.blood_type || '';
+  document.getElementById('field-address').value = p.address || '';
+  document.getElementById('field-allergies').value = p.allergies || '';
+  document.getElementById('field-chronic').value = p.chronic_conditions || '';
+  document.getElementById('field-ec-name').value = p.emergency_contact_name || '';
+
+  // Phone fields — parse stored "dial number" format
+  const mob = _parsePhone(p.mobile);
+  _buildCCSelect('field-mobile-cc', mob.dial);
+  document.getElementById('field-mobile').value = mob.number;
+
+  const ecp = _parsePhone(p.emergency_contact_phone);
+  _buildCCSelect('field-ec-phone-cc', ecp.dial);
+  document.getElementById('field-ec-phone').value = ecp.number;
+
+  // Avatar
+  const initials = (p.name || '?').charAt(0).toUpperCase();
+  document.getElementById('avatar-initials').textContent = initials;
+  document.getElementById('display-name').textContent = p.name || '—';
+  document.getElementById('display-since').textContent = p.created_at
+    ? 'Member since ' + new Date(p.created_at).toLocaleDateString('en-US', { year:'numeric', month:'long' })
+    : '';
+}
+
+async function saveProfile(e) {
+  e.preventDefault();
+  const mobOk = _validatePhone('field-mobile', 'mobile-err');
+  const ecOk  = _validatePhone('field-ec-phone', 'ec-phone-err');
+  if (!mobOk || !ecOk) return;
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  const body = {
+    name: document.getElementById('field-name').value.trim() || undefined,
+    mobile: _getPhone('field-mobile-cc', 'field-mobile') || undefined,
+    age: parseInt(document.getElementById('field-age').value) || undefined,
+    gender: document.getElementById('field-gender').value || undefined,
+    blood_type: document.getElementById('field-blood-type').value || undefined,
+    address: document.getElementById('field-address').value.trim() || undefined,
+    allergies: document.getElementById('field-allergies').value.trim() || undefined,
+    chronic_conditions: document.getElementById('field-chronic').value.trim() || undefined,
+    emergency_contact_name: document.getElementById('field-ec-name').value.trim() || undefined,
+    emergency_contact_phone: _getPhone('field-ec-phone-cc', 'field-ec-phone') || undefined,
+  };
+  // Remove undefined keys
+  Object.keys(body).forEach(k => body[k] === undefined && delete body[k]);
+  try {
+    const res = await fetch('/api/auth/profile', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Save failed');
+    // Update localStorage name if changed
+    if (body.name) {
+      const u = getAuthUser();
+      if (u) { u.name = body.name; localStorage.setItem('authUser', JSON.stringify(u)); }
+      document.getElementById('avatar-initials').textContent = body.name.charAt(0).toUpperCase();
+      document.getElementById('display-name').textContent = body.name;
+    }
+    document.getElementById('incomplete-banner').style.display = 'none';
+    const status = document.getElementById('save-status');
+    status.classList.add('show');
+    setTimeout(() => status.classList.remove('show'), 2500);
+  } catch (err) {
+    alert('Could not save: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+
+loadProfile();
+
+// ── Dependents ────────────────────────────────────────────────────────
+let _dependents = [];
+let _editingDepId = null;
+
+const _relLabels = { child:'Child', spouse:'Spouse / Partner', parent:'Parent', sibling:'Sibling', other:'Other' };
+
+async function loadDependents() {
+  try {
+    const res = await fetch('/api/auth/dependents', { headers: { ...authHeaders() } });
+    if (!res.ok) return;
+    const data = await res.json();
+    _dependents = data.dependents || [];
+    renderDependents();
+    document.getElementById('dependents-section').style.display = '';
+  } catch {}
+}
+
+function renderDependents() {
+  const el = document.getElementById('dependents-list');
+  if (!_dependents.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text-muted);font-style:italic;">No family members added yet.</div>';
+    return;
+  }
+  el.innerHTML = _dependents.map(d => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.025);">
+      <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,#0077a8,#00b4d8);color:#000;font-size:13px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        ${(d.name||'?').charAt(0).toUpperCase()}
+      </div>
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(d.name)}</div>
+        <div style="font-size:11px;color:var(--text-muted);">${escHtml(_relLabels[d.relationship]||d.relationship||'')}${d.age ? ' · Age ' + d.age : ''}${d.blood_type ? ' · ' + d.blood_type : ''}</div>
+      </div>
+      <button class="btn btn-ghost btn-sm" style="font-size:11px;" onclick="openEditDependent('${d.id}')">Edit</button>
+      <button class="btn btn-sm" style="font-size:11px;border:1px solid rgba(255,107,107,.3);color:var(--danger);background:rgba(255,107,107,.07);border-radius:7px;padding:5px 10px;cursor:pointer;" onclick="deleteDependent('${d.id}')">Remove</button>
+    </div>`).join('');
+}
+
+function openAddDependent() {
+  _editingDepId = null;
+  document.getElementById('dep-modal-title').textContent = 'Add Family Member';
+  document.getElementById('dep-name').value = '';
+  document.getElementById('dep-rel').value = 'child';
+  document.getElementById('dep-age').value = '';
+  document.getElementById('dep-gender').value = '';
+  document.getElementById('dep-blood').value = '';
+  document.getElementById('dep-allergies').value = '';
+  document.getElementById('dep-chronic').value = '';
+  document.getElementById('dep-error').style.display = 'none';
+  document.getElementById('dep-overlay').style.display = 'flex';
+}
+function openEditDependent(id) {
+  const d = _dependents.find(x => x.id === id);
+  if (!d) return;
+  _editingDepId = id;
+  document.getElementById('dep-modal-title').textContent = 'Edit Family Member';
+  document.getElementById('dep-name').value = d.name || '';
+  document.getElementById('dep-rel').value = d.relationship || 'child';
+  document.getElementById('dep-age').value = d.age || '';
+  document.getElementById('dep-gender').value = d.gender || '';
+  document.getElementById('dep-blood').value = d.blood_type || '';
+  document.getElementById('dep-allergies').value = d.allergies || '';
+  document.getElementById('dep-chronic').value = d.chronic_conditions || '';
+  document.getElementById('dep-error').style.display = 'none';
+  document.getElementById('dep-overlay').style.display = 'flex';
+}
+function closeDepModal() { document.getElementById('dep-overlay').style.display = 'none'; }
+
+async function saveDependent() {
+  const name = document.getElementById('dep-name').value.trim();
+  const errEl = document.getElementById('dep-error');
+  if (!name) { errEl.textContent = 'Name is required.'; errEl.style.display = ''; return; }
+  const body = {
+    name,
+    relationship: document.getElementById('dep-rel').value,
+    age: parseInt(document.getElementById('dep-age').value) || null,
+    gender: document.getElementById('dep-gender').value || null,
+    blood_type: document.getElementById('dep-blood').value || null,
+    allergies: document.getElementById('dep-allergies').value.trim() || null,
+    chronic_conditions: document.getElementById('dep-chronic').value.trim() || null,
+  };
+  const btn = document.getElementById('dep-save-btn');
+  btn.disabled = true; btn.textContent = 'Saving…';
+  try {
+    const url = _editingDepId ? `/api/auth/dependents/${_editingDepId}` : '/api/auth/dependents';
+    const method = _editingDepId ? 'PATCH' : 'POST';
+    const res = await fetch(url, { method, headers: { 'Content-Type':'application/json', ...authHeaders() }, body: JSON.stringify(body) });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    closeDepModal();
+    await loadDependents();
+  } catch (e) {
+    errEl.textContent = e.message; errEl.style.display = '';
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save';
+  }
+}
+
+async function deleteDependent(id) {
+  if (!confirm('Remove this family member?')) return;
+  await fetch(`/api/auth/dependents/${id}`, { method: 'DELETE', headers: { ...authHeaders() } });
+  await loadDependents();
+}
+
+function escHtml(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+async function downloadHealthSummary() {
+  const btn = document.querySelector('[onclick="downloadHealthSummary()"]');
+  const origText = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Generating…'; }
+  try {
+    const res = await fetch('/api/appointments', { headers: { ...authHeaders() } });
+    if (!res.ok) throw new Error('Failed to load appointments');
+    const { appointments } = await res.json();
+
+    const profileRes = await fetch('/api/auth/profile', { headers: { ...authHeaders() } });
+    const profile = profileRes.ok ? await profileRes.json() : {};
+
+    const patName = profile.name || 'Patient';
+    const patEmail = profile.email || '';
+    const patAge = profile.age ? `${profile.age} yrs` : '';
+    const patGender = profile.gender || '';
+    const patBlood = profile.blood_type || '';
+    const patAllergies = profile.allergies || 'None recorded';
+    const patChronic = profile.chronic_conditions || 'None recorded';
+    const dateGen = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+
+    // Collect all diagnoses, prescriptions, test orders, referrals
+    const diagnoses = [];
+    const prescriptions = [];
+    const testOrders = [];
+    const referrals = [];
+
+    for (const a of (appointments || [])) {
+      const slotDate = a.slot ? new Date(a.slot).toLocaleDateString('en-GB', {day:'numeric',month:'short',year:'numeric'}) : '';
+      if (a.primary_diagnosis) {
+        diagnoses.push({ date: slotDate, dx: a.primary_diagnosis, doctor: a.doctor_name || '', status: a.status || '' });
+      }
+      for (const rx of (a.prescriptions || [])) {
+        prescriptions.push({ ...rx, date: slotDate, doctor: a.doctor_name || '' });
+      }
+      for (const t of (a.test_orders || [])) {
+        testOrders.push({ ...t, date: slotDate, doctor: a.doctor_name || '' });
+      }
+      if (a.referral) {
+        referrals.push({ ...a.referral, date: slotDate, from_doctor: a.doctor_name || '' });
+      }
+    }
+
+    const dxRows = diagnoses.length
+      ? diagnoses.map(d => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;">${d.date}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;font-weight:600;color:#0a2540;">${escHtml(d.dx)}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(d.doctor)}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;"><span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${d.status==='seen'?'#f0fdf4':'#f0f9ff'};color:${d.status==='seen'?'#059669':'#0077a8'};">${d.status.toUpperCase()}</span></td></tr>`).join('')
+      : '<tr><td colspan="4" style="padding:12px;color:#999;font-style:italic;">No diagnoses recorded.</td></tr>';
+
+    const rxRows = prescriptions.length
+      ? prescriptions.map(r => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;">${r.date}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;font-weight:600;color:#0a2540;">${escHtml(r.drug||'')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(r.dose||'')} · ${escHtml(r.frequency||'')} · ${escHtml(r.duration||'')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(r.doctor)}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="padding:12px;color:#999;font-style:italic;">No prescriptions recorded.</td></tr>';
+
+    const testRows = testOrders.length
+      ? testOrders.map(t => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;">${t.date}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;font-weight:600;color:#0a2540;">${escHtml(t.test||'')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;text-transform:capitalize;">${escHtml(t.category||'')} · ${escHtml(t.priority||'')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(t.doctor)}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="padding:12px;color:#999;font-style:italic;">No test orders recorded.</td></tr>';
+
+    const refRows = referrals.length
+      ? referrals.map(r => `<tr><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;">${r.date}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;font-weight:600;color:#0a2540;">${escHtml(r.specialty||'')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(r.to_doctor||'Any available specialist')}</td><td style="padding:8px 12px;border-bottom:1px solid #e8f0f5;color:#555;">${escHtml(r.from_doctor)}</td></tr>`).join('')
+      : '<tr><td colspan="4" style="padding:12px;color:#999;font-style:italic;">No referrals recorded.</td></tr>';
+
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Health Summary — ${patName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{font-family:'Inter',Arial,sans-serif;color:#1a1a1a;background:#f0f4f8;}
+    .page{max-width:860px;margin:24px auto;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.12);border-radius:12px;overflow:hidden;}
+    .banner{background:linear-gradient(135deg,#0a2540 0%,#0077a8 100%);padding:24px 36px;display:flex;justify-content:space-between;align-items:flex-start;}
+    .banner h1{font-size:22px;font-weight:800;color:#fff;letter-spacing:-.02em;}
+    .banner p{font-size:12px;color:rgba(255,255,255,.7);margin-top:4px;}
+    .banner-right{text-align:right;}
+    .banner-date{font-size:11px;color:rgba(255,255,255,.6);margin-top:4px;}
+    .pat-strip{background:#f0f7fa;border-bottom:1px solid #d0e4ef;padding:14px 36px;display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+    .pat-cell .pl{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0077a8;margin-bottom:3px;}
+    .pat-cell .pv{font-size:13px;font-weight:600;color:#0a2540;}
+    .content{padding:28px 36px;}
+    .sec{margin-bottom:28px;}
+    .sec-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid #e8f0f5;}
+    .sec-bar{width:3px;height:18px;background:#0077a8;border-radius:2px;flex-shrink:0;}
+    .sec-label{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#0077a8;}
+    table{width:100%;border-collapse:collapse;font-size:12px;}
+    th{padding:8px 12px;background:#f8fafc;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#0077a8;text-align:left;}
+    .footer{padding:18px 36px;background:#f8fafc;border-top:1px solid #e2ecf4;display:flex;justify-content:space-between;align-items:center;}
+    .footer-note{font-size:11px;color:#888;line-height:1.6;}
+    @media print{body{background:#fff;}.page{box-shadow:none;margin:0;border-radius:0;}*{-webkit-print-color-adjust:exact;print-color-adjust:exact;}}
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="banner">
+    <div><h1>Health Summary</h1><p>MedicalConvo — Patient Medical Record</p></div>
+    <div class="banner-right"><div style="font-size:32px;font-weight:900;color:rgba(255,255,255,.2);">♥</div><div class="banner-date">Generated: ${dateGen}</div></div>
+  </div>
+  <div class="pat-strip">
+    <div class="pat-cell"><div class="pl">Full Name</div><div class="pv">${escHtml(patName)}</div></div>
+    <div class="pat-cell"><div class="pl">Age / Gender</div><div class="pv">${escHtml([patAge, patGender].filter(Boolean).join(' · ') || '—')}</div></div>
+    <div class="pat-cell"><div class="pl">Blood Type</div><div class="pv">${escHtml(patBlood || '—')}</div></div>
+    <div class="pat-cell"><div class="pl">Email</div><div class="pv" style="font-size:11px;font-weight:500;color:#444;">${escHtml(patEmail)}</div></div>
+  </div>
+  <div class="content">
+    <div class="sec" style="background:#fff8ed;border:1px solid #fde68a;border-radius:10px;padding:14px 18px;margin-bottom:24px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#92400e;margin-bottom:4px;">Known Allergies</div><div style="font-size:13px;color:#78350f;">${escHtml(patAllergies)}</div></div>
+        <div><div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#92400e;margin-bottom:4px;">Chronic Conditions</div><div style="font-size:13px;color:#78350f;">${escHtml(patChronic)}</div></div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-bar"></div><span class="sec-label">Medical History (Diagnoses)</span></div>
+      <table><thead><tr><th>Date</th><th>Diagnosis</th><th>Doctor</th><th>Status</th></tr></thead><tbody>${dxRows}</tbody></table>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-bar"></div><span class="sec-label">Prescriptions</span></div>
+      <table><thead><tr><th>Date</th><th>Medication</th><th>Dosage / Instructions</th><th>Prescribed By</th></tr></thead><tbody>${rxRows}</tbody></table>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-bar"></div><span class="sec-label">Test Orders</span></div>
+      <table><thead><tr><th>Date</th><th>Test</th><th>Category / Priority</th><th>Ordered By</th></tr></thead><tbody>${testRows}</tbody></table>
+    </div>
+    <div class="sec">
+      <div class="sec-head"><div class="sec-bar"></div><span class="sec-label">Referrals</span></div>
+      <table><thead><tr><th>Date</th><th>Specialty</th><th>Referred To</th><th>Referred By</th></tr></thead><tbody>${refRows}</tbody></table>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="footer-note">This health summary was generated from MedicalConvo records.<br>This document is for informational purposes only and is not a substitute for professional medical advice.</div>
+    <div style="font-size:11px;color:#aaa;">Generated ${dateGen}</div>
+  </div>
+</div>
+<script>window.onload=()=>{window.print();}<\/script>
+</body>
+</html>`;
+
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
+  } catch (err) {
+    alert('Could not generate health summary: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = origText; }
+  }
+}
+
+loadDependents();
+</script>
+</body>
+</html>

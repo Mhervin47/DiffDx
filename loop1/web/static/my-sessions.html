@@ -1,0 +1,1890 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — My Sessions</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    .session-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 22px;
+      display: grid; grid-template-columns: 1fr auto;
+      gap: 12px; align-items: center;
+      transition: border-color .15s;
+    }
+    .session-card:hover { border-color: var(--primary); }
+    .session-complaint { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+    .session-meta-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .session-date { font-size: 12px; color: var(--text-muted); }
+    .session-dx {
+      font-size: 12px; font-weight: 600;
+      color: var(--success); background: rgba(78,222,163,.1);
+      border: 1px solid rgba(78,222,163,.2); border-radius: 99px;
+      padding: 2px 10px;
+    }
+    .session-actions { display: flex; gap: 8px; align-items: center; }
+    .btn-delete {
+      padding: 6px 8px; background: none; border: 1px solid transparent;
+      border-radius: var(--radius); color: var(--text-muted); cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+      display: flex; align-items: center;
+    }
+    .btn-delete:hover { color: var(--danger); border-color: rgba(239,68,68,.3); background: rgba(239,68,68,.06); }
+    /* Confirm state */
+    .btn-delete.confirm { color: var(--danger); border-color: rgba(239,68,68,.5); background: rgba(239,68,68,.1); font-size: 12px; font-weight: 600; padding: 6px 12px; }
+    .deleting { opacity: .45; pointer-events: none; }
+    .empty-state {
+      text-align: center; padding: 60px 24px;
+      color: var(--text-muted); font-size: 14px;
+    }
+    .empty-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-title { font-size: 16px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; }
+    .sessions-list { display: flex; flex-direction: column; gap: 12px; }
+
+    /* Feature 7/9 — card actions extension */
+    .session-card { grid-template-columns: 1fr; }
+    .card-actions-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:14px; }
+    .card-actions-row .btn { font-size:12px; }
+
+    /* Feature 9 — Upload collapsible */
+    .upload-section { margin-top:14px; border-top:1px solid var(--border); padding-top:14px; display:none; }
+    .upload-section.open { display:block; }
+    .dropzone {
+      border:1.5px dashed var(--border); border-radius:var(--radius); padding:22px;
+      text-align:center; color:var(--text-muted); font-size:13px; cursor:pointer;
+      transition:border-color .15s, background .15s;
+    }
+    .dropzone:hover, .dropzone.drag { border-color:var(--primary); background:rgba(0,180,216,.05); color:var(--text); }
+    .file-row {
+      display:flex; align-items:center; gap:10px; padding:9px 12px; margin-top:8px;
+      background:var(--surface-3); border:1px solid var(--border); border-radius:var(--radius); font-size:13px;
+    }
+    .file-row .fr-name { font-weight:600; color:var(--text); }
+    .file-row .fr-meta { font-size:11px; color:var(--text-muted); }
+    .file-row .fr-spacer { flex:1; }
+    .file-row a { color:var(--primary); font-size:12px; text-decoration:none; }
+    .file-row a:hover { text-decoration:underline; }
+    .file-row button { background:none; border:none; color:var(--text-muted); cursor:pointer; font-size:15px; line-height:1; }
+    .file-row button:hover { color:var(--danger); }
+
+    /* Prescription & Test Orders collapsible panels */
+    .patient-panel { margin-top:14px; border-top:1px solid var(--border); padding-top:14px; }
+    .patient-panel-toggle {
+      display:flex; align-items:center; gap:8px; width:100%; background:none; border:none;
+      cursor:pointer; font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase;
+      color:var(--text-muted); font-family:var(--font); padding:0 0 10px;
+      transition:color .12s;
+    }
+    .patient-panel-toggle:hover { color:var(--text); }
+    .patient-panel-chevron { margin-left:auto; transition:transform .2s; flex-shrink:0; }
+    .patient-panel-body { display:none; }
+    .patient-panel-body.open { display:block; }
+
+    .referral-card {
+      display:flex; align-items:center; gap:14px;
+      background:rgba(0,180,216,.06); border:1px solid rgba(0,180,216,.2);
+      border-radius:var(--radius); padding:14px 16px;
+    }
+    .referral-icon {
+      width:36px; height:36px; border-radius:10px; flex-shrink:0;
+      background:rgba(0,180,216,.12); display:flex; align-items:center; justify-content:center;
+    }
+    .referral-specialty { font-size:14px; font-weight:700; color:var(--text); margin-bottom:2px; }
+    .referral-meta { font-size:12px; color:var(--text-muted); }
+    .referral-urgency-badge {
+      font-size:10px; font-weight:700; padding:2px 8px; border-radius:99px;
+      text-transform:uppercase; letter-spacing:.05em; flex-shrink:0;
+    }
+    .referral-urgency-urgent { background:rgba(239,68,68,.15); color:#ef4444; border:1px solid rgba(239,68,68,.3); }
+    .referral-urgency-routine { background:rgba(78,222,163,.1); color:var(--success); border:1px solid rgba(78,222,163,.2); }
+    .referral-urgency-soon { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
+
+    .rx-card {
+      display:grid; grid-template-columns:1fr auto; gap:4px 16px; align-items:start;
+      padding:10px 14px; background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); margin-bottom:7px;
+    }
+    .rx-card:last-child { margin-bottom:0; }
+    .rx-drug { font-size:13px; font-weight:600; color:var(--text); }
+    .rx-details { font-size:11px; color:var(--text-muted); margin-top:2px; }
+    .rx-duration { font-size:11px; color:var(--text-muted); text-align:right; white-space:nowrap; }
+
+    .test-card {
+      display:flex; align-items:center; gap:10px; padding:9px 14px;
+      background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); margin-bottom:7px;
+    }
+    .test-card:last-child { margin-bottom:0; }
+    .test-icon {
+      width:32px; height:32px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+      flex-shrink:0;
+    }
+    .test-icon.blood {
+      background:rgba(239,68,68,.13); color:#ef4444;
+      border:1px solid rgba(239,68,68,.25);
+      box-shadow: 0 0 8px rgba(239,68,68,.25);
+      animation: blood-glow 2s ease-in-out infinite;
+    }
+    .test-icon.imaging { background:rgba(0,180,216,.12); color:var(--primary); border:1px solid rgba(0,180,216,.2); }
+    .test-icon.other { background:rgba(139,92,246,.12); color:#8b5cf6; border:1px solid rgba(139,92,246,.2); }
+    @keyframes blood-glow {
+      0%,100% { box-shadow:0 0 6px rgba(239,68,68,.3); border-color:rgba(239,68,68,.25); }
+      50%      { box-shadow:0 0 14px rgba(239,68,68,.6); border-color:rgba(239,68,68,.55); }
+    }
+    .test-name { font-size:13px; font-weight:600; color:var(--text); flex:1; }
+    .test-priority {
+      font-size:10px; font-weight:700; border-radius:99px; padding:2px 8px;
+      text-transform:uppercase; letter-spacing:.05em;
+    }
+    .test-priority.stat { background:rgba(239,68,68,.15); color:#ef4444; }
+    .test-priority.urgent { background:rgba(245,158,11,.15); color:#f59e0b; }
+    .test-priority.routine { background:rgba(16,185,129,.12); color:var(--success); }
+
+    /* Inline modal (Feature 7) */
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+      display:none; align-items:center; justify-content:center; z-index:1000;
+    }
+    .modal-overlay.open { display:flex; }
+    .modal-box {
+      background:var(--surface-2); border:1px solid var(--border); border-radius:12px;
+      padding:24px; max-height:90vh; overflow:auto; width:460px;
+    }
+    .modal-title { font-size:18px; font-weight:700; margin-bottom:14px; }
+    .field-label {
+      font-size:10px; font-weight:700; letter-spacing:.08em; text-transform:uppercase;
+      color:var(--text-muted); margin-bottom:8px; display:block;
+    }
+    .rx-line { display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--border); font-size:13px; }
+    .rx-line:last-child { border-bottom:none; }
+    .rx-dose { color:var(--text-muted); font-size:12px; }
+    .modal-ta {
+      width:100%; box-sizing:border-box; background:var(--surface-3); border:1px solid var(--border);
+      border-radius:var(--radius); color:var(--text); font-size:13px; padding:10px;
+      outline:none; font-family:var(--font); resize:vertical; min-height:72px;
+    }
+    .modal-ta:focus { border-color:var(--primary); }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:18px; }
+
+    /* ── premium my-sessions overrides ── */
+    .session-card {
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 20px 24px;
+      transition: border-color .18s, background .18s, transform .15s;
+      position: relative; overflow: hidden;
+    }
+    .session-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, var(--primary-dim), var(--primary));
+      opacity: 0; transition: opacity .2s;
+    }
+    .session-card:hover {
+      border-color: rgba(0,180,216,.3);
+      background: rgba(0,180,216,.03);
+      transform: translateY(-1px);
+    }
+    .session-card:hover::before { opacity: 1; }
+    .session-complaint { font-size: 15px; font-weight: 800; letter-spacing: -.02em; }
+    .session-dx {
+      font-size: 11px; font-weight: 700;
+      background: rgba(78,222,163,.09); color: #4edea3;
+      border: 1px solid rgba(78,222,163,.22); border-radius: 8px;
+      padding: 3px 10px;
+    }
+    .session-date { font-size: 11px; font-weight: 600; color: var(--text-muted); }
+    .rx-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 10px; padding: 11px 14px;
+    }
+    .rx-card:hover { border-color: rgba(0,180,216,.2); }
+    .rx-drug { font-size: 13px; font-weight: 700; }
+    .test-card {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 10px; padding: 10px 14px;
+    }
+    .test-card:hover { border-color: rgba(0,180,216,.2); }
+    .test-icon { border-radius: 8px; }
+    .patient-panel-toggle { color: var(--text-muted); letter-spacing: .06em; }
+    .patient-panel-toggle:hover { color: var(--primary); }
+    .dropzone {
+      border: 1.5px dashed rgba(255,255,255,.1);
+      border-radius: 12px;
+    }
+    .dropzone:hover, .dropzone.drag { border-color: rgba(0,180,216,.5); background: rgba(0,180,216,.05); }
+    .file-row {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 10px;
+    }
+    .modal-overlay { background: rgba(0,0,0,.75); backdrop-filter: blur(12px); }
+    .modal-box {
+      background: #0d1120;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 18px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .modal-title { font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
+    .modal-ta {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+    }
+    .modal-ta:focus { border-color: rgba(0,180,216,.5); box-shadow: 0 0 0 3px rgba(0,180,216,.1); }
+    .modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .modal-close {
+      display: flex; align-items: center; justify-content: center;
+      width: 30px; height: 30px; border-radius: 8px; border: none;
+      background: rgba(255,255,255,.06); color: var(--text-muted);
+      cursor: pointer; flex-shrink: 0; transition: background .15s, color .15s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,.12); color: var(--text); }
+    .star-btn { transition: color .12s, transform .12s !important; }
+    .star-btn:hover { transform: scale(1.18) !important; }
+
+    /* ── Section dividers ─────────────────────────────── */
+    .sessions-section-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--text-muted); margin: 28px 0 12px; display: flex; align-items: center; gap: 10px;
+    }
+    .sessions-section-label::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── Reschedule proposal banner ───────────────────── */
+    .proposal-banner {
+      margin-top: 14px; border-radius: 10px;
+      border: 1px solid rgba(245,158,11,.35);
+      background: rgba(245,158,11,.06);
+      padding: 12px 14px;
+    }
+    .proposal-banner-label {
+      font-size: 10px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase;
+      color: #f59e0b; margin-bottom: 6px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .proposal-slot {
+      font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 2px;
+    }
+    .proposal-reason {
+      font-size: 12px; color: var(--text-muted); margin-bottom: 10px; font-style: italic;
+    }
+    .proposal-btns { display: flex; gap: 8px; }
+    .btn-accept {
+      padding: 7px 16px; border-radius: var(--radius); font-size: 12px; font-weight: 700;
+      background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.4); color: #10b981;
+      cursor: pointer; font-family: var(--font); transition: background .12s;
+    }
+    .btn-accept:hover { background: rgba(16,185,129,.25); }
+    .btn-decline {
+      padding: 7px 16px; border-radius: var(--radius); font-size: 12px; font-weight: 700;
+      background: rgba(239,68,68,.1); border: 1px solid rgba(239,68,68,.3); color: #ef4444;
+      cursor: pointer; font-family: var(--font); transition: background .12s;
+    }
+    .btn-decline:hover { background: rgba(239,68,68,.18); }
+
+    /* ── Doctor notes panel ───────────────────────────── */
+    .doc-notes-panel {
+      margin-top: 14px; border-top: 1px solid var(--border); padding-top: 14px;
+    }
+    .doc-notes-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--primary); margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .doc-notes-text {
+      font-size: 13px; color: var(--text-dim); line-height: 1.6;
+      background: rgba(0,180,216,.04); border: 1px solid rgba(0,180,216,.12);
+      border-radius: 8px; padding: 10px 12px;
+    }
+    .plan-item {
+      display: flex; align-items: flex-start; gap: 8px; padding: 7px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05); font-size: 13px; color: var(--text-dim);
+    }
+    .plan-item:last-child { border-bottom: none; }
+    .plan-check {
+      width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0; margin-top: 1px;
+      background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3);
+      display: flex; align-items: center; justify-content: center; color: #10b981; font-size: 9px;
+    }
+
+    /* ── Page tab toggle ────────────────────────────────── */
+    .page-tab-bar {
+      display: flex; gap: 4px; margin-bottom: 22px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 4px;
+    }
+    .page-tab {
+      flex: 1; text-align: center; padding: 9px 12px;
+      font-size: 13px; font-weight: 600; border-radius: 8px;
+      cursor: pointer; border: none; background: none;
+      color: var(--text-muted); transition: all .15s;
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .page-tab.active {
+      background: var(--surface-3); color: var(--text);
+      box-shadow: 0 1px 4px rgba(0,0,0,.25);
+    }
+    .page-tab-badge {
+      font-size: 10px; font-weight: 700; min-width: 17px; height: 17px;
+      border-radius: 99px; display: inline-flex; align-items: center; justify-content: center;
+      padding: 0 5px; background: rgba(0,180,216,.15); color: var(--primary);
+    }
+
+    /* ── Appointments view ─────────────────────────────── */
+    .appt-sub-tabs {
+      display: flex; gap: 4px; margin-bottom: 18px;
+    }
+    .appt-sub-tab {
+      padding: 6px 16px; border-radius: 99px; font-size: 12px; font-weight: 700;
+      cursor: pointer; border: 1px solid var(--border); background: none;
+      color: var(--text-muted); transition: all .15s;
+    }
+    .appt-sub-tab.active {
+      background: var(--primary); color: #000d1a; border-color: var(--primary);
+    }
+    .appt-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 20px; margin-bottom: 10px;
+      position: relative; overflow: hidden; transition: border-color .15s, box-shadow .15s;
+    }
+    .appt-card:hover { border-color: rgba(255,255,255,.12); box-shadow: 0 4px 16px rgba(0,0,0,.2); }
+    .appt-card.cancelled {
+      opacity: .55; background: rgba(239,68,68,.03); border-color: rgba(239,68,68,.2);
+    }
+    .appt-card.cancelled:hover { box-shadow: none; border-color: rgba(239,68,68,.3); }
+    .appt-card-accent {
+      position: absolute; left: 0; top: 0; bottom: 0; width: 3px; border-radius: 14px 0 0 14px;
+    }
+    .appt-card-accent.followup { background: #8b5cf6; }
+    .appt-card-accent.upcoming { background: var(--primary); }
+    .appt-card-accent.cancelled { background: #ef4444; }
+    .appt-card-header { display: flex; align-items: flex-start; gap: 14px; }
+    .appt-card-icon {
+      width: 42px; height: 42px; border-radius: 11px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .appt-card-icon.followup { background: rgba(139,92,246,.12); color: #8b5cf6; box-shadow: inset 0 0 0 1px rgba(139,92,246,.2); }
+    .appt-card-icon.upcoming { background: rgba(0,180,216,.1); color: var(--primary); box-shadow: inset 0 0 0 1px rgba(0,180,216,.2); }
+    .appt-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 3px; }
+    .appt-card-meta { font-size: 12px; color: var(--text-muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .appt-card-slot {
+      font-size: 13px; font-weight: 600; color: var(--text);
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 8px; padding: 5px 12px; display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 10px;
+    }
+    .appt-card-notes {
+      margin-top: 10px; font-size: 12px; color: var(--text-dim); line-height: 1.55;
+      background: rgba(139,92,246,.04); border: 1px solid rgba(139,92,246,.12);
+      border-radius: 8px; padding: 8px 12px;
+    }
+    .appt-card-notes.upcoming-notes {
+      background: rgba(0,180,216,.04); border-color: rgba(0,180,216,.12);
+    }
+    .appt-card-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+    .reschedule-btn { color: var(--primary) !important; border-color: rgba(99,102,241,.3) !important; }
+    .reschedule-btn:hover { background: rgba(99,102,241,.07) !important; }
+    /* Reschedule modal */
+    #reschedule-modal .rs-day-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+    #reschedule-modal .rs-day-tab { flex: 0 0 auto; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-size: 12px; font-weight: 600; color: var(--text-muted); cursor: pointer; transition: all .15s; }
+    #reschedule-modal .rs-day-tab.active, #reschedule-modal .rs-day-tab:hover { border-color: var(--primary); color: var(--primary); background: rgba(99,102,241,.07); }
+    #reschedule-modal .rs-slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 8px; margin-bottom: 18px; min-height: 48px; }
+    #reschedule-modal .rs-slot { padding: 8px 6px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); font-size: 12px; font-weight: 600; color: var(--text); text-align: center; cursor: pointer; transition: all .15s; }
+    #reschedule-modal .rs-slot:hover { border-color: var(--primary); color: var(--primary); background: rgba(99,102,241,.07); }
+    #reschedule-modal .rs-slot.selected { border-color: var(--primary); background: var(--primary); color: #fff; }
+    #reschedule-modal .rs-note { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--text); font-size: 13px; resize: vertical; }
+    #reschedule-modal .rs-note:focus { outline: none; border-color: var(--primary); }
+    #reschedule-modal .rs-empty { color: var(--text-muted); font-size: 13px; padding: 12px 0; }
+    .appt-empty {
+      text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px;
+    }
+    .appt-empty svg { margin-bottom: 10px; opacity: .4; }
+
+    /* ── Quick-start shortcut ─────────────────────────── */
+    .quick-start-bar {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(0,180,216,.05); border: 1px solid rgba(0,180,216,.15);
+      border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .quick-start-bar:hover { background: rgba(0,180,216,.09); border-color: rgba(0,180,216,.3); }
+    .quick-start-icon {
+      width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+      background: rgba(0,180,216,.12); display: flex; align-items: center; justify-content: center;
+    }
+    .quick-start-text { flex: 1; }
+    .quick-start-title { font-size: 14px; font-weight: 700; color: var(--text); }
+    .quick-start-sub   { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page" style="max-width:840px;">
+  <div class="patient-page-header">
+    <div>
+      <div class="patient-page-title">My Sessions</div>
+      <div class="patient-page-sub" id="session-count"></div>
+    </div>
+  </div>
+
+  <!-- Page tab toggle -->
+  <div class="page-tab-bar">
+    <button class="page-tab active" id="tab-sessions" onclick="switchPageTab('sessions')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      Sessions
+    </button>
+    <button class="page-tab" id="tab-appointments" onclick="switchPageTab('appointments')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Appointments
+      <span class="page-tab-badge" id="appt-tab-badge" style="display:none;"></span>
+    </button>
+  </div>
+
+  <!-- Appointments panel (hidden by default) -->
+  <div id="appointments-panel" style="display:none;">
+    <div class="appt-sub-tabs">
+      <button class="appt-sub-tab active" id="sub-tab-upcoming" onclick="switchApptSubTab('upcoming')">Upcoming</button>
+      <button class="appt-sub-tab" id="sub-tab-followups" onclick="switchApptSubTab('followups')">
+        Follow-ups <span id="followup-count-badge" style="display:none;"></span>
+      </button>
+    </div>
+    <div id="upcoming-appts-list"></div>
+    <div id="followups-list" style="display:none;"></div>
+  </div>
+
+  <!-- Sessions panel (shown by default) -->
+  <div id="sessions-panel">
+  <!-- Resume active session banner (shown if tab was closed mid-session) -->
+  <div id="resume-banner" style="display:none;"></div>
+
+  <!-- Quick-start shortcut -->
+  <div class="quick-start-bar" onclick="window.location.href='/patient-info.html'">
+    <div class="quick-start-icon">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    </div>
+    <div class="quick-start-text">
+      <div class="quick-start-title">Start AI Diagnostic Session</div>
+      <div class="quick-start-sub">Answer questions, get a diagnosis, book a doctor.</div>
+    </div>
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+  </div>
+
+  <div id="sessions-container">
+    <div class="thinking-row"><div class="spinner"></div> Loading sessions…</div>
+  </div>
+
+  <!-- Waitlist section -->
+  <div id="waitlist-section" style="display:none;margin-top:32px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div>
+        <div class="section-title" style="margin-bottom:2px;font-size:14px;">My Waitlist</div>
+        <div style="font-size:12px;color:var(--text-muted);">You'll be notified when a slot opens up.</div>
+      </div>
+    </div>
+    <div id="waitlist-list"></div>
+  </div>
+  </div><!-- end #sessions-panel -->
+</div>
+
+<!-- Refill request modal (Feature 7) -->
+<div class="modal-overlay" id="refill-modal">
+  <div class="modal-box">
+    <div class="modal-title">Request Prescription Refill</div>
+    <label class="field-label">Current Prescriptions</label>
+    <div id="refill-rx-list" style="margin-bottom:16px;"></div>
+    <label class="field-label" for="refill-note">Note to Doctor (optional)</label>
+    <textarea class="modal-ta" id="refill-note" placeholder="e.g. running low, no side effects so far"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeRefill()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="refill-send" onclick="sendRefill()">Send Request</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const user = getAuthUser();
+if (!user) window.location.replace('/login.html?next=/my-sessions.html');
+
+// Show resume banner if patient closed the tab mid-session
+(function() {
+  const sid = localStorage.getItem('activeSessionId');
+  const sd  = localStorage.getItem('activeSessionStart');
+  if (!sid || !sd) return;
+  try {
+    const data = JSON.parse(sd);
+    const complaint = data.chief_complaint || 'session';
+    const banner = document.getElementById('resume-banner');
+    banner.style.display = '';
+    banner.innerHTML = `
+      <div style="display:flex;align-items:center;gap:14px;background:rgba(139,92,246,.07);border:1px solid rgba(139,92,246,.25);border-radius:14px;padding:14px 18px;margin-bottom:16px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:rgba(139,92,246,.12);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2.2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:14px;font-weight:700;color:var(--text);">Continue your session</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:1px;">${escHtml(complaint)}</div>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="resumeSession()">Resume →</button>
+        <button onclick="dismissResume()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;padding:4px;font-size:18px;line-height:1;flex-shrink:0;">×</button>
+      </div>`;
+  } catch {}
+})();
+
+function resumeSession() {
+  const sid = localStorage.getItem('activeSessionId');
+  const sd  = localStorage.getItem('activeSessionStart');
+  if (!sid || !sd) return;
+  sessionStorage.setItem('sessionId', sid);
+  sessionStorage.setItem('sessionStart', sd);
+  window.location.href = '/session.html';
+}
+function dismissResume() {
+  localStorage.removeItem('activeSessionId');
+  localStorage.removeItem('activeSessionStart');
+  document.getElementById('resume-banner').style.display = 'none';
+}
+
+function _checkPatientNotifs(appts) {
+  if (!_isNotifEnabled()) return;
+  const today = new Date().toISOString().slice(0, 10);
+  for (const a of appts) {
+    const id = a.appointment_id;
+    if (!id) continue;
+    // Appointment confirmed / status change
+    if (a.status === 'upcoming' && !_patNotifSeen.has('appt-confirmed-' + id)) {
+      const slot = a.slot ? new Date(a.slot).toLocaleString([], { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '';
+      _firePushNotif('appt-confirmed-' + id,
+        'Appointment Confirmed',
+        `Your appointment is scheduled${slot ? ' for ' + slot : ''}.`,
+        { link: '/my-sessions.html' }
+      );
+    }
+    // Doctor rescheduled
+    if (a.reschedule_request?.proposed_slot && a.reschedule_request?.status === 'pending') {
+      _firePushNotif('reschedule-' + id + '-' + a.reschedule_request.proposed_slot,
+        'Appointment Rescheduled',
+        'Your doctor has proposed a new appointment time. Tap to review.',
+        { link: '/notifications.html', requireInteraction: true }
+      );
+    }
+    // New prescription
+    if ((a.prescriptions || []).length > 0) {
+      const rxKey = 'rx-' + id + '-' + a.prescriptions.length;
+      _firePushNotif(rxKey,
+        'Prescription Ready',
+        `Dr. ${a.doctor_name || 'your doctor'} has added a prescription. Tap to view.`,
+        { link: '/my-sessions.html' }
+      );
+    }
+    // Test orders
+    if ((a.test_orders || []).length > 0) {
+      const testKey = 'tests-' + id + '-' + a.test_orders.length;
+      _firePushNotif(testKey,
+        'Test Ordered',
+        `${a.test_orders.length} test${a.test_orders.length > 1 ? 's have' : ' has'} been ordered by your doctor.`,
+        { link: '/my-sessions.html' }
+      );
+    }
+    // Referral
+    if (a.referral && !_patNotifSeen.has('referral-' + id)) {
+      _firePushNotif('referral-' + id,
+        'Referral Issued',
+        `You've been referred to ${a.referral.specialty || 'a specialist'}.`,
+        { link: '/notifications.html' }
+      );
+    }
+    // Refill fulfilled
+    if (a.refill_request?.status === 'fulfilled') {
+      _firePushNotif('refill-fulfilled-' + id,
+        'Refill Approved',
+        `Your refill request has been approved by your doctor.`,
+        { link: '/my-sessions.html' }
+      );
+    }
+  }
+}
+async function _checkPatientMessages() {
+  try {
+    const r = await fetch('/api/messages/unread-count', { headers: authHeaders() });
+    if (!r.ok) return;
+    const { count } = await r.json();
+    if (count > 0) {
+      const ts = new Date().toISOString().slice(0, 16); // minute-resolution so re-fires if count changes
+      _firePushNotif(`msg-${ts}-${count}`,
+        `${count} Unread Message${count > 1 ? 's' : ''}`,
+        'You have unread messages from your care team.',
+        { link: '/messages.html' }
+      );
+    }
+  } catch {}
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'short', day: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+  } catch { return iso; }
+}
+
+function statusBadge(s) {
+  if (s.status === 'complete') return `<span class="badge badge-green">Complete</span>`;
+  return `<span class="badge badge-dim">In progress</span>`;
+}
+
+function viewReport(sessionId) {
+  sessionStorage.setItem('sessionId', sessionId);
+  window.location.href = '/report.html';
+}
+
+// Map of session_id -> full appointment object (Features 6,7,9)
+let _apptMap = {};
+
+async function loadSessions() {
+  const container = document.getElementById('sessions-container');
+  try {
+    // Load sessions, test notifications and appointments in parallel
+    const [sessRes, notifRes, apptRes] = await Promise.all([
+      fetch('/api/auth/sessions', { headers: { ...authHeaders() } }),
+      fetch('/api/patient/test-notifications', { headers: { ...authHeaders() } }),
+      fetch('/api/appointments', { headers: { ...authHeaders() } }),
+    ]);
+    if (!sessRes.ok) {
+      if (sessRes.status === 401) { clearAuth(); window.location.replace('/login.html'); return; }
+      throw new Error(await sessRes.text());
+    }
+    const { sessions } = await sessRes.json();
+    const notifData = notifRes.ok ? await notifRes.json() : { appointments: [] };
+    const apptData = apptRes.ok ? await apptRes.json() : { appointments: [] };
+    // Map session_id → full appointment for refill / intake / upload features
+    _apptMap = {};
+    for (const a of (apptData.appointments || [])) {
+      if (a.session_id) _apptMap[a.session_id] = a;
+    }
+    _checkPatientNotifs(apptData.appointments || []);
+    _checkPatientMessages();
+    // Map session_id → test orders for quick lookup
+    const testMap = {};
+    for (const a of (notifData.appointments || [])) {
+      if (a.session_id) testMap[a.session_id] = a;
+    }
+    // Mark all test notification appointments as seen so the nav badge clears
+    if (notifData.appointments?.length && typeof _markTestIdsSeen === 'function') {
+      _markTestIdsSeen(notifData.appointments.map(a => a.appt_id).filter(Boolean));
+    }
+
+    document.getElementById('session-count').textContent =
+      sessions.length === 0 ? 'No sessions yet' :
+      sessions.length === 1 ? '1 session' : `${sessions.length} sessions`;
+
+    if (sessions.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--text-muted)"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          </div>
+          <div class="empty-title">No sessions yet</div>
+          <p>Use the shortcut above to start your first diagnostic session.</p>
+        </div>
+      `;
+      return;
+    }
+
+    // Sort and group: upcoming-appointment sessions first, then past
+    const upcoming = sessions.filter(s => {
+      const a = _apptMap[s.session_id];
+      return a && a.status === 'upcoming';
+    });
+    const past = sessions.filter(s => {
+      const a = _apptMap[s.session_id];
+      return !a || a.status !== 'upcoming';
+    }).sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
+
+    function buildCard(s) {
+      const testInfo = testMap[s.session_id];
+      const testBadge = testInfo ? `
+        <span style="display:inline-flex;align-items:center;gap:5px;background:rgba(245,158,11,.15);
+          color:#f59e0b;border:1px solid rgba(245,158,11,.35);border-radius:99px;
+          padding:2px 10px;font-size:11px;font-weight:700;">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/><path d="M5.58 16.5h12.85"/></svg> ${testInfo.test_count} Test${testInfo.test_count !== 1 ? 's' : ''} Ordered
+          ${testInfo.has_stat ? '<span style="color:#ef4444;">· STAT</span>' : ''}
+        </span>` : '';
+      const appt = _apptMap[s.session_id];
+      const apptId = appt ? appt.appointment_id : null;
+      const isUpcoming = appt && (appt.status || 'upcoming') === 'upcoming';
+      const hasRx = appt && Array.isArray(appt.prescriptions) && appt.prescriptions.length > 0;
+      const refilled = appt && appt.refill_request;
+      const intakeDone = appt && appt.intake;
+      const isSeen = appt && appt.status === 'seen';
+      const hasRating = appt && appt.rating;
+
+      // Reschedule proposal
+      const proposal = appt && appt.reschedule_proposal;
+      const hasPendingProposal = proposal && proposal.status === 'pending';
+
+      const featureBtns = appt ? `
+        ${isUpcoming && !hasPendingProposal ? `<button class="btn btn-secondary btn-sm" onclick="window.location.href='/pre-visit-intake.html?appt=${apptId}'">
+          ${intakeDone ? 'Update Check-in' : 'Pre-visit Check-in'}</button>` : ''}
+        ${isUpcoming && !hasPendingProposal ? `<button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:rgba(239,68,68,.3);" onclick="cancelAppt('${apptId}', this)">Cancel</button>` : ''}
+        ${hasRx ? `<button class="btn btn-ghost btn-sm" id="refill-btn-${apptId}" ${refilled ? 'disabled' : ''} onclick="openRefill('${apptId}')">
+          ${refilled ? 'Refill Requested' : 'Request Refill'}</button>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="toggleUpload('${apptId}')">Upload Results</button>
+        ${isSeen && !hasRating ? `<button class="btn btn-ghost btn-sm" onclick="openRating('${apptId}')">Rate Visit</button>` : ''}
+        ${isSeen && hasRating ? `<span class="btn btn-ghost btn-sm" style="cursor:default;letter-spacing:1px;"><span style="color:#f59e0b;">${'★'.repeat(appt.rating.stars)}</span><span style="color:#4d647e;">${'★'.repeat(5-appt.rating.stars)}</span></span>` : ''}
+        <button class="btn btn-ghost btn-sm" onclick="openMessages('${apptId}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Message
+        </button>
+      ` : '';
+
+      // Proposal banner
+      const proposalBanner = hasPendingProposal ? (() => {
+        const newSlot = proposal.proposed_slot
+          ? new Date(proposal.proposed_slot).toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })
+          : proposal.proposed_slot;
+        return `
+        <div class="proposal-banner">
+          <div class="proposal-banner-label">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Reschedule Proposed
+          </div>
+          <div class="proposal-slot">${escHtml(newSlot || '—')}</div>
+          ${proposal.reason ? `<div class="proposal-reason">"${escHtml(proposal.reason)}"</div>` : '<div style="margin-bottom:10px;"></div>'}
+          <div class="proposal-btns">
+            <button class="btn-accept" onclick="respondProposal('${apptId}','accept',this)">✓ Accept</button>
+            <button class="btn-decline" onclick="respondProposal('${apptId}','decline',this)">✕ Decline</button>
+          </div>
+        </div>`;
+      })() : '';
+
+      // Doctor notes + approved plan
+      const hasNotes = appt && (appt.doctor_notes || (appt.approved_plan && appt.approved_plan.length));
+      const notesPanel = hasNotes ? (() => {
+        const planHtml = (appt.approved_plan || []).length ? `
+          <div style="margin-top:${appt.doctor_notes ? '10px' : '0'};">
+            <div style="font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:6px;">Treatment Plan</div>
+            ${appt.approved_plan.map(p => `
+              <div class="plan-item">
+                <div class="plan-check">✓</div>
+                <span>${escHtml(p.text || '')}</span>
+              </div>`).join('')}
+          </div>` : '';
+        return `
+        <div class="doc-notes-panel">
+          <div class="doc-notes-label">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Doctor's Notes
+          </div>
+          ${appt.doctor_notes ? `<div class="doc-notes-text">${escHtml(appt.doctor_notes)}</div>` : ''}
+          ${planHtml}
+        </div>`;
+      })() : '';
+
+      return `
+      <div class="session-card" data-appt="${apptId || ''}">
+        <div style="flex:1;min-width:0;">
+          <div class="session-complaint">${escHtml(s.chief_complaint || 'Unnamed session')}</div>
+          <div class="session-meta-row">
+            <span class="session-date">${fmtDate(s.started_at)}</span>
+            ${statusBadge(s)}
+            ${s.primary_diagnosis ? `<span class="session-dx">${escHtml(s.primary_diagnosis)}</span>` : ''}
+            ${testBadge}
+            ${appt && appt.slot ? `<span class="session-date">· Appt: ${fmtDate(appt.slot)}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-actions-row">
+          ${s.status === 'complete'
+            ? `<button class="btn btn-primary btn-sm" onclick="viewReport('${s.session_id}')">View Report</button>`
+            : `<span class="badge badge-dim">No report yet</span>`}
+          ${featureBtns}
+          <span style="flex:1;"></span>
+          <button class="btn-delete" id="del-${s.session_id}" title="Delete session"
+            onclick="confirmDelete('${s.session_id}', this)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/>
+            </svg>
+          </button>
+        </div>
+        ${proposalBanner}
+        ${appt && hasRx ? `
+        <div class="patient-panel" id="rx-panel-${apptId}">
+          <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
+            <button class="patient-panel-toggle" style="border-bottom:none;flex:1;" onclick="togglePatientPanel('rx-panel-${apptId}')">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11m0 0H5m4 0h10m-10 0a2 2 0 002 2h10a2 2 0 002-2m0-11v4"/></svg>
+              Prescriptions (${appt.prescriptions.length})
+              <svg class="patient-panel-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <button onclick="downloadPrescription('${apptId}')" style="display:flex;align-items:center;gap:5px;padding:8px 12px;font-size:11px;font-weight:600;color:var(--primary);background:none;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Download prescription as PDF">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+              Download
+            </button>
+          </div>
+          <div class="patient-panel-body" id="rx-body-${apptId}">
+            ${appt.prescriptions.map(rx => `
+              <div class="rx-card">
+                <div>
+                  <div class="rx-drug">${escHtml(rx.drug||'')}</div>
+                  <div class="rx-details">${[rx.dose, rx.route, rx.frequency].filter(Boolean).map(escHtml).join(' · ')}</div>
+                  ${rx.notes ? `<div class="rx-details" style="margin-top:2px;font-style:italic;">${escHtml(rx.notes)}</div>` : ''}
+                </div>
+                <div class="rx-duration">${escHtml(rx.duration||'')}</div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        ${appt && appt.test_orders && appt.test_orders.length ? `
+        <div class="patient-panel" id="tests-panel-${apptId}">
+          <button class="patient-panel-toggle" onclick="togglePatientPanel('tests-panel-${apptId}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/></svg>
+            Test Orders (${appt.test_orders.length})
+            <svg class="patient-panel-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="patient-panel-body" id="tests-body-${apptId}">
+            ${appt.test_orders.map(t => {
+              const iconMap = {
+                blood: `<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3c0 0-7 8.5-7 13a7 7 0 0014 0C19 11.5 12 3 12 3z" opacity=".9"/></svg>`,
+                imaging: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="12" cy="12" r="4"/></svg>`,
+                other: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 2v7.31"/><path d="M14 9.3V2"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 1 1-4 0"/></svg>`,
+              };
+              const cat = t.category || 'other';
+              return `<div class="test-card">
+                <div class="test-icon ${cat}">${iconMap[cat] || iconMap.other}</div>
+                <div class="test-name">${escHtml(t.test||'')}</div>
+                ${t.notes ? `<div style="font-size:11px;color:var(--text-muted);">${escHtml(t.notes)}</div>` : ''}
+                <span class="test-priority ${t.priority||'routine'}">${escHtml(t.priority||'routine')}</span>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>` : ''}
+
+        ${appt && appt.referral ? (() => {
+          const ref = appt.referral;
+          const urg = (ref.urgency || 'routine').toLowerCase();
+          const urgClass = urg === 'urgent' ? 'referral-urgency-urgent' : urg === 'soon' ? 'referral-urgency-soon' : 'referral-urgency-routine';
+          const bookUrl = `/find-doctors.html?specialty=${encodeURIComponent(ref.specialty || '')}`;
+          return `
+        <div class="patient-panel" id="ref-panel-${apptId}">
+          <button class="patient-panel-toggle" onclick="togglePatientPanel('ref-panel-${apptId}')">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+            Specialist Referral
+            <svg class="patient-panel-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="patient-panel-body" id="ref-body-${apptId}">
+            <div class="referral-card">
+              <div class="referral-icon">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              </div>
+              <div style="flex:1;min-width:0;">
+                <div class="referral-specialty">${escHtml(ref.specialty || 'Specialist')}</div>
+                <div class="referral-meta">
+                  ${ref.to_doctor ? `Dr. ${escHtml(ref.to_doctor)}` : 'Any available specialist'}
+                  ${ref.notes ? ` · ${escHtml(ref.notes)}` : ''}
+                </div>
+              </div>
+              <span class="referral-urgency-badge ${urgClass}">${escHtml(ref.urgency || 'Routine')}</span>
+              <a href="${escHtml(bookUrl)}" class="btn btn-primary btn-sm" style="white-space:nowrap;text-decoration:none;">
+                Book Appointment
+              </a>
+            </div>
+          </div>
+        </div>`;
+        })() : ''}
+
+        ${notesPanel}
+
+        ${appt ? `
+        <div class="upload-section" id="upload-${apptId}">
+          <label class="field-label" style="margin-bottom:8px;">Upload Test Results</label>
+          <div class="dropzone" id="dz-${apptId}" onclick="document.getElementById('fi-${apptId}').click()">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="margin-bottom:6px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <div>Drag &amp; drop a file here, or click to browse</div>
+          </div>
+          <input type="file" id="fi-${apptId}" style="display:none" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,image/*,application/pdf" onchange="onFilePicked('${apptId}', this.files)">
+          <div id="filelist-${apptId}" style="margin-top:4px;"></div>
+        </div>` : ''}
+      </div>`;
+    } // end buildCard
+
+    let html = '<div class="sessions-list">';
+    if (upcoming.length) {
+      html += `<div class="sessions-section-label">Upcoming Appointments</div>`;
+      html += upcoming.map(buildCard).join('');
+    }
+    if (past.length) {
+      html += `<div class="sessions-section-label">Past Sessions</div>`;
+      html += past.map(buildCard).join('');
+    }
+    html += '</div>';
+    container.innerHTML = html;
+
+    // Build appointments panel from same apptData
+    _buildAppointmentsPanel(apptData.appointments || []);
+
+  } catch (e) {
+    container.innerHTML = `<div class="error-msg">Error loading sessions: ${escHtml(e.message)}</div>`;
+  }
+}
+
+// ── Tab switching ────────────────────────────────────────────────────────────
+
+function switchPageTab(tab) {
+  document.getElementById('sessions-panel').style.display = tab === 'sessions' ? '' : 'none';
+  document.getElementById('appointments-panel').style.display = tab === 'appointments' ? '' : 'none';
+  document.getElementById('tab-sessions').classList.toggle('active', tab === 'sessions');
+  document.getElementById('tab-appointments').classList.toggle('active', tab === 'appointments');
+}
+
+let _apptSubTab = 'upcoming';
+function switchApptSubTab(sub) {
+  _apptSubTab = sub;
+  document.getElementById('upcoming-appts-list').style.display = sub === 'upcoming' ? '' : 'none';
+  document.getElementById('followups-list').style.display = sub === 'followups' ? '' : 'none';
+  document.getElementById('sub-tab-upcoming').classList.toggle('active', sub === 'upcoming');
+  document.getElementById('sub-tab-followups').classList.toggle('active', sub === 'followups');
+}
+
+// ── Appointments panel builder ───────────────────────────────────────────────
+
+function _buildAppointmentsPanel(appts) {
+  const now = new Date().toISOString();
+  // Show upcoming (active + recently cancelled within 30 days) and exclude old past
+  const upcoming = appts.filter(a => !a.is_followup && (a.status === 'upcoming' || a.status === 'cancelled') && a.slot >= new Date(Date.now() - 30*86400000).toISOString());
+  const followups = appts.filter(a => a.is_followup);
+
+  // Update badge count
+  const total = upcoming.length + followups.length;
+  const badge = document.getElementById('appt-tab-badge');
+  if (total > 0) { badge.textContent = total; badge.style.display = ''; }
+
+  // Follow-up sub-tab badge
+  const fuBadge = document.getElementById('followup-count-badge');
+  if (followups.length > 0) {
+    fuBadge.textContent = followups.length;
+    fuBadge.style.cssText = 'display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;border-radius:99px;font-size:9px;font-weight:800;background:rgba(139,92,246,.25);color:#8b5cf6;margin-left:4px;padding:0 4px;';
+  }
+
+  document.getElementById('upcoming-appts-list').innerHTML = _buildUpcomingHtml(upcoming);
+  document.getElementById('followups-list').innerHTML = _buildFollowupsHtml(followups, appts);
+}
+
+function _fmtSlot(iso) {
+  if (!iso) return '—';
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+      + ' · ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+function _daysUntil(iso) {
+  if (!iso) return null;
+  const diff = Math.ceil((new Date(iso) - new Date()) / 86400000);
+  if (diff < 0) return null;
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return `In ${diff} days`;
+}
+
+function _buildUpcomingHtml(appts) {
+  if (!appts.length) return `
+    <div class="appt-empty">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <div>No upcoming appointments</div>
+    </div>`;
+
+  return appts.sort((a, b) => (a.slot || '') < (b.slot || '') ? -1 : 1).map(a => {
+    const isCancelled = a.status === 'cancelled';
+    const daysLabel = _daysUntil(a.slot);
+    const preVisitDone = !!a.intake;
+    const cancelledAt = a.cancelled_at ? ` on ${_fmtSlot(a.cancelled_at)}` : '';
+    return `
+    <div class="appt-card${isCancelled ? ' cancelled' : ''}">
+      <div class="appt-card-accent ${isCancelled ? 'cancelled' : 'upcoming'}"></div>
+      <div class="appt-card-header">
+        <div class="appt-card-icon ${isCancelled ? '' : 'upcoming'}" style="${isCancelled ? 'background:rgba(239,68,68,.1);color:#ef4444;box-shadow:inset 0 0 0 1px rgba(239,68,68,.2);' : ''}">
+          ${isCancelled
+            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="appt-card-title" style="${isCancelled ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${escHtml(a.doctor_name || 'Doctor')}</div>
+          <div class="appt-card-meta">
+            <span>${escHtml(a.specialty || '')}</span>
+            ${a.primary_diagnosis ? `<span style="color:var(--success);font-weight:600;">${escHtml(a.primary_diagnosis)}</span>` : ''}
+            ${!isCancelled && daysLabel ? `<span style="color:var(--primary);font-weight:700;">${escHtml(daysLabel)}</span>` : ''}
+          </div>
+        </div>
+        ${isCancelled
+          ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);white-space:nowrap;flex-shrink:0;">✕ Cancelled</span>`
+          : `<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,180,216,.1);color:var(--primary);border:1px solid rgba(0,180,216,.2);white-space:nowrap;flex-shrink:0;">${escHtml((a.urgency || 'routine').replace(/_/g,' '))}</span>`}
+      </div>
+      <div class="appt-card-slot" style="${isCancelled ? 'opacity:.5;text-decoration:line-through;' : ''}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        ${escHtml(_fmtSlot(a.slot))}
+      </div>
+      ${isCancelled ? `
+        <div style="margin-top:8px;font-size:12px;color:#ef4444;display:flex;align-items:center;gap:5px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Cancelled by you${escHtml(cancelledAt)}
+        </div>
+        <div class="appt-card-actions" style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Book Again
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="dismissAppt('${escHtml(a.appointment_id)}', this)" style="color:var(--text-muted);border-color:rgba(148,163,184,.3);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Remove
+          </button>
+        </div>` : ''}
+      ${!isCancelled && a.doctor_summary ? `<div class="appt-card-notes upcoming-notes">${escHtml(a.doctor_summary)}</div>` : ''}
+      ${!isCancelled ? `<div class="appt-card-actions">
+        <a href="/pre-visit-intake.html?appt=${escHtml(a.appointment_id)}" class="btn btn-secondary btn-sm" style="text-decoration:none;">${preVisitDone ? 'Update Check-in' : 'Pre-visit Check-in'}</a>
+        <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Reschedule
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelAppt('${escHtml(a.appointment_id)}', this)" style="color:var(--danger);border-color:rgba(239,68,68,.3);">Cancel</button>
+        <button class="btn btn-ghost btn-sm" onclick="openMessages('${escHtml(a.appointment_id)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Message
+        </button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function _buildFollowupsHtml(followups, allAppts) {
+  if (!followups.length) return `
+    <div class="appt-empty">
+      <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+      <div>No follow-up appointments scheduled</div>
+    </div>`;
+
+  const apptById = {};
+  allAppts.forEach(a => { apptById[a.appointment_id] = a; });
+
+  return followups.sort((a, b) => (a.slot || '') < (b.slot || '') ? -1 : 1).map(a => {
+    const isCancelled = a.status === 'cancelled';
+    const daysLabel = _daysUntil(a.slot);
+    const parent = apptById[a.parent_appointment_id];
+    const isPast = !isCancelled && a.slot && a.slot < new Date().toISOString();
+    const cancelledAt = a.cancelled_at ? ` on ${_fmtSlot(a.cancelled_at)}` : '';
+    return `
+    <div class="appt-card${isCancelled ? ' cancelled' : ''}">
+      <div class="appt-card-accent ${isCancelled ? 'cancelled' : 'followup'}"></div>
+      <div class="appt-card-header">
+        <div class="appt-card-icon ${isCancelled ? '' : 'followup'}" style="${isCancelled ? 'background:rgba(239,68,68,.1);color:#ef4444;box-shadow:inset 0 0 0 1px rgba(239,68,68,.2);' : ''}">
+          ${isCancelled
+            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
+            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>`}
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div class="appt-card-title" style="${isCancelled ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">
+            ${escHtml(a.doctor_name || 'Doctor')}
+            <span style="font-size:11px;font-weight:600;color:${isCancelled ? '#ef4444' : '#8b5cf6'};background:${isCancelled ? 'rgba(239,68,68,.1)' : 'rgba(139,92,246,.1)'};border:1px solid ${isCancelled ? 'rgba(239,68,68,.2)' : 'rgba(139,92,246,.2)'};border-radius:99px;padding:2px 8px;margin-left:6px;">${isCancelled ? '✕ Cancelled' : 'Follow-up'}</span>
+          </div>
+          <div class="appt-card-meta">
+            <span>${escHtml(a.specialty || '')}</span>
+            ${a.primary_diagnosis ? `<span style="color:var(--success);font-weight:600;">${escHtml(a.primary_diagnosis)}</span>` : ''}
+            ${!isCancelled && daysLabel && !isPast ? `<span style="color:#8b5cf6;font-weight:700;">${escHtml(daysLabel)}</span>` : ''}
+            ${isPast ? `<span style="color:var(--text-muted);">Completed</span>` : ''}
+            ${parent ? `<span style="color:var(--text-muted);">· Follow-up from ${escHtml(fmtDate(parent.slot || parent.booked_at))}</span>` : ''}
+          </div>
+        </div>
+      </div>
+      <div class="appt-card-slot" style="${isCancelled || isPast ? 'opacity:.5;' : ''}${isCancelled ? 'text-decoration:line-through;' : ''}">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        ${escHtml(_fmtSlot(a.slot))}
+      </div>
+      ${isCancelled ? `
+        <div style="margin-top:8px;font-size:12px;color:#ef4444;display:flex;align-items:center;gap:5px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Cancelled by you${escHtml(cancelledAt)}
+        </div>
+        <div class="appt-card-actions" style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Book Again
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="dismissAppt('${escHtml(a.appointment_id)}', this)" style="color:var(--text-muted);border-color:rgba(148,163,184,.3);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Remove
+          </button>
+        </div>` : ''}
+      ${!isCancelled && a.followup_notes ? `<div class="appt-card-notes"><strong style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#8b5cf6;">Doctor's Note</strong><br>${escHtml(a.followup_notes)}</div>` : ''}
+      ${!isCancelled && !isPast ? `<div class="appt-card-actions">
+        <button class="btn btn-ghost btn-sm" onclick="openMessages('${escHtml(a.appointment_id)}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Message Doctor
+        </button>
+        <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+          Reschedule
+        </button>
+        <button class="btn btn-ghost btn-sm" onclick="cancelAppt('${escHtml(a.appointment_id)}', this)" style="color:var(--danger);border-color:rgba(239,68,68,.3);">Cancel</button>
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+let _deleteTimers = {};
+
+function confirmDelete(sessionId, btn) {
+  if (!btn.classList.contains('confirm')) {
+    btn.classList.add('confirm');
+    btn.textContent = 'Confirm';
+    _deleteTimers[sessionId] = setTimeout(() => {
+      btn.classList.remove('confirm');
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>`;
+    }, 3000);
+    return;
+  }
+  clearTimeout(_deleteTimers[sessionId]);
+  const card = btn.closest('.session-card');
+  card.classList.add('deleting');
+  fetch(`/api/auth/sessions/${sessionId}`, {
+    method: 'DELETE',
+    headers: { ...authHeaders() },
+  }).then(r => {
+    if (!r.ok) return r.json().then(d => { throw new Error(d.detail || r.statusText); });
+    card.remove();
+    const remaining = document.querySelectorAll('.session-card').length;
+    document.getElementById('session-count').textContent =
+      remaining === 0 ? 'No sessions yet' :
+      remaining === 1 ? '1 session' : `${remaining} sessions`;
+    if (remaining === 0) loadSessions();
+  }).catch(e => {
+    card.classList.remove('deleting');
+    alert('Could not delete session: ' + e.message);
+  });
+}
+
+// ---- Feature 7: Refill request ----
+let _refillApptId = null;
+function openRefill(apptId) {
+  const appt = Object.values(_apptMap).find(a => a.appointment_id === apptId);
+  if (!appt) return;
+  _refillApptId = apptId;
+  const rx = appt.prescriptions || [];
+  document.getElementById('refill-rx-list').innerHTML = rx.length
+    ? rx.map(r => `<div class="rx-line"><span>${escHtml(r.drug || '')}</span><span class="rx-dose">${escHtml(r.dose || '')}${r.frequency ? ' · ' + escHtml(r.frequency) : ''}</span></div>`).join('')
+    : `<div style="color:var(--text-muted);font-size:13px;">No prescriptions on file.</div>`;
+  document.getElementById('refill-note').value = '';
+  document.getElementById('refill-modal').classList.add('open');
+}
+function closeRefill() { document.getElementById('refill-modal').classList.remove('open'); }
+async function sendRefill() {
+  const appt = Object.values(_apptMap).find(a => a.appointment_id === _refillApptId);
+  const btn = document.getElementById('refill-send');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(`/api/patient/appointments/${_refillApptId}/refill`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', ...authHeaders() },
+      body: JSON.stringify({ medications: (appt && appt.prescriptions) || [], note: document.getElementById('refill-note').value }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    if (appt) appt.refill_request = { note: document.getElementById('refill-note').value };
+    closeRefill();
+    const rb = document.getElementById('refill-btn-' + _refillApptId);
+    if (rb) { rb.disabled = true; rb.textContent = 'Refill Requested'; }
+  } catch (e) {
+    alert('Could not send refill: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send Request';
+  }
+}
+document.getElementById('refill-modal').addEventListener('click', (e) => {
+  if (e.target.id === 'refill-modal') closeRefill();
+});
+
+// ---- Feature 9: Test result upload ----
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1024*1024) return (b/1024).toFixed(1) + ' KB';
+  return (b/1024/1024).toFixed(1) + ' MB';
+}
+async function toggleUpload(apptId) {
+  const sec = document.getElementById('upload-' + apptId);
+  if (!sec) return;
+  const opening = !sec.classList.contains('open');
+  sec.classList.toggle('open');
+  if (opening) {
+    setupDropzone(apptId);
+    await loadFiles(apptId);
+  }
+}
+function setupDropzone(apptId) {
+  const dz = document.getElementById('dz-' + apptId);
+  if (!dz || dz._wired) return;
+  dz._wired = true;
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop', e => { if (e.dataTransfer.files.length) onFilePicked(apptId, e.dataTransfer.files); });
+}
+async function loadFiles(apptId) {
+  const list = document.getElementById('filelist-' + apptId);
+  try {
+    const res = await fetch(`/api/patient/appointments/${apptId}/files`, { headers: { ...authHeaders() } });
+    if (!res.ok) return;
+    const { files } = await res.json();
+    renderFiles(apptId, files || []);
+  } catch { /* ignore */ }
+}
+function renderFiles(apptId, files) {
+  const list = document.getElementById('filelist-' + apptId);
+  if (!list) return;
+  list.innerHTML = files.map(f => `
+    <div class="file-row">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><path d="M13 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V9z"/><polyline points="13 2 13 9 20 9"/></svg>
+      <div>
+        <div class="fr-name">${escHtml(f.filename)}</div>
+        <div class="fr-meta">${fmtSize(f.size_bytes)} · ${new Date(f.uploaded_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+      </div>
+      <div class="fr-spacer"></div>
+      <a href="#" onclick="downloadFile('${apptId}','${escHtml(f.filename).replace(/'/g,"\\'")}');return false;">Download</a>
+      <button title="Remove" onclick="removeFile('${apptId}','${escHtml(f.filename).replace(/'/g,"\\'")}')">&times;</button>
+    </div>`).join('');
+}
+const _ALLOWED_FILE_TYPES = new Set(['application/pdf','image/jpeg','image/png','image/gif','image/webp','image/heic']);
+async function onFilePicked(apptId, files) {
+  if (!files || !files.length) return;
+  const file = files[0];
+  if (!_ALLOWED_FILE_TYPES.has(file.type)) {
+    alert('Only PDF and image files (JPEG, PNG, GIF, WebP, HEIC) are allowed.');
+    document.getElementById('fi-' + apptId).value = '';
+    return;
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    alert('File is too large. Maximum size is 10 MB.');
+    document.getElementById('fi-' + apptId).value = '';
+    return;
+  }
+  const fd = new FormData();
+  fd.append('file', file);
+  const dz = document.getElementById('dz-' + apptId);
+  const prev = dz.innerHTML;
+  dz.innerHTML = '<div class="spinner" style="margin:0 auto;"></div>';
+  try {
+    const res = await fetch(`/api/patient/appointments/${apptId}/files`, {
+      method:'POST', headers:{ ...authHeaders() }, body: fd,
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+    await loadFiles(apptId);
+  } catch (e) {
+    alert('Upload failed: ' + e.message);
+  } finally {
+    dz.innerHTML = prev;
+    document.getElementById('fi-' + apptId).value = '';
+  }
+}
+async function removeFile(apptId, filename) {
+  try {
+    const res = await fetch(`/api/patient/appointments/${apptId}/files/${encodeURIComponent(filename)}`, {
+      method:'DELETE', headers:{ ...authHeaders() },
+    });
+    if (!res.ok) throw new Error('Delete failed');
+    await loadFiles(apptId);
+  } catch (e) { alert('Could not remove file: ' + e.message); }
+}
+async function downloadFile(apptId, filename) {
+  try {
+    const res = await fetch(`/api/patient/appointments/${apptId}/files/${encodeURIComponent(filename)}`, {
+      headers: authHeaders(),
+    });
+    if (!res.ok) { alert('Download failed: ' + ((await res.json()).detail || 'Server error')); return; }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  } catch (e) { alert('Download failed: ' + e.message); }
+}
+
+// ── Prescription & Test Orders toggle ────────────────────────────────────
+function togglePatientPanel(panelId) {
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const body    = panel.querySelector('.patient-panel-body');
+  const chevron = panel.querySelector('.patient-panel-chevron');
+  const isOpen  = body.classList.toggle('open');
+  if (chevron) chevron.style.transform = isOpen ? 'rotate(180deg)' : 'rotate(0deg)';
+}
+
+// ── Appointment cancellation ──────────────────────────────────────────────
+async function cancelAppt(apptId, btn) {
+  if (!btn.classList.contains('confirm-cancel')) {
+    btn.classList.add('confirm-cancel');
+    btn.textContent = 'Confirm cancel?';
+    setTimeout(() => {
+      if (btn.classList.contains('confirm-cancel')) {
+        btn.classList.remove('confirm-cancel');
+        btn.textContent = 'Cancel';
+      }
+    }, 4000);
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Cancelling…';
+  try {
+    const r = await fetch(`/api/patient/appointments/${apptId}`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast('Appointment cancelled.', 'var(--success)');
+    await loadSessions();
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Cancel';
+    btn.classList.remove('confirm-cancel');
+    alert(e.message);
+  }
+}
+
+async function dismissAppt(apptId, btn) {
+  btn.disabled = true; btn.textContent = 'Removing…';
+  try {
+    const r = await fetch(`/api/patient/appointments/${apptId}/dismiss`, {
+      method: 'DELETE', headers: authHeaders(),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast('Appointment removed.', 'var(--text-muted)');
+    await loadSessions();
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>Remove`;
+    alert(e.message);
+  }
+}
+
+// ── Patient reschedule ────────────────────────────────────────────────────
+let _rsApptId = null;
+let _rsDoctorId = null;
+let _rsSlotsByDay = {};
+let _rsSelectedDay = null;
+let _rsSelectedSlot = null;
+
+async function openReschedule(apptId, doctorId) {
+  _rsApptId = apptId;
+  _rsDoctorId = doctorId;
+  _rsSlotsByDay = {};
+  _rsSelectedDay = null;
+  _rsSelectedSlot = null;
+  document.getElementById('rs-loading').style.display = '';
+  document.getElementById('rs-content').style.display = 'none';
+  document.getElementById('rs-no-slots').style.display = 'none';
+  document.getElementById('rs-error').style.display = 'none';
+  document.getElementById('rs-confirm-btn').disabled = true;
+  document.getElementById('reschedule-modal').classList.add('open');
+  try {
+    const r = await fetch(`/api/patient/doctors/${encodeURIComponent(doctorId)}/slots`, { headers: authHeaders() });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed to load slots');
+    const data = await r.json();
+    const slots = (data.slots || []).filter(s => s > new Date().toISOString());
+    if (!slots.length) {
+      document.getElementById('rs-loading').style.display = 'none';
+      document.getElementById('rs-no-slots').style.display = '';
+      return;
+    }
+    // Group by date
+    slots.forEach(s => {
+      const day = s.slice(0, 10);
+      if (!_rsSlotsByDay[day]) _rsSlotsByDay[day] = [];
+      _rsSlotsByDay[day].push(s);
+    });
+    _rsSelectedDay = Object.keys(_rsSlotsByDay).sort()[0];
+    document.getElementById('rs-loading').style.display = 'none';
+    document.getElementById('rs-content').style.display = '';
+    _renderRsDayTabs();
+    _renderRsSlots();
+  } catch (e) {
+    document.getElementById('rs-loading').textContent = 'Error: ' + e.message;
+  }
+}
+
+function closeReschedule() {
+  document.getElementById('reschedule-modal').classList.remove('open');
+}
+
+function _renderRsDayTabs() {
+  const days = Object.keys(_rsSlotsByDay).sort();
+  const today = new Date().toISOString().slice(0, 10);
+  document.getElementById('rs-day-tabs').innerHTML = days.map(day => {
+    const label = day === today ? 'Today' : _fmtDay(day);
+    return `<button class="rs-day-tab${day === _rsSelectedDay ? ' active' : ''}" onclick="_selectRsDay('${day}')">${label}</button>`;
+  }).join('');
+}
+
+function _fmtDay(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+function _fmtTime(iso) {
+  const d = new Date(iso);
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+}
+
+function _selectRsDay(day) {
+  _rsSelectedDay = day;
+  _rsSelectedSlot = null;
+  document.getElementById('rs-confirm-btn').disabled = true;
+  _renderRsDayTabs();
+  _renderRsSlots();
+}
+
+function _renderRsSlots() {
+  const slots = (_rsSlotsByDay[_rsSelectedDay] || []).sort();
+  if (!slots.length) {
+    document.getElementById('rs-slots').innerHTML = '<div class="rs-empty">No slots available on this day.</div>';
+    return;
+  }
+  document.getElementById('rs-slots').innerHTML = slots.map(s =>
+    `<button class="rs-slot${s === _rsSelectedSlot ? ' selected' : ''}" onclick="_selectRsSlot('${s}')">${_fmtTime(s)}</button>`
+  ).join('');
+}
+
+function _selectRsSlot(slot) {
+  _rsSelectedSlot = slot;
+  document.getElementById('rs-confirm-btn').disabled = false;
+  _renderRsSlots();
+}
+
+async function confirmReschedule() {
+  if (!_rsSelectedSlot) return;
+  const btn = document.getElementById('rs-confirm-btn');
+  btn.disabled = true; btn.textContent = 'Rescheduling…';
+  document.getElementById('rs-error').style.display = 'none';
+  const note = document.getElementById('rs-note').value.trim();
+  try {
+    const r = await fetch(`/api/patient/appointments/${_rsApptId}/reschedule`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ new_slot: _rsSelectedSlot, note }),
+    });
+    if (!r.ok) {
+      const err = await r.json();
+      throw new Error(err.detail || 'Reschedule failed');
+    }
+    closeReschedule();
+    showToast('Appointment rescheduled successfully.', 'var(--success)');
+    await loadSessions();
+  } catch (e) {
+    const errEl = document.getElementById('rs-error');
+    errEl.textContent = e.message;
+    errEl.style.display = '';
+    btn.disabled = false; btn.textContent = 'Confirm Reschedule';
+  }
+}
+
+// ── Post-visit rating ─────────────────────────────────────────────────────
+let _ratingApptId = null;
+let _ratingStars   = 0;
+
+function openRating(apptId) {
+  _ratingApptId = apptId;
+  _ratingStars  = 0;
+  document.getElementById('rating-comment').value = '';
+  _renderStars(0);
+  document.getElementById('rating-modal').classList.add('open');
+}
+function closeRating() { document.getElementById('rating-modal').classList.remove('open'); }
+function _renderStars(n, hover) {
+  const active = hover ?? n;
+  document.querySelectorAll('.star-btn').forEach((el, i) => {
+    el.style.color = i < active ? '#f59e0b' : '#4d647e';
+    el.style.transform = i < active ? 'scale(1.15)' : 'scale(1)';
+  });
+}
+function setRatingStar(n) {
+  _ratingStars = n;
+  _renderStars(n);
+}
+async function submitRating() {
+  if (!_ratingStars) { alert('Please select a star rating.'); return; }
+  const comment = document.getElementById('rating-comment').value.trim();
+  const btn = document.getElementById('rating-submit-btn');
+  btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const r = await fetch(`/api/patient/appointments/${_ratingApptId}/rating`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ rating: _ratingStars, comment }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    closeRating();
+    showToast('Rating submitted. Thank you!', 'var(--success)');
+    await loadSessions();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Submit Rating';
+  }
+}
+
+// ── Reschedule proposal response ──────────────────────────────────────────
+async function respondProposal(apptId, action, btn) {
+  const wrap = btn.closest('.proposal-banner');
+  wrap.querySelectorAll('button').forEach(b => b.disabled = true);
+  btn.textContent = action === 'accept' ? 'Accepting…' : 'Declining…';
+  try {
+    const r = await fetch(`/api/patient/appointments/${apptId}/reschedule-response`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ action }),
+    });
+    if (!r.ok) throw new Error((await r.json()).detail || 'Failed');
+    showToast(
+      action === 'accept' ? 'Appointment rescheduled.' : 'Proposal declined.',
+      action === 'accept' ? 'var(--success)' : '#ef4444'
+    );
+    await loadSessions();
+  } catch (e) {
+    wrap.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = action === 'accept' ? '✓ Accept' : '✕ Decline';
+    alert('Could not respond: ' + e.message);
+  }
+}
+
+// ── Messages shortcut ─────────────────────────────────────────────────────
+function openMessages(apptId) {
+  window.location.href = `/messages.html?appt=${apptId}`;
+}
+
+// ── Toast helper ──────────────────────────────────────────────────────────
+function showToast(msg, color) {
+  let t = document.getElementById('_my-sessions-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_my-sessions-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:10px;font-size:13px;color:#fff;z-index:9999;transition:opacity .3s;pointer-events:none;font-family:Inter,sans-serif;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.background = color || '#10b981';
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+// ---- Waitlist ----
+async function loadWaitlist() {
+  try {
+    const res = await fetch('/api/patient/waitlist', { headers: { ...authHeaders() } });
+    if (!res.ok) return;
+    const { waitlist } = await res.json();
+    const active = (waitlist || []).filter(e => e.status === 'waiting' || e.status === 'notified');
+    const section = document.getElementById('waitlist-section');
+    const list = document.getElementById('waitlist-list');
+    if (!active.length) { section.style.display = 'none'; return; }
+    section.style.display = '';
+    list.innerHTML = active.map(e => `
+      <div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-radius:14px;border:1px solid ${e.status==='notified'?'rgba(16,185,129,.35)':'rgba(255,255,255,.07)'};background:${e.status==='notified'?'rgba(16,185,129,.04)':'rgba(255,255,255,.025)'};margin-bottom:10px;">
+        <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#0077a8,#00b4d8);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#000d1a;flex-shrink:0;">${(e.doctor_name||'D').replace(/^Dr\.?\s*/i,'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;">${escHtml(e.doctor_name||'')}</div>
+          <div style="font-size:11px;color:var(--primary);font-weight:600;">${escHtml(e.specialty||'')}</div>
+          ${e.note ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px;font-style:italic;">"${escHtml(e.note)}"</div>` : ''}
+          <div style="font-size:10px;color:var(--text-muted);margin-top:4px;">Joined ${new Date(e.joined_at).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+          ${e.status==='notified'
+            ? `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(16,185,129,.15);color:#10b981;border:1px solid rgba(16,185,129,.3);">Slot Available!</span>`
+            : `<span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,180,216,.1);color:var(--primary);border:1px solid rgba(0,180,216,.2);">Waiting</span>`}
+          <button class="btn btn-ghost btn-sm" style="font-size:11px;padding:4px 10px;border-color:rgba(239,68,68,.3);color:var(--danger);" onclick="leaveWaitlist('${escHtml(e.id)}', this)">Leave</button>
+        </div>
+      </div>`).join('');
+  } catch {}
+}
+
+async function leaveWaitlist(entryId, btn) {
+  if (!btn.classList.contains('wl-confirm')) {
+    btn.classList.add('wl-confirm');
+    btn.textContent = 'Confirm?';
+    setTimeout(() => { if (btn.classList.contains('wl-confirm')) { btn.classList.remove('wl-confirm'); btn.textContent = 'Leave'; } }, 3000);
+    return;
+  }
+  btn.disabled = true; btn.textContent = 'Leaving…';
+  try {
+    const r = await fetch(`/api/patient/waitlist/${entryId}`, { method: 'DELETE', headers: authHeaders() });
+    if (!r.ok) throw new Error('Failed');
+    await loadWaitlist();
+  } catch {
+    btn.disabled = false; btn.textContent = 'Leave';
+    btn.classList.remove('wl-confirm');
+  }
+}
+
+_updateNotifBtn();
+loadSessions();
+loadWaitlist();
+// Background poll every 60s for new events
+setInterval(() => {
+  fetch('/api/appointments', { headers: authHeaders() })
+    .then(r => r.ok ? r.json() : null)
+    .then(d => { if (d) _checkPatientNotifs(d.appointments || []); })
+    .catch(() => {});
+  _checkPatientMessages();
+}, 60000);
+
+function downloadPrescription(apptId) {
+  const appt = Object.values(_apptMap).find(a => a.appointment_id === apptId);
+  if (!appt) return;
+  const rxList  = (appt.prescriptions || []).filter(r => r.drug);
+  const tests   = appt.test_orders || [];
+
+  const dateStr = new Date().toLocaleDateString('en-GB', { day:'numeric', month:'long', year:'numeric' });
+  const refNo   = apptId.slice(0,8).toUpperCase();
+  const docName = appt.doctor_name || '';
+  const specialty = appt.specialty || '';
+  const patName = appt.patient_name || '';
+  const patAge  = appt.age  != null ? `${appt.age} yrs` : '';
+  const patSex  = appt.sex  ? appt.sex.charAt(0).toUpperCase() + appt.sex.slice(1) : '';
+  const patBmi  = appt.bmi  != null ? `${Number(appt.bmi).toFixed(1)} kg/m²` : '';
+  const dx      = appt.primary_diagnosis || '';
+  const urgency = appt.urgency || 'routine';
+  const complaint = appt.chief_complaint || '';
+  const slot    = appt.slot ? new Date(appt.slot).toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'}) : '';
+  const urgColor = urgency==='emergency'?'#dc2626':urgency==='urgent'?'#d97706':'#059669';
+  const urgBg   = urgency==='emergency'?'#fef2f2':urgency==='urgent'?'#fffbeb':'#f0fdf4';
+
+  const rxCards = rxList.length
+    ? rxList.map((r,i) => `
+      <div style="display:grid;grid-template-columns:28px 1fr;gap:0;margin-bottom:10px;border:1px solid #e2ecf4;border-radius:8px;overflow:hidden;">
+        <div style="background:#0077a8;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px;font-weight:800;">${i+1}</div>
+        <div style="padding:10px 14px;">
+          <div style="font-size:14px;font-weight:700;color:#0a2540;margin-bottom:6px;">${r.drug||''}</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+            <div><div style="font-size:9px;color:#0077a8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Dose</div><div style="font-size:12px;">${r.dose||'—'}</div></div>
+            <div><div style="font-size:9px;color:#0077a8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Route</div><div style="font-size:12px;text-transform:capitalize;">${r.route||'—'}</div></div>
+            <div><div style="font-size:9px;color:#0077a8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Frequency</div><div style="font-size:12px;">${r.frequency||'—'}</div></div>
+            <div><div style="font-size:9px;color:#0077a8;font-weight:700;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px;">Duration</div><div style="font-size:12px;">${r.duration||'—'}</div></div>
+          </div>
+          ${r.notes?`<div style="margin-top:6px;font-size:11px;color:#555;font-style:italic;border-top:1px dashed #d8e8f0;padding-top:6px;">Note: ${r.notes}</div>`:''}
+        </div>
+      </div>`).join('')
+    : '<p style="color:#999;font-style:italic;font-size:12px;padding:12px 0;">No medications prescribed.</p>';
+
+  const testCards = tests.length
+    ? tests.map((t) => {
+        const pc = t.priority==='stat'?'#dc2626':t.priority==='urgent'?'#d97706':'#059669';
+        const pb = t.priority==='stat'?'#fef2f2':t.priority==='urgent'?'#fffbeb':'#f0fdf4';
+        return `<div style="display:flex;align-items:flex-start;gap:10px;padding:10px 14px;border:1px solid #e2ecf4;border-radius:8px;margin-bottom:8px;">
+          <div style="flex:1;">
+            <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px;">
+              <span style="font-size:13px;font-weight:700;color:#0a2540;">${t.test||''}</span>
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;background:${pb};color:${pc};border:1px solid ${pc}33;">${(t.priority||'routine').toUpperCase()}</span>
+            </div>
+            <div style="font-size:11px;color:#666;text-transform:capitalize;">${t.category||''} test</div>
+            ${t.notes?`<div style="font-size:11px;color:#555;margin-top:3px;font-style:italic;">${t.notes}</div>`:''}
+          </div>
+        </div>`;
+      }).join('')
+    : '';
+
+  const docInitials = docName.replace(/^Dr\.?\s*/i,'').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()||'DR';
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Prescription — ${patName}</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Inter',Arial,sans-serif; color:#1a1a1a; background:#f0f4f8; }
+    .page { max-width:800px; margin:24px auto; background:#fff; box-shadow:0 4px 24px rgba(0,0,0,.12); border-radius:12px; overflow:hidden; }
+    .banner { background:linear-gradient(135deg,#0a2540 0%,#0077a8 100%); padding:22px 36px; display:flex; justify-content:space-between; align-items:flex-start; }
+    .banner-left h1 { font-size:22px; font-weight:800; color:#fff; letter-spacing:-.02em; }
+    .banner-left p  { font-size:12px; color:rgba(255,255,255,.75); margin-top:3px; }
+    .rx-symbol { font-size:48px; font-weight:900; color:rgba(255,255,255,.9); line-height:1; font-style:italic; }
+    .banner-date { font-size:11px; color:rgba(255,255,255,.7); margin-top:4px; text-align:right; }
+    .banner-ref  { font-size:10px; color:rgba(255,255,255,.5); margin-top:2px; letter-spacing:.04em; text-align:right; }
+    .doc-strip { background:#f0f7fa; border-bottom:1px solid #d0e4ef; padding:12px 36px; display:flex; align-items:center; gap:14px; }
+    .doc-avatar { width:40px; height:40px; border-radius:50%; background:linear-gradient(135deg,#0077a8,#00b4d8); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:800; color:#fff; flex-shrink:0; }
+    .doc-name { font-size:14px; font-weight:700; color:#0a2540; }
+    .doc-meta { font-size:11px; color:#555; margin-top:2px; }
+    .content { padding:28px 36px; }
+    .patient-card { border:1.5px solid #d0e4ef; border-radius:10px; overflow:hidden; margin-bottom:22px; }
+    .patient-card-head { background:#0077a8; padding:8px 16px; display:flex; align-items:center; justify-content:space-between; }
+    .patient-card-head span { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#fff; }
+    .urgency-pill { font-size:10px; font-weight:700; padding:2px 10px; border-radius:99px; background:${urgBg}; color:${urgColor}; border:1.5px solid ${urgColor}; }
+    .patient-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:0; }
+    .pat-cell { padding:11px 16px; border-right:1px solid #e8f0f5; }
+    .pat-cell:last-child { border-right:none; }
+    .pat-label { font-size:9px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; color:#0077a8; margin-bottom:3px; }
+    .pat-val { font-size:13px; font-weight:600; color:#0a2540; }
+    .pat-val.light { font-weight:400; color:#444; }
+    .pat-row-2 { display:grid; grid-template-columns:1fr 1fr; gap:0; border-top:1px solid #e8f0f5; }
+    .pat-row-2 .pat-cell { border-right:1px solid #e8f0f5; }
+    .pat-row-2 .pat-cell:last-child { border-right:none; }
+    .sec { margin-top:24px; margin-bottom:12px; display:flex; align-items:center; gap:10px; }
+    .sec-bar { width:3px; height:18px; background:#0077a8; border-radius:2px; flex-shrink:0; }
+    .sec-label { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:#0077a8; }
+    .sec-count { font-size:10px; font-weight:700; background:#e8f4fa; color:#0077a8; border-radius:99px; padding:2px 8px; }
+    .rx-footer { margin-top:36px; padding-top:20px; border-top:1.5px dashed #ccdde8; display:flex; justify-content:space-between; align-items:flex-end; }
+    .sig-space { height:44px; border-bottom:1px solid #333; width:180px; margin-bottom:6px; }
+    .sig-name  { font-size:12px; font-weight:700; color:#0a2540; }
+    .sig-meta  { font-size:10px; color:#666; margin-top:2px; }
+    .stamp-box { width:90px; height:90px; border:2px dashed #ccc; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:9px; color:#ccc; text-align:center; line-height:1.4; letter-spacing:.04em; }
+    .footer-note { font-size:10px; color:#888; max-width:220px; line-height:1.6; }
+    .watermark { position:fixed; bottom:60px; right:40px; opacity:.04; font-size:90px; font-weight:900; color:#0077a8; transform:rotate(-20deg); font-style:italic; pointer-events:none; }
+    @media print {
+      body { background:#fff; }
+      .page { box-shadow:none; margin:0; border-radius:0; }
+      .watermark { position:fixed; }
+      * { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+    }
+  </style>
+</head>
+<body>
+<div class="watermark">Rx</div>
+<div class="page">
+  <div class="banner">
+    <div class="banner-left">
+      <h1>${specialty ? specialty + ' Department' : 'Medical Centre'}</h1>
+      <p>${docName}</p>
+    </div>
+    <div>
+      <div class="rx-symbol">Rx</div>
+      <div class="banner-date">${dateStr}</div>
+      <div class="banner-ref">REF: ${refNo}</div>
+    </div>
+  </div>
+  <div class="doc-strip">
+    <div class="doc-avatar">${docInitials}</div>
+    <div>
+      <div class="doc-name">${docName}</div>
+      <div class="doc-meta">${specialty}</div>
+    </div>
+  </div>
+  <div class="content">
+    <div class="patient-card">
+      <div class="patient-card-head">
+        <span>Patient Information</span>
+        <span class="urgency-pill">${urgency.toUpperCase()}</span>
+      </div>
+      <div class="patient-grid">
+        <div class="pat-cell"><div class="pat-label">Full Name</div><div class="pat-val">${patName}</div></div>
+        <div class="pat-cell"><div class="pat-label">Age / Sex</div><div class="pat-val light">${[patAge,patSex].filter(Boolean).join(' · ')||'—'}</div></div>
+        <div class="pat-cell"><div class="pat-label">BMI</div><div class="pat-val light">${patBmi||'—'}</div></div>
+        <div class="pat-cell"><div class="pat-label">Visit Date</div><div class="pat-val light">${slot||dateStr}</div></div>
+      </div>
+      <div class="pat-row-2">
+        <div class="pat-cell"><div class="pat-label">Chief Complaint</div><div class="pat-val light">${complaint||'—'}</div></div>
+        <div class="pat-cell"><div class="pat-label">Primary Diagnosis</div><div class="pat-val">${dx||'—'}</div></div>
+      </div>
+    </div>
+    <div class="sec"><div class="sec-bar"></div><span class="sec-label">Prescribed Medications</span>${rxList.length?`<span class="sec-count">${rxList.length}</span>`:''}</div>
+    ${rxCards}
+    ${tests.length ? `<div class="sec"><div class="sec-bar"></div><span class="sec-label">Investigations Ordered</span><span class="sec-count">${tests.length}</span></div>${testCards}` : ''}
+    <div class="rx-footer">
+      <div>
+        <div class="sig-space"></div>
+        <div class="sig-name">${docName}</div>
+        <div class="sig-meta">${specialty}</div>
+      </div>
+      <div class="stamp-box">DOCTOR<br>STAMP</div>
+      <div class="footer-note">Valid for 30 days from date of issue.<br>This is a computer-generated prescription.</div>
+    </div>
+  </div>
+</div>
+<script>window.onload = () => { window.print(); }<\/script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
+}
+</script>
+
+<!-- Reschedule modal -->
+<div id="reschedule-modal" class="modal-overlay" onclick="if(event.target===this)closeReschedule()">
+  <div class="modal-box" style="max-width:460px;">
+    <div class="modal-header">
+      <span class="modal-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:-3px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+        Reschedule Appointment
+      </span>
+      <button class="modal-close" onclick="closeReschedule()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">Pick a new date and time with the same doctor. Your current slot will be freed immediately.</p>
+      <div id="rs-loading" style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:13px;">Loading available slots…</div>
+      <div id="rs-content" style="display:none;">
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Select date</label>
+        <div class="rs-day-tabs" id="rs-day-tabs"></div>
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px;">Available times</label>
+        <div class="rs-slots" id="rs-slots"></div>
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Note (optional)</label>
+        <textarea class="rs-note" id="rs-note" rows="2" placeholder="Any notes for the doctor…"></textarea>
+        <div id="rs-error" style="display:none;color:#ef4444;font-size:12px;margin-top:10px;"></div>
+      </div>
+      <div id="rs-no-slots" style="display:none;text-align:center;padding:24px 0;color:var(--text-muted);font-size:13px;">No available slots found for this doctor. Please try again later.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+        <button class="btn btn-ghost" onclick="closeReschedule()">Cancel</button>
+        <button class="btn btn-primary" id="rs-confirm-btn" onclick="confirmReschedule()" disabled>Confirm Reschedule</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Rating modal -->
+<div id="rating-modal" class="modal-overlay" onclick="if(event.target===this)closeRating()">
+  <div class="modal-box" style="max-width:380px;">
+    <div class="modal-header">
+      <span class="modal-title">Rate Your Visit</span>
+      <button class="modal-close" onclick="closeRating()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div style="padding:20px;">
+      <p style="font-size:13px;color:var(--text-muted);margin:0 0 16px;">How was your experience with this visit?</p>
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:18px;">
+        <button class="star-btn" onclick="setRatingStar(1)" onmouseenter="_renderStars(_ratingStars,1)" onmouseleave="_renderStars(_ratingStars)" style="background:none;border:none;cursor:pointer;font-size:36px;color:#4d647e;padding:0 2px;transition:color .1s,transform .1s;line-height:1;">★</button>
+        <button class="star-btn" onclick="setRatingStar(2)" onmouseenter="_renderStars(_ratingStars,2)" onmouseleave="_renderStars(_ratingStars)" style="background:none;border:none;cursor:pointer;font-size:36px;color:#4d647e;padding:0 2px;transition:color .1s,transform .1s;line-height:1;">★</button>
+        <button class="star-btn" onclick="setRatingStar(3)" onmouseenter="_renderStars(_ratingStars,3)" onmouseleave="_renderStars(_ratingStars)" style="background:none;border:none;cursor:pointer;font-size:36px;color:#4d647e;padding:0 2px;transition:color .1s,transform .1s;line-height:1;">★</button>
+        <button class="star-btn" onclick="setRatingStar(4)" onmouseenter="_renderStars(_ratingStars,4)" onmouseleave="_renderStars(_ratingStars)" style="background:none;border:none;cursor:pointer;font-size:36px;color:#4d647e;padding:0 2px;transition:color .1s,transform .1s;line-height:1;">★</button>
+        <button class="star-btn" onclick="setRatingStar(5)" onmouseenter="_renderStars(_ratingStars,5)" onmouseleave="_renderStars(_ratingStars)" style="background:none;border:none;cursor:pointer;font-size:36px;color:#4d647e;padding:0 2px;transition:color .1s,transform .1s;line-height:1;">★</button>
+      </div>
+      <div style="margin-bottom:18px;">
+        <label style="display:block;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;">Comment (optional)</label>
+        <textarea id="rating-comment" class="modal-ta" rows="3" placeholder="Share your experience…"></textarea>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn btn-ghost" onclick="closeRating()">Cancel</button>
+        <button class="btn btn-primary" id="rating-submit-btn" onclick="submitRating()">Submit Rating</button>
+      </div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

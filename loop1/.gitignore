@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+dist/
+
+# Environment & secrets
+.env
+.env.*
+
+# Virtual environment
+.venv/
+
+# ── Session & training data (large, machine-generated) ──────────────────
+logs/sessions/*.jsonl
+logs/final_records/*.json
+logs/critic_reports/*.json
+logs/test.txt
+
+# ── Raw datasets (too large for git) ────────────────────────────────────
+data/DDXPlus_Raw/
+data/phase7_sessions/
+data/phase7_critiques/
+data/ddxplus_eval_set.json
+data/doctors/*.xlsx
+
+# ── Web app database & user data (never commit real data) ───────────────
+web/data/*.json
+web/data/*.db
+web/data/*.db-wal
+web/data/*.db-shm

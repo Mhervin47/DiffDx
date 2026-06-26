@@ -1,0 +1,55 @@
+{
+  "session_id": "case_02",
+  "demographics": {
+    "age": 34,
+    "sex": "F",
+    "other": {}
+  },
+  "chief_complaint": "severe headache and visual disturbances since yesterday",
+  "symptoms": [
+    {
+      "name": "headache",
+      "onset": "yesterday",
+      "severity": "severe",
+      "notes": "worst headache of life, thunderclap onset"
+    },
+    {
+      "name": "photophobia",
+      "onset": "yesterday",
+      "severity": "moderate",
+      "notes": "light-sensitive"
+    },
+    {
+      "name": "nausea",
+      "onset": "yesterday",
+      "severity": "moderate",
+      "notes": "with one episode of vomiting"
+    },
+    {
+      "name": "visual disturbance",
+      "onset": "yesterday",
+      "severity": "moderate",
+      "notes": "blurry vision, flickering lights"
+    }
+  ],
+  "history": {
+    "medical": [
+      "migraines (no prior aura)"
+    ],
+    "medications": [
+      "oral contraceptive pill"
+    ],
+    "allergies": [],
+    "family": [
+      "mother: migraines"
+    ],
+    "social": [
+      "non-smoker",
+      "occasional alcohol"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "Neck stiffness not yet assessed.",
+  "running_summary": ""
+}

@@ -1,0 +1,23 @@
+logging:
+  final_dir: logs/final_records
+  schema_version: 0.5.0
+  session_dir: logs/sessions
+models:
+  compressor: groq/llama-3.3-70b-versatile
+  doctor: groq/llama-3.3-70b-versatile
+  embedder: sentence-transformers/all-MiniLM-L6-v2
+  profile_updater: groq/llama-3.3-70b-versatile
+prompt_versions:
+  compressor: v0.2
+  doctor: v0.6
+  profile_updater: v0.3
+thresholds:
+  compression_keep_recent: 3
+  compression_token_threshold: 3000
+  confidence_to_stop: 0.55
+  exemplar_pool_size: 50
+  llm_max_tokens: 4096
+  llm_temperature: 0.3
+  max_turns: 15
+  mmr_lambda: 0.5
+  top_k_exemplars: 3

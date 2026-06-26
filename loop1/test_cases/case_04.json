@@ -1,0 +1,51 @@
+{
+  "session_id": "case_04",
+  "demographics": {
+    "age": 6,
+    "sex": "M",
+    "other": {}
+  },
+  "chief_complaint": "fever and sore throat for 3 days",
+  "symptoms": [
+    {
+      "name": "fever",
+      "onset": "3 days ago",
+      "severity": "moderate",
+      "notes": "38.8C, spikes in evenings"
+    },
+    {
+      "name": "sore throat",
+      "onset": "3 days ago",
+      "severity": "moderate",
+      "notes": "difficulty swallowing"
+    },
+    {
+      "name": "tonsillar swelling",
+      "onset": "2 days ago",
+      "severity": "moderate",
+      "notes": "with white exudate"
+    },
+    {
+      "name": "cervical lymphadenopathy",
+      "onset": "2 days ago",
+      "severity": "mild",
+      "notes": "tender anterior cervical nodes"
+    }
+  ],
+  "history": {
+    "medical": [],
+    "medications": [
+      "paracetamol PRN"
+    ],
+    "allergies": [],
+    "family": [],
+    "social": [
+      "attends primary school",
+      "classmate with similar illness"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "No rash. No difficulty breathing. Eating reduced.",
+  "running_summary": ""
+}

@@ -1,0 +1,62 @@
+{
+  "session_id": "case_05",
+  "demographics": {
+    "age": 78,
+    "sex": "F",
+    "other": {}
+  },
+  "chief_complaint": "fatigue, confusion and decreased appetite for 1 week",
+  "symptoms": [
+    {
+      "name": "fatigue",
+      "onset": "1 week",
+      "severity": "moderate",
+      "notes": "unable to do usual activities"
+    },
+    {
+      "name": "confusion",
+      "onset": "3 days",
+      "severity": "mild to moderate",
+      "notes": "worse at night, intermittent"
+    },
+    {
+      "name": "decreased appetite",
+      "onset": "1 week",
+      "severity": "moderate",
+      "notes": "eating very little"
+    },
+    {
+      "name": "urinary frequency",
+      "onset": "4 days",
+      "severity": "mild",
+      "notes": "more frequent, mild dysuria"
+    }
+  ],
+  "history": {
+    "medical": [
+      "atrial fibrillation",
+      "hypertension",
+      "osteoarthritis",
+      "depression"
+    ],
+    "medications": [
+      "warfarin",
+      "ramipril 5mg",
+      "paracetamol PRN",
+      "sertraline 50mg"
+    ],
+    "allergies": [
+      "sulfa drugs"
+    ],
+    "family": [],
+    "social": [
+      "lives alone",
+      "independent baseline",
+      "no recent travel"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "Daughter concerned about cognitive decline. Baseline MMSE was 28/30.",
+  "running_summary": ""
+}

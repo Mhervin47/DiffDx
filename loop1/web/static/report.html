@@ -1,0 +1,2633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Session Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <style>
+    .diagnosis-hero {
+      text-align: center;
+      padding: 40px 0 28px;
+    }
+    .diagnosis-eyebrow {
+      font-size: 12px; font-weight: 700; letter-spacing: .1em;
+      text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
+    }
+    .diagnosis-name {
+      font-size: 38px; font-weight: 700; color: var(--primary);
+      line-height: 1.15; margin-bottom: 14px;
+    }
+    .diagnosis-chips { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+
+    .report-section { margin-bottom: 32px; }
+    .report-section-title {
+      font-size: 12px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-dim);
+      margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .action-bar-bottom {
+      display: flex; gap: 12px; justify-content: center;
+      margin-top: 40px; padding-bottom: 48px;
+    }
+
+    /* score colored cells */
+    .score-cell { font-weight: 700; }
+    .score-green { color: var(--success); }
+    .score-yellow { color: var(--warning); }
+    .score-red { color: var(--danger); }
+
+    /* final diff mini bars */
+    .final-diff { display: flex; flex-direction: column; gap: 8px; }
+
+    /* ---- Next Steps / Routing block ---- */
+    .routing-block { margin-bottom: 32px; }
+    .urgency-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: 99px;
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; margin-bottom: 10px;
+    }
+    .urgency-emergency { background: rgba(239,68,68,.15); color: #ef4444; border: 1px solid rgba(239,68,68,.3); }
+    .urgency-urgent    { background: rgba(245,158,11,.15); color: #f59e0b; border: 1px solid rgba(245,158,11,.3); }
+    .urgency-routine   { background: rgba(16,185,129,.15); color: #10b981; border: 1px solid rgba(16,185,129,.3); }
+
+    @keyframes emergency-glow {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,0), 0 0 18px 4px rgba(239,68,68,.18); border-color: rgba(239,68,68,.35); }
+      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,.12), 0 0 36px 12px rgba(239,68,68,.32); border-color: rgba(239,68,68,.8); }
+    }
+    @keyframes emergency-icon-pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .6; transform: scale(1.15); }
+    }
+    .emergency-alert {
+      background: rgba(239,68,68,.08); border: 2px solid rgba(239,68,68,.5);
+      border-radius: var(--radius-lg); padding: 20px 24px;
+      display: flex; align-items: flex-start; gap: 14px;
+      animation: emergency-glow 1.6s ease-in-out infinite;
+    }
+    .emergency-alert-icon { color: #ef4444; flex-shrink: 0; margin-top: 2px;
+      animation: emergency-icon-pulse 1.6s ease-in-out infinite; }
+    .emergency-alert-title { font-size: 16px; font-weight: 700; color: #ef4444; margin-bottom: 6px; }
+    .emergency-alert-body { font-size: 14px; color: var(--text-dim); line-height: 1.6; }
+
+    /* Nearby hospitals grid */
+    .hospital-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-top: 14px; }
+    .hospital-card {
+      background: rgba(239,68,68,.06); border: 1px solid rgba(239,68,68,.2);
+      border-radius: var(--radius-lg); padding: 16px 18px;
+    }
+    .hospital-card-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+    .hospital-card-dist { font-size: 12px; color: var(--text-muted); margin-bottom: 10px; }
+    .hospital-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .hospital-btn {
+      flex: 1; min-width: 80px; padding: 7px 10px; font-size: 12px; font-weight: 600;
+      border-radius: var(--radius); border: none; cursor: pointer; text-align: center;
+      text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .hospital-btn-call { background: #ef4444; color: #fff; }
+    .hospital-btn-call:hover { background: #dc2626; }
+    .hospital-btn-maps { background: var(--surface-3); color: var(--text); border: 1px solid var(--border); }
+    .hospital-btn-maps:hover { border-color: var(--primary); }
+
+    .doctor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .doctor-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 18px;
+      display: flex; flex-direction: column; gap: 12px;
+      transition: border-color .15s;
+    }
+    .doctor-card:hover { border-color: var(--primary-dim); }
+    .doctor-card-header { display: flex; align-items: center; gap: 12px; }
+    .doctor-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--primary-dim); color: var(--primary);
+      font-size: 14px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .doctor-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
+    .doctor-hospital { font-size: 12px; color: var(--text-muted); }
+    .doctor-rating { font-size: 12px; color: var(--warning); font-weight: 600; }
+    .doctor-card-footer { margin-top: auto; }
+    .book-btn {
+      width: 100%; padding: 9px; font-size: 13px; font-weight: 600;
+      background: var(--primary); color: #000; border: none;
+      border-radius: var(--radius); cursor: pointer;
+      transition: opacity .15s;
+    }
+    .book-btn:hover { opacity: .85; }
+    .book-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+    .booking-confirmed {
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.25);
+      border-radius: var(--radius-lg); padding: 18px 22px;
+      display: flex; align-items: center; gap: 12px;
+      font-size: 14px; color: var(--success); font-weight: 600;
+    }
+
+    /* ---- Own doctor search ---- */
+    .own-doctor-section {
+      margin-top: 28px; padding-top: 22px;
+      border-top: 1px solid var(--border);
+    }
+    .own-doctor-toggle {
+      display: flex; align-items: center; gap: 8px;
+      background: none; border: none; cursor: pointer;
+      color: var(--text-dim); font-size: 13px; font-weight: 600;
+      padding: 0; font-family: var(--font);
+      transition: color .15s;
+    }
+    .own-doctor-toggle:hover { color: var(--text); }
+    .own-doctor-toggle svg { transition: transform .2s; }
+    .own-doctor-toggle.open svg { transform: rotate(180deg); }
+    .own-doctor-body { display: none; margin-top: 14px; }
+    .own-doctor-body.open { display: block; }
+    .own-doctor-search-wrap { position: relative; margin-bottom: 10px; }
+    .own-doctor-search-wrap svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none;
+    }
+    .own-doctor-input {
+      width: 100%; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font);
+      font-size: 14px; padding: 10px 12px 10px 38px; outline: none;
+      transition: border-color .15s;
+    }
+    .own-doctor-input:focus { border-color: var(--primary); }
+    .own-doctor-input::placeholder { color: var(--text-muted); }
+
+    /* Specialty filter chips */
+    .own-doctor-filters {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;
+    }
+    .own-doc-chip {
+      font-size: 11px; font-weight: 600; padding: 4px 11px;
+      border-radius: 99px; cursor: pointer; border: 1px solid var(--border);
+      background: var(--surface-3); color: var(--text-muted);
+      transition: border-color .12s, color .12s, background .12s;
+      font-family: var(--font);
+    }
+    .own-doc-chip:hover  { color: var(--text); border-color: var(--text-muted); }
+    .own-doc-chip.active { background: rgba(0,180,216,.12); border-color: var(--primary); color: var(--primary); }
+
+    /* Doctor result cards */
+    .own-doctor-results {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .own-doctor-card {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 14px 16px;
+      transition: border-color .15s;
+    }
+    .own-doctor-card:hover { border-color: rgba(0,180,216,.35); }
+    .own-doctor-card.mismatch-card { border-color: rgba(245,158,11,.25); }
+    .own-doctor-card-top {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+    }
+    .own-doctor-card-info { flex: 1; min-width: 0; }
+    .own-doctor-name { font-size: 14px; font-weight: 600; color: var(--text); }
+    .own-doctor-meta { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+    .own-doctor-mismatch-badge {
+      font-size: 10px; font-weight: 700; padding: 2px 8px;
+      background: rgba(245,158,11,.1); color: #f59e0b;
+      border: 1px solid rgba(245,158,11,.25); border-radius: 99px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    /* Slot chips row */
+    .own-doctor-slots {
+      display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px;
+    }
+    .own-doctor-slot-chip {
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 99px; cursor: pointer;
+      background: var(--surface-3); border: 1px solid var(--border);
+      color: var(--text-dim); font-family: var(--font);
+      transition: border-color .12s, color .12s, background .12s;
+    }
+    .own-doctor-slot-chip:hover {
+      background: rgba(0,180,216,.1); border-color: var(--primary); color: var(--primary);
+    }
+    .own-doctor-no-slots {
+      font-size: 11px; color: var(--text-muted); font-style: italic;
+    }
+    .own-doctor-card-actions { display: flex; justify-content: flex-end; }
+    .own-doctor-not-found {
+      text-align: center; padding: 24px 16px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); margin-top: 8px;
+    }
+    .own-doctor-not-found-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .own-doctor-not-found-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 14px; }
+
+    /* Mismatch dialog */
+    .mismatch-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.65);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1100; padding: 24px;
+    }
+    .mismatch-overlay.hidden { display: none; }
+    .mismatch-box {
+      background: var(--surface-1); border: 1px solid rgba(255,185,95,.3);
+      border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+      padding: 28px;
+    }
+    .mismatch-icon { font-size: 28px; margin-bottom: 10px; }
+    .mismatch-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .mismatch-body { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 20px; }
+    .mismatch-actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+    /* Slot picker modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 1000; padding: 24px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal-box {
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); width: 100%; max-width: 420px;
+      padding: 28px; position: relative;
+    }
+    .modal-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .slot-list {
+      display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px;
+      max-height: 320px; overflow-y: auto;
+      padding-right: 4px;
+      scrollbar-width: thin; scrollbar-color: var(--surface-4) transparent;
+    }
+    .slot-list::-webkit-scrollbar { width: 4px; }
+    .slot-list::-webkit-scrollbar-track { background: transparent; }
+    .slot-list::-webkit-scrollbar-thumb { background: var(--surface-4); border-radius: 99px; }
+    .slot-btn {
+      padding: 10px 14px; background: var(--surface-3);
+      border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text); font-size: 13px; text-align: left; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .slot-btn:hover, .slot-btn.selected { border-color: var(--primary); background: var(--surface-4); }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .modal-close {
+      position: absolute; top: 14px; right: 14px;
+      background: none; border: none; color: var(--text-muted);
+      cursor: pointer; font-size: 18px; line-height: 1;
+    }
+    .modal-close:hover { color: var(--text); }
+
+    /* ---- Suggested Tests ---- */
+    .suggested-tests-section { margin-bottom: 32px; }
+    .sug-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+    .sug-rationale {
+      font-size: 13px; color: var(--text-muted); margin-bottom: 16px;
+      padding: 10px 14px; background: rgba(0,180,216,.05);
+      border-left: 3px solid var(--primary); border-radius: 0 var(--radius) var(--radius) 0;
+      line-height: 1.6;
+    }
+    .sug-none {
+      display: flex; align-items: center; gap: 12px; padding: 18px 20px;
+      background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2);
+      border-radius: var(--radius-lg); font-size: 13px; color: #4edea3; font-weight: 600;
+    }
+    .sug-checkbox {
+      width: 24px; height: 24px; border-radius: 7px; flex-shrink: 0;
+      border: 2px solid var(--border); background: var(--surface-3);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all .15s;
+    }
+    .sug-checkbox:hover { border-color: #4edea3; }
+    .sug-checkbox-done { background: #4edea3; border-color: #4edea3; color: #051424; }
+    .sug-test-card {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 18px; border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface-2);
+      transition: border-color .2s, box-shadow .2s, opacity .2s;
+      position: relative; overflow: hidden;
+      margin-bottom: 10px;
+    }
+    .sug-test-card::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+      border-radius: 14px 0 0 14px; opacity: 0; transition: opacity .2s;
+    }
+    .sug-test-card.card-urgent::before { background: #f59e0b; opacity: 1; }
+    .sug-test-card.card-routine::before { background: #4edea3; opacity: 1; }
+    .sug-test-card:hover { border-color: rgba(255,255,255,.12); box-shadow: 0 4px 20px rgba(0,0,0,.25); }
+    .sug-test-card.done { opacity: .6; }
+    .sug-icon {
+      width: 44px; height: 44px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 20px;
+    }
+    .sug-icon-blood   { background: rgba(239,68,68,.12); box-shadow: inset 0 0 0 1px rgba(239,68,68,.2); }
+    .sug-icon-urine   { background: rgba(245,158,11,.12); box-shadow: inset 0 0 0 1px rgba(245,158,11,.2); }
+    .sug-icon-imaging { background: rgba(99,102,241,.12); box-shadow: inset 0 0 0 1px rgba(99,102,241,.2); }
+    .sug-icon-vitals  { background: rgba(16,185,129,.12); box-shadow: inset 0 0 0 1px rgba(16,185,129,.2); }
+    .sug-icon-other   { background: rgba(100,116,139,.12); box-shadow: inset 0 0 0 1px rgba(100,116,139,.2); }
+    .sug-test-name { font-size: 14px; font-weight: 700; color: var(--text); letter-spacing: -.01em; }
+    .sug-test-name-done { text-decoration: line-through; color: var(--text-muted); }
+    .sug-test-why  { font-size: 12px; color: var(--text-muted); line-height: 1.55; margin-top: 3px; }
+    .sug-test-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    .sug-badge {
+      font-size: 10px; font-weight: 700; padding: 3px 9px;
+      border-radius: 99px; text-transform: uppercase; letter-spacing: .07em;
+    }
+    .sug-badge-routine { background: rgba(16,185,129,.1); color: #4edea3; border: 1px solid rgba(16,185,129,.25); }
+    .sug-badge-urgent  { background: rgba(245,158,11,.1); color: #f59e0b; border: 1px solid rgba(245,158,11,.25); }
+    .sug-meta-pill {
+      display: inline-flex; align-items: center; gap: 4px;
+      font-size: 11px; color: var(--text-dim); background: var(--surface-3);
+      border: 1px solid var(--border); border-radius: 99px; padding: 3px 9px;
+    }
+    .sug-meta-pill svg { flex-shrink: 0; opacity: .7; }
+    .sug-prep {
+      margin-top: 8px; font-size: 11px; color: var(--text-dim);
+      background: var(--surface-3); border-radius: 8px; padding: 6px 11px;
+      border-left: 2px solid var(--border);
+    }
+    .sug-done-badge {
+      flex-shrink: 0; font-size: 11px; font-weight: 700; padding: 3px 10px;
+      border-radius: 99px; background: rgba(78,222,163,.12); color: #4edea3;
+      border: 1px solid rgba(78,222,163,.25);
+    }
+    .sug-status-bar {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 14px;
+    }
+    .sug-progress { flex: 1; height: 4px; background: var(--surface-3); border-radius: 99px; overflow: hidden; }
+    .sug-progress-fill { height: 100%; background: #4edea3; border-radius: 99px; transition: width .3s; }
+    .sug-loading {
+      display: flex; align-items: center; gap: 10px; padding: 20px 0;
+      font-size: 13px; color: var(--text-muted);
+    }
+    .sug-upload-btn {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 7px; border: 1px solid var(--border);
+      background: var(--surface-3); color: var(--text-muted);
+      cursor: pointer; transition: border-color .15s, color .15s;
+      white-space: nowrap;
+    }
+    .sug-upload-btn:hover { border-color: var(--primary); color: var(--primary); }
+    .sug-uploaded-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 7px; border: 1px solid rgba(78,222,163,.3);
+      background: rgba(78,222,163,.08); color: #4edea3; white-space: nowrap;
+    }
+
+    /* ---- Conversation Viewer ---- */
+    .conv-toggle-btn {
+      display: flex; align-items: center; gap: 8px; cursor: pointer;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 9px 16px;
+      font-size: 13px; font-weight: 600; color: var(--text-dim);
+      transition: border-color .15s, color .15s; width: 100%;
+    }
+    .conv-toggle-btn:hover { border-color: var(--primary-dim); color: var(--text); }
+    .conv-toggle-btn svg { transition: transform .2s; }
+    .conv-toggle-btn.open svg { transform: rotate(180deg); }
+    .conv-scroll-wrap {
+      max-height: 480px; overflow-y: auto; margin-top: 14px;
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      padding: 4px 0; display: none;
+      scroll-behavior: smooth;
+    }
+    .conv-scroll-wrap.open { display: block; }
+    .conv-turn {
+      padding: 18px 20px; border-bottom: 1px solid var(--border);
+    }
+    .conv-turn:last-child { border-bottom: none; }
+    .conv-turn-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 12px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .conv-turn-num {
+      background: var(--primary-dim); color: var(--primary);
+      border-radius: 99px; padding: 2px 10px; font-size: 11px; font-weight: 700;
+    }
+    .conv-bubble-doctor {
+      background: rgba(99,102,241,.1); border: 1px solid rgba(99,102,241,.2);
+      border-radius: 12px 12px 12px 2px; padding: 12px 16px;
+      font-size: 14px; color: var(--text); line-height: 1.6; margin-bottom: 10px;
+    }
+    .conv-bubble-patient {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 12px 12px 2px 12px; padding: 12px 16px;
+      font-size: 14px; color: var(--text-dim); line-height: 1.6; margin-left: 24px;
+    }
+    .conv-rationale-toggle {
+      font-size: 11px; color: var(--text-muted); cursor: pointer;
+      margin-top: 8px; display: flex; align-items: center; gap: 4px;
+      background: none; border: none; padding: 0;
+    }
+    .conv-rationale-toggle:hover { color: var(--primary); }
+    .conv-rationale-body {
+      display: none; font-size: 12px; color: var(--text-muted);
+      line-height: 1.6; margin-top: 6px; padding: 10px 14px;
+      background: var(--surface-2); border-radius: var(--radius); border-left: 3px solid var(--primary-dim);
+    }
+    .conv-rationale-body.open { display: block; }
+    .conv-confidence {
+      font-size: 11px; color: var(--text-muted); margin-top: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .conv-conf-bar {
+      height: 4px; border-radius: 2px; background: var(--surface-4); flex: 1; max-width: 100px;
+    }
+    .conv-conf-fill {
+      height: 100%; border-radius: 2px; background: var(--primary);
+    }
+
+    /* ---- Differential Evolution ---- */
+    .diff-evo-turn {
+      margin-bottom: 16px; padding: 14px 16px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+    }
+    .diff-evo-turn-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px;
+    }
+    .diff-evo-bar-row { margin-bottom: 7px; }
+    .diff-evo-bar-header {
+      display: flex; justify-content: space-between;
+      font-size: 12px; color: var(--text-dim); margin-bottom: 3px;
+    }
+    .diff-evo-bar-track {
+      height: 6px; background: var(--surface-4); border-radius: 3px; overflow: hidden;
+    }
+    .diff-evo-bar-fill {
+      height: 100%; border-radius: 3px;
+      transition: width .4s ease;
+    }
+
+    /* Doctor's Note */
+    .doctors-note-card {
+      background: rgba(59,130,246,.06);
+      border-left: 4px solid #3b82f6;
+      border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+      padding: 16px 20px;
+    }
+    .doctors-note-label {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: #3b82f6; margin-bottom: 8px;
+    }
+    .doctors-note-text { font-size: 14px; color: var(--text); line-height: 1.65; white-space: pre-line; }
+
+    /* ---- Auth modal (guest → login/register to book) ---- */
+    .auth-modal-box {
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); width: 100%; max-width: 400px;
+      padding: 32px 28px; position: relative;
+      box-shadow: 0 8px 40px rgba(0,0,0,.6);
+    }
+    .auth-modal-eyebrow {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--primary); margin-bottom: 6px;
+    }
+    .auth-modal-title { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+    .auth-modal-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; line-height: 1.5; }
+    .auth-tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 22px; }
+    .auth-tab {
+      flex: 1; padding: 9px 0; font-size: 13px; font-weight: 600;
+      text-align: center; cursor: pointer; color: var(--text-muted);
+      border-bottom: 2px solid transparent; transition: color .12s, border-color .12s;
+    }
+    .auth-tab:hover { color: var(--text); }
+    .auth-tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .auth-form { display: flex; flex-direction: column; gap: 14px; }
+    .auth-field { display: flex; flex-direction: column; gap: 5px; }
+    .auth-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+    .auth-input {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font);
+      font-size: 14px; padding: 10px 14px; outline: none;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .auth-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(0,180,216,.12); }
+    .auth-input::placeholder { color: var(--text-muted); }
+    .auth-error { font-size: 12px; color: var(--danger); min-height: 16px; }
+    .auth-submit {
+      width: 100%; padding: 11px; font-size: 14px; font-weight: 700;
+      background: linear-gradient(135deg,#009ec0,#00b4d8); color: #000;
+      border: none; border-radius: var(--radius); cursor: pointer;
+      transition: opacity .15s; margin-top: 4px;
+      box-shadow: 0 2px 8px rgba(0,180,216,.25);
+    }
+    .auth-submit:hover { opacity: .88; }
+    .auth-submit:disabled { opacity: .45; cursor: not-allowed; }
+    .auth-divider { text-align: center; font-size: 12px; color: var(--text-muted); }
+
+    /* Patient test orders */
+    .test-orders-alert {
+      background: rgba(245,158,11,.07); border: 1px solid rgba(245,158,11,.35);
+      border-radius: var(--radius-lg); padding: 16px 20px; margin-bottom: 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .test-orders-alert-icon { color: #f59e0b; flex-shrink: 0; }
+    .test-orders-alert-text { font-size: 13px; color: var(--text-dim); line-height: 1.5; }
+    .test-orders-alert-title { font-weight: 700; color: #f59e0b; margin-bottom: 2px; font-size: 14px; }
+    .patient-test-orders { display: flex; flex-direction: column; gap: 10px; }
+    .patient-test-item {
+      display: flex; align-items: flex-start; gap: 12px;
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 16px;
+      transition: border-color .15s;
+    }
+    .patient-test-item:hover { border-color: rgba(245,158,11,.4); }
+    .patient-test-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; flex-shrink: 0;
+    }
+    .pti-blood   { background: rgba(239,68,68,.15); }
+    .pti-imaging { background: rgba(0,180,216,.15); }
+    .pti-urine   { background: rgba(234,179,8,.15); }
+    .pti-other   { background: rgba(245,158,11,.15); }
+    .patient-test-name { font-size: 14px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+    .patient-test-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .patient-test-priority {
+      font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 99px;
+    }
+    .ptp-stat    { background: rgba(239,68,68,.15); color: #ef4444; }
+    .ptp-urgent  { background: rgba(245,158,11,.15); color: #f59e0b; }
+    .ptp-routine { background: rgba(16,185,129,.15); color: #10b981; }
+    .patient-test-notes { font-size: 12px; color: var(--text-muted); margin-top: 6px; line-height: 1.5;
+      padding: 6px 10px; background: var(--surface-3); border-radius: var(--radius); }
+    .test-action-note {
+      margin-top: 14px; font-size: 12px; color: var(--text-muted); line-height: 1.6;
+      padding: 10px 14px; background: var(--surface-2); border-radius: var(--radius);
+      border-left: 3px solid rgba(245,158,11,.5);
+    }
+
+    /* ── premium report overrides ── */
+    .diagnosis-name {
+      font-size: 40px; font-weight: 900; letter-spacing: -.05em;
+      background: linear-gradient(90deg, #00b4d8, #38bdf8);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .report-section-title {
+      font-size: 10px; font-weight: 800; letter-spacing: .1em;
+      color: var(--text-muted); border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .doctor-card {
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; transition: border-color .18s, transform .15s;
+    }
+    .doctor-card:hover { border-color: rgba(0,180,216,.3); transform: translateY(-1px); }
+    .doctor-avatar {
+      border-radius: 12px;
+      background: linear-gradient(135deg, #0077a8, #00b4d8);
+      box-shadow: 0 0 0 1px rgba(0,180,216,.3), 0 4px 12px rgba(0,180,216,.2);
+      color: #000d1a; font-weight: 800;
+    }
+    .doctor-name { font-weight: 800; font-size: 14px; }
+    .book-btn {
+      border-radius: 10px; font-weight: 800;
+      background: linear-gradient(135deg, #009ec0, #00b4d8);
+      box-shadow: 0 2px 10px rgba(0,180,216,.3);
+      transition: all .15s;
+    }
+    .book-btn:hover { opacity: 1; box-shadow: 0 4px 16px rgba(0,180,216,.4); transform: translateY(-1px); }
+    .conv-toggle-btn {
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+    }
+    .conv-toggle-btn:hover { border-color: rgba(0,180,216,.3); }
+    .conv-scroll-wrap { border: 1px solid rgba(255,255,255,.07); border-radius: 14px; }
+    .conv-bubble-doctor {
+      background: rgba(0,180,216,.07); border: 1px solid rgba(0,180,216,.15);
+      border-radius: 12px 12px 12px 2px;
+    }
+    .conv-bubble-patient {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px 12px 2px 12px;
+    }
+    .conv-rationale-body {
+      background: rgba(0,180,216,.04); border: none;
+      border-left: 2px solid rgba(0,180,216,.3); border-radius: 0 8px 8px 0;
+    }
+    .diff-evo-turn {
+      background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 14px;
+    }
+    .booking-confirmed {
+      background: rgba(78,222,163,.07); border: 1px solid rgba(78,222,163,.2);
+      border-radius: 14px;
+    }
+    .own-doctor-card {
+      background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 14px; transition: border-color .18s;
+    }
+    .own-doctor-card:hover { border-color: rgba(0,180,216,.3); }
+    .own-doctor-slot-chip {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 8px; font-weight: 700;
+    }
+    .own-doctor-slot-chip:hover { background: rgba(0,180,216,.1); border-color: rgba(0,180,216,.4); }
+    .own-doc-chip {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.08);
+      border-radius: 99px; font-weight: 700;
+    }
+    .own-doc-chip.active { background: rgba(0,180,216,.12); border-color: rgba(0,180,216,.45); }
+    .own-doctor-input {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px;
+    }
+    .own-doctor-input:focus { border-color: rgba(0,180,216,.5); box-shadow: 0 0 0 3px rgba(0,180,216,.1); }
+    .modal-overlay { background: rgba(0,0,0,.75); backdrop-filter: blur(12px); }
+    .modal-box, .auth-modal-box, .mismatch-box {
+      background: #0d1120;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 18px;
+      box-shadow: 0 32px 80px rgba(0,0,0,.7), 0 0 0 1px rgba(255,255,255,.04);
+    }
+    .mismatch-box { border-color: rgba(255,185,95,.25); }
+    .auth-input {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px;
+    }
+    .auth-input:focus { border-color: rgba(0,180,216,.5); box-shadow: 0 0 0 3px rgba(0,180,216,.1); }
+    .slot-btn {
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px; transition: all .12s;
+    }
+    .slot-btn:hover, .slot-btn.selected { border-color: rgba(0,180,216,.5); background: rgba(0,180,216,.1); color: var(--primary); }
+    .patient-test-item {
+      background: rgba(255,255,255,.025); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px; transition: border-color .15s;
+    }
+    .patient-test-item:hover { border-color: rgba(245,158,11,.3); }
+    .patient-test-icon { border-radius: 10px; }
+    .doctors-note-card {
+      background: rgba(59,130,246,.05); border-left: 3px solid rgba(59,130,246,.5);
+      border-radius: 0 12px 12px 0;
+    }
+    /* Patient referral card */
+    .ref-pt-card {
+      background: rgba(0,180,216,.04); border: 1px solid rgba(0,180,216,.18);
+      border-radius: 14px; padding: 18px 20px; display: flex; flex-direction: column; gap: 12px;
+    }
+    .ref-pt-header { display: flex; align-items: center; gap: 14px; }
+    .ref-pt-icon {
+      width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+      background: rgba(0,180,216,.1); border: 1px solid rgba(0,180,216,.2);
+      display: flex; align-items: center; justify-content: center; color: var(--primary);
+    }
+    .ref-pt-specialty { font-size: 15px; font-weight: 800; color: var(--text); letter-spacing: -.01em; }
+    .ref-pt-to { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+    .ref-pt-to strong { color: var(--text); }
+    .ref-pt-urgency {
+      margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 700;
+      padding: 3px 10px; border-radius: 99px;
+    }
+    .ref-urg-routine { background: rgba(78,222,163,.1); color: #4edea3; border: 1px solid rgba(78,222,163,.2); }
+    .ref-urg-urgent  { background: rgba(255,185,95,.1);  color: #ffb95f; border: 1px solid rgba(255,185,95,.2); }
+    .ref-urg-emergency { background: rgba(255,107,107,.1); color: #ff6b6b; border: 1px solid rgba(255,107,107,.2); }
+    .ref-pt-notes { font-size: 13px; color: var(--text-dim); line-height: 1.6; padding: 10px 14px; background: rgba(255,255,255,.03); border-radius: 9px; }
+    .ref-pt-meta { font-size: 11px; color: var(--text-muted); }
+    .ref-pt-chooser { border-top: 1px solid rgba(255,255,255,.07); padding-top: 14px; }
+    .ref-pt-chooser-label {
+      display: flex; align-items: center; gap: 7px;
+      font-size: 12px; color: var(--text-muted); margin-bottom: 12px; line-height: 1.5;
+    }
+    .ref-pt-doc-list { display: flex; flex-direction: column; gap: 8px; }
+    .ref-pt-doc-card {
+      display: flex; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 11px; cursor: pointer;
+      border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.025);
+      transition: all .15s;
+    }
+    .ref-pt-doc-card:hover { border-color: rgba(0,180,216,.35); background: rgba(0,180,216,.06); }
+    .ref-pt-doc-av {
+      width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+      background: linear-gradient(135deg,#0077a8,#00b4d8);
+      color: #000d1a; font-size: 12px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .ref-pt-doc-name { font-size: 13px; font-weight: 700; color: var(--text); }
+    .ref-pt-doc-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+    .ref-pt-doc-slots {
+      margin-left: auto; flex-shrink: 0; font-size: 11px; font-weight: 600;
+      padding: 3px 9px; border-radius: 7px;
+      background: rgba(78,222,163,.08); color: #4edea3; border: 1px solid rgba(78,222,163,.18);
+    }
+    .ref-pt-loading, .ref-pt-none { font-size: 12px; color: var(--text-muted); padding: 10px 0; font-style: italic; }
+    .hospital-card { border-radius: 14px; }
+    .hospital-btn-maps { background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09); border-radius: 8px; }
+
+    /* ── Print / PDF export ───────────────────────────────────────────── */
+    @page {
+      size: A4 portrait;
+      margin: 16mm 18mm 20mm;
+    }
+
+    @media print {
+      /* Force color rendering */
+      * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+      /* Reset dark theme to light */
+      :root {
+        --background: #ffffff;
+        --surface-1: #ffffff;
+        --surface-2: #f8f9fb;
+        --surface-3: #f1f3f6;
+        --surface-4: #e4e8ee;
+        --text:       #0f172a;
+        --text-dim:   #334155;
+        --text-muted: #64748b;
+        --border:     #e2e8f0;
+        --primary:         #0284c7;
+        --primary-dim:     rgba(2,132,199,.12);
+        --success:         #059669;
+        --warning:         #d97706;
+        --danger:          #dc2626;
+        --radius:     8px;
+        --radius-lg:  12px;
+      }
+
+      body {
+        background: #fff !important;
+        color: #0f172a !important;
+        font-family: Inter, system-ui, sans-serif;
+      }
+
+      /* ── Hide all UI chrome ─────────────────────────────── */
+      .nav,
+      #patient-tabbar,
+      .action-bar-bottom,
+      #notif-toggle-btn,
+      .notif-toggle-btn,
+      .modal-overlay,
+      .mismatch-overlay,
+      .own-doctor-section,
+      .slot-picker-modal,
+      #slot-modal,
+      #auth-modal,
+      .book-btn,
+      .booking-confirmed .book-btn { display: none !important; }
+
+      /* ── Page ──────────────────────────────────────────── */
+      .page { max-width: 100% !important; padding: 0 !important; }
+
+      /* ── Print header watermark ─────────────────────────── */
+      body::before {
+        content: 'MedicalConvo — Session Report';
+        display: block;
+        font-size: 10px; font-weight: 700; letter-spacing: .1em;
+        text-transform: uppercase; color: #94a3b8;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+        margin-bottom: 24px;
+      }
+
+      /* ── Diagnosis hero ─────────────────────────────────── */
+      .diagnosis-hero { padding: 16px 0 20px; text-align: center; }
+      .diagnosis-eyebrow { color: #64748b !important; }
+      .diagnosis-name { color: #0284c7 !important; font-size: 32px !important; }
+
+      /* ── Section headers ────────────────────────────────── */
+      .report-section-title {
+        color: #475569 !important;
+        border-bottom: 1.5px solid #e2e8f0 !important;
+        padding-bottom: 6px !important; margin-bottom: 14px !important;
+      }
+
+      /* ── Cards / sections ───────────────────────────────── */
+      .card,
+      .closing-card,
+      .doctors-note-card {
+        background: #f8f9fb !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        box-shadow: none !important;
+      }
+
+      .report-section {
+        break-inside: avoid;
+        margin-bottom: 24px !important;
+      }
+
+      /* ── Performance metric rings ───────────────────────── */
+      .metric-cards {
+        display: flex; gap: 24px; justify-content: center;
+        break-inside: avoid;
+      }
+      .metric-card {
+        background: #f8f9fb !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 12px !important;
+        padding: 16px 24px !important;
+      }
+      .metric-card-label { color: #475569 !important; }
+      .metric-ring-val { color: inherit !important; }
+      /* ensure track ring is visible on white */
+      .metric-ring svg circle:first-child { stroke: #e2e8f0 !important; }
+
+      /* ── Scores table ───────────────────────────────────── */
+      table { width: 100%; border-collapse: collapse; break-inside: avoid; }
+      thead tr { background: #f1f3f6 !important; }
+      th {
+        background: #f1f3f6 !important;
+        color: #475569 !important;
+        font-size: 11px !important;
+        letter-spacing: .06em !important;
+        text-transform: uppercase !important;
+        padding: 8px 12px !important;
+        border: 1px solid #e2e8f0 !important;
+      }
+      td {
+        padding: 8px 12px !important;
+        border: 1px solid #e2e8f0 !important;
+        color: #0f172a !important;
+      }
+      .mean-row td { background: #f1f3f6 !important; font-weight: 700 !important; }
+      .score-green { color: #059669 !important; }
+      .score-yellow { color: #d97706 !important; }
+      .score-red { color: #dc2626 !important; }
+
+      /* ── Badges ─────────────────────────────────────────── */
+      .badge, .badge-teal, .badge-dim, .badge-amber {
+        border: 1px solid !important;
+        box-shadow: none !important;
+      }
+      .badge-teal  { background: rgba(2,132,199,.08) !important; color: #0284c7 !important; border-color: rgba(2,132,199,.25) !important; }
+      .badge-dim   { background: #f1f3f6 !important; color: #475569 !important; border-color: #e2e8f0 !important; }
+      .badge-amber { background: rgba(217,119,6,.08) !important; color: #d97706 !important; border-color: rgba(217,119,6,.25) !important; }
+
+      /* ── Weakness tag list ──────────────────────────────── */
+      .tag-list { display: flex; flex-wrap: wrap; gap: 8px; }
+
+      /* ── Diff evolution bars ────────────────────────────── */
+      .diff-evo-turn {
+        background: #f8f9fb !important;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        break-inside: avoid;
+      }
+      .diff-evo-turn-label { color: #475569 !important; border-bottom: 1px solid #e2e8f0 !important; }
+      .diff-evo-bar-track { background: #e2e8f0 !important; }
+      .diff-evo-bar-fill  { background: #0284c7 !important; }
+      .diff-evo-bar-header span { color: #334155 !important; }
+
+      /* ── Final differential bars ────────────────────────── */
+      .diff-bar-track  { background: #e2e8f0 !important; }
+      .diff-bar-fill   { background: #0284c7 !important; }
+      .diff-bar-name   { color: #0f172a !important; }
+      .diff-bar-prob   { color: #475569 !important; }
+      .top-dx .diff-bar-name { color: #0284c7 !important; }
+
+      /* ── Conversation viewer ────────────────────────────── */
+      .conv-toggle-btn { display: none !important; }
+      .conv-scroll-wrap {
+        display: block !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border: none !important;
+      }
+      .conv-turn {
+        break-inside: avoid;
+        border: 1px solid #e2e8f0 !important;
+        border-radius: 10px !important;
+        background: #f8f9fb !important;
+        margin-bottom: 10px !important;
+      }
+      .conv-q-label, .conv-a-label { color: #64748b !important; }
+      .conv-q-text { color: #0f172a !important; }
+      .conv-a-text { color: #334155 !important; }
+      .conv-conf { color: #475569 !important; }
+
+      /* ── Doctor cards ───────────────────────────────────── */
+      .doctor-card, .doctor-grid {
+        background: #f8f9fb !important;
+        border: 1px solid #e2e8f0 !important;
+        break-inside: avoid;
+      }
+      .doctor-name  { color: #0f172a !important; }
+      .doctor-hospital, .doctor-rating, .doctor-meta { color: #475569 !important; }
+      .doctor-avatar { background: rgba(2,132,199,.12) !important; color: #0284c7 !important; }
+
+      /* ── Closing card ───────────────────────────────────── */
+      .closing-header { color: #0284c7 !important; }
+      .closing-section-title { color: #64748b !important; }
+      .closing-text { color: #334155 !important; }
+      .closing-steps li { color: #334155 !important; }
+      .closing-steps li::before { color: #059669 !important; }
+
+      /* ── Urgency badges ─────────────────────────────────── */
+      .urgency-emergency { background: rgba(220,38,38,.08) !important; color: #dc2626 !important; }
+      .urgency-urgent    { background: rgba(217,119,6,.08) !important; color: #d97706 !important; }
+      .urgency-routine   { background: rgba(5,150,105,.08) !important; color: #059669 !important; }
+      .emergency-alert   { animation: none !important; }
+
+      /* ── Symptom history ────────────────────────────────── */
+      #symptom-history-section { display: none !important; }
+
+      /* ── Misc ───────────────────────────────────────────── */
+      a { text-decoration: none !important; color: inherit !important; }
+      * { box-shadow: none !important; animation: none !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.href='/session.html'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Session
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div><span>Profile</span></div>
+    <div class="step-sep"></div>
+    <div class="step done"><div class="step-num">✓</div><span>History</span></div>
+    <div class="step-sep"></div>
+    <div class="step done"><div class="step-num">✓</div><span>Book</span></div>
+    <div class="step-sep"></div>
+    <div class="step done"><div class="step-num">✓</div><span>Session</span></div>
+    <div class="step-sep"></div>
+    <div class="step active"><div class="step-num">5</div><span>Report</span></div>
+  </div>
+  <div class="spacer"></div>
+  <span class="badge badge-green">Session Complete</span>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin:0 8px;"></div>
+
+</nav>
+
+<div class="page" id="content">
+  <div class="thinking-row"><div class="spinner"></div> Loading session report…</div>
+</div>
+
+<!-- Auth modal (shown to guests when they click Book) -->
+<div class="modal-overlay hidden" id="auth-modal">
+  <div class="auth-modal-box">
+    <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    <div class="auth-modal-eyebrow">One more step</div>
+    <div class="auth-modal-title">Sign in to book</div>
+    <div class="auth-modal-sub">Create a free account or sign in to confirm your appointment. Your session data is saved automatically.</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="auth-tab-login" onclick="switchAuthTab('login')">Sign In</div>
+      <div class="auth-tab" id="auth-tab-register" onclick="switchAuthTab('register')">Create Account</div>
+    </div>
+
+    <!-- Login form -->
+    <div id="auth-form-login" class="auth-form">
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" type="email" id="auth-login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" type="password" id="auth-login-password" placeholder="••••••••" autocomplete="current-password"
+          onkeydown="if(event.key==='Enter') doAuthLogin()">
+      </div>
+      <div class="auth-error" id="auth-login-error"></div>
+      <button class="auth-submit" id="auth-login-btn" onclick="doAuthLogin()">Sign In &amp; Book</button>
+      <div class="auth-divider">Don't have an account? <a href="#" onclick="switchAuthTab('register');return false;">Create one free</a></div>
+    </div>
+
+    <!-- Register form -->
+    <div id="auth-form-register" class="auth-form" style="display:none;">
+      <div class="auth-field">
+        <label class="auth-label">Full Name</label>
+        <input class="auth-input" type="text" id="auth-reg-name" placeholder="Your full name" autocomplete="name">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Email</label>
+        <input class="auth-input" type="email" id="auth-reg-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+      <div class="auth-field">
+        <label class="auth-label">Password</label>
+        <input class="auth-input" type="password" id="auth-reg-password" placeholder="Min 6 characters" autocomplete="new-password"
+          onkeydown="if(event.key==='Enter') doAuthRegister()">
+      </div>
+      <div class="auth-error" id="auth-reg-error"></div>
+      <button class="auth-submit" id="auth-reg-btn" onclick="doAuthRegister()">Create Account &amp; Book</button>
+      <div class="auth-divider">Already have an account? <a href="#" onclick="switchAuthTab('login');return false;">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- Slot picker modal -->
+<div class="modal-overlay hidden" id="slot-modal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-title" id="modal-doctor-name"></div>
+    <div class="modal-sub" id="modal-doctor-hospital"></div>
+    <div class="slot-list" id="slot-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="confirm-book-btn" onclick="confirmBooking()" disabled>Confirm Booking</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = '';
+const sessionId = sessionStorage.getItem('sessionId');
+if (!sessionId) window.location.href = '/';
+
+// Modal state
+let _pendingDoctor = null;
+let _pendingSlot = null;
+
+// load() is defined further below (extended version with symptom history + download)
+
+// ---- Suggested Tests ----
+const _SUG_STORAGE_KEY = `sug_tests_${sessionId}`;
+let _sugDone = new Set();    // set of test IDs marked done
+let _sugUploads = {};        // { [testId]: { filename, uploaded_at, test_name } }
+let _sugApptId = null;       // appointment id for uploads
+
+function _loadSugState() {
+  try { _sugDone = new Set(JSON.parse(localStorage.getItem(_SUG_STORAGE_KEY) || '[]')); } catch { _sugDone = new Set(); }
+}
+function _saveSugState() {
+  try { localStorage.setItem(_SUG_STORAGE_KEY, JSON.stringify([..._sugDone])); } catch {}
+}
+
+const _SUG_ICONS = {
+  blood:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#ef4444;"><path d="M12 2C6 9 4 13.5 4 16a8 8 0 0016 0c0-2.5-2-7-8-14z"/></svg>`,
+  urine:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#f59e0b;"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>`,
+  imaging: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#818cf8;"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>`,
+  vitals:  `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#10b981;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>`,
+  other:   `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:#94a3b8;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
+};
+const _SUG_ICON_CLS = { blood: 'sug-icon-blood', urine: 'sug-icon-urine', imaging: 'sug-icon-imaging', vitals: 'sug-icon-vitals', other: 'sug-icon-other' };
+
+async function loadSuggestedTests() {
+  const el = document.getElementById('suggested-tests-section');
+  if (!el) return;
+  _loadSugState();
+  // Pre-load any previously uploaded files for this session
+  try {
+    if (getAuthToken()) {
+      const ur = await fetch(`${API}/api/session/${sessionId}/suggested-test-files`, { headers: authHeaders() });
+      if (ur.ok) {
+        const ud = await ur.json();
+        _sugUploads = ud.uploads || {};
+      }
+    }
+  } catch { /* ignore */ }
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 40000);
+    const res = await fetch(`${API}/api/session/${sessionId}/suggested-tests`, { signal: ctrl.signal });
+    clearTimeout(timer);
+    if (!res.ok) { el.innerHTML = ''; return; }
+    const data = await res.json();
+    if (!data.necessary || !data.tests || data.tests.length === 0) {
+      el.innerHTML = `
+        <div class="report-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4edea3" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px;"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Suggested Tests
+        </div>
+        <div class="sug-none">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          No basic tests required before your appointment.${data.rationale ? ' ' + escHtml(data.rationale) : ''}
+        </div>`;
+      return;
+    }
+    el.innerHTML = _buildSuggestedTestsHtml(data);
+  } catch (e) {
+    el.innerHTML = e.name === 'AbortError'
+      ? `<div class="sug-none" style="color:var(--text-muted);">Test analysis timed out — reload the page to retry.</div>`
+      : '';
+  }
+}
+
+function _buildSuggestedTestsHtml(data) {
+  const tests = data.tests || [];
+  const doneCount = tests.filter(t => _sugDone.has(t.id)).length;
+
+  const cards = tests.map(t => {
+    const done = _sugDone.has(t.id);
+    const uploaded = _sugUploads[t.id];
+    const badgeCls = t.priority === 'urgent' ? 'sug-badge-urgent' : 'sug-badge-routine';
+    const iconCls  = _SUG_ICON_CLS[t.category] || 'sug-icon-other';
+    const icon     = _SUG_ICONS[t.category] || '🔬';
+    const uploadBtn = uploaded
+      ? `<span class="sug-uploaded-badge">
+           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+           Result uploaded
+         </span>`
+      : `<label class="sug-upload-btn" title="Upload test result">
+           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+           Upload result
+           <input type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,image/*,application/pdf"
+             style="display:none" onchange="uploadSugResult(event,'${escHtml(t.id)}','${escHtml(t.name)}',${JSON.stringify(tests).replace(/"/g,'&quot;')})">
+         </label>`;
+    const accentCls = t.priority === 'urgent' ? 'card-urgent' : 'card-routine';
+    return `
+      <div class="sug-test-card${done ? ' done' : ''} ${accentCls}" id="sugcard-${escHtml(t.id)}">
+        <button class="sug-checkbox${done ? ' sug-checkbox-done' : ''}" onclick="toggleSugDone('${escHtml(t.id)}',${JSON.stringify(tests).replace(/"/g,'&quot;')})" title="${done ? 'Mark as not done' : 'Mark as done'}">
+          ${done ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : ''}
+        </button>
+        <div class="sug-icon ${iconCls}">${icon}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="sug-test-name${done ? ' sug-test-name-done' : ''}">${escHtml(t.name)}</div>
+          <div class="sug-test-why">${escHtml(t.why)}</div>
+          <div class="sug-test-meta" style="margin-top:8px;">
+            <span class="sug-badge ${badgeCls}">${escHtml(t.priority)}</span>
+            ${t.where ? `<span class="sug-meta-pill"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>${escHtml(t.where)}</span>` : ''}
+          </div>
+          ${t.preparation && t.preparation !== 'No special preparation required.' ? `<div class="sug-prep"><strong style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-muted);">Prep</strong> &nbsp;${escHtml(t.preparation)}</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0;">
+          ${done ? `<span class="sug-done-badge">Done</span>` : ''}
+          <div id="sug-upload-${escHtml(t.id)}">${uploadBtn}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="sug-header">
+      <div class="report-section-title" style="margin-bottom:0;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px;"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        Suggested Tests
+        <span style="font-size:11px;font-weight:500;color:var(--text-muted);margin-left:6px;text-transform:none;letter-spacing:0;">AI Recommendation</span>
+      </div>
+      <button onclick="_printTestList()" class="btn btn-ghost" style="font-size:11px;padding:5px 10px;" title="Print test checklist">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+        Print
+      </button>
+    </div>
+    ${data.rationale ? `<div class="sug-rationale">${escHtml(data.rationale)}</div>` : ''}
+    <div class="sug-status-bar">
+      <span id="sug-status-text" style="font-size:12px;color:var(--text-muted);">${doneCount} of ${tests.length} completed</span>
+      <div class="sug-progress"><div class="sug-progress-fill" id="sug-progress-fill" style="width:${tests.length ? Math.round(doneCount/tests.length*100) : 0}%"></div></div>
+      <button onclick="_resetSugState(${JSON.stringify(tests).replace(/"/g,'&quot;')})" style="font-size:11px;color:var(--text-muted);background:none;border:none;cursor:pointer;padding:0;white-space:nowrap;" onmouseenter="this.style.color='var(--text)'" onmouseleave="this.style.color='var(--text-muted)'">Reset</button>
+    </div>
+    <div id="sug-cards">${cards}</div>
+    <p style="font-size:11px;color:var(--text-muted);margin-top:12px;">AI-generated suggestions — consult your doctor before proceeding. Tick each box once you've completed a test.</p>`;
+}
+
+function toggleSugDone(id, tests) {
+  if (_sugDone.has(id)) _sugDone.delete(id); else _sugDone.add(id);
+  _saveSugState();
+  _refreshSugCards(tests);
+}
+
+function _resetSugState(tests) {
+  _sugDone.clear();
+  _saveSugState();
+  _refreshSugCards(tests);
+}
+
+async function uploadSugResult(event, testId, testName, tests) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const labelEl = document.getElementById('sug-upload-' + testId);
+  if (labelEl) labelEl.innerHTML = '<span style="font-size:11px;color:var(--text-muted);padding:4px 10px;">Uploading…</span>';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    // Use session-level endpoint — works whether or not an appointment is booked yet
+    const url = `/api/session/${sessionId}/suggested-test-files?suggested_test_id=${encodeURIComponent(testId)}&suggested_test_name=${encodeURIComponent(testName)}`;
+    const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: fd });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || 'Upload failed');
+    }
+    _sugUploads[testId] = { filename: file.name, uploaded_at: new Date().toISOString(), test_name: testName };
+    _sugDone.add(testId);
+    _saveSugState();
+    _refreshSugCards(tests);
+    _showReportToast(`Result uploaded for ${testName}`);
+  } catch (e) {
+    if (labelEl) {
+      labelEl.innerHTML = `<label class="sug-upload-btn" title="Upload test result">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload result
+        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.gif,.webp,.heic,image/*,application/pdf" style="display:none"
+          onchange="uploadSugResult(event,'${escHtml(testId)}','${escHtml(testName)}',${JSON.stringify(tests).replace(/"/g,'&quot;')})">
+      </label>`;
+    }
+    alert('Upload failed: ' + e.message);
+  }
+}
+
+function _refreshSugCards(tests) {
+  const doneCount = tests.filter(t => _sugDone.has(t.id)).length;
+  const fill = document.getElementById('sug-progress-fill');
+  const text = document.getElementById('sug-status-text');
+  if (fill) fill.style.width = tests.length ? Math.round(doneCount / tests.length * 100) + '%' : '0%';
+  if (text) text.textContent = `${doneCount} of ${tests.length} completed`;
+
+  tests.forEach(t => {
+    const card = document.getElementById('sugcard-' + t.id);
+    if (!card) return;
+    const done = _sugDone.has(t.id);
+    const accentCls = t.priority === 'urgent' ? 'card-urgent' : 'card-routine';
+    card.className = `sug-test-card ${accentCls}${done ? ' done' : ''}`;
+
+    const btn = card.querySelector('.sug-checkbox');
+    if (btn) {
+      btn.className = 'sug-checkbox' + (done ? ' sug-checkbox-done' : '');
+      btn.title = done ? 'Mark as not done' : 'Mark as done';
+      btn.innerHTML = done ? `<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>` : '';
+    }
+    const nameEl = card.querySelector('.sug-test-name');
+    if (nameEl) nameEl.className = 'sug-test-name' + (done ? ' sug-test-name-done' : '');
+
+    let badge = card.querySelector('.sug-done-badge');
+    if (done && !badge) {
+      badge = document.createElement('span');
+      badge.className = 'sug-done-badge';
+      badge.textContent = 'Done';
+      card.appendChild(badge);
+    } else if (!done && badge) {
+      badge.remove();
+    }
+
+    // Update upload zone
+    const uploadZone = document.getElementById('sug-upload-' + t.id);
+    if (uploadZone) {
+      const uploaded = _sugUploads[t.id];
+      if (uploaded) {
+        uploadZone.innerHTML = `<span class="sug-uploaded-badge">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Result uploaded
+        </span>`;
+      }
+    }
+  });
+}
+
+function _printTestList() {
+  const el = document.getElementById('suggested-tests-section');
+  if (!el) return;
+  const cards = [...el.querySelectorAll('.sug-test-card')].map(card => {
+    const name = card.querySelector('.sug-test-name')?.textContent || '';
+    const why  = card.querySelector('.sug-test-why')?.textContent || '';
+    const prep = card.querySelector('.sug-prep')?.textContent || '';
+    const state = card.classList.contains('done') ? '☑ Done'
+                : card.classList.contains('checked') ? '◉ Planned' : '☐';
+    return `<tr><td style="padding:8px 10px;font-weight:700;">${state} ${name}</td><td style="padding:8px 10px;color:#555;">${why}</td><td style="padding:8px 10px;color:#666;font-size:12px;">${prep}</td></tr>`;
+  }).join('');
+  const w = window.open('', '_blank');
+  if (!w) return;
+  w.document.write(`<!DOCTYPE html><html><head><title>Test Checklist</title>
+  <style>body{font-family:Arial,sans-serif;padding:24px;} table{width:100%;border-collapse:collapse;} tr{border-bottom:1px solid #eee;} th{background:#f5f5f5;padding:8px 10px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#777;}</style>
+  </head><body>
+  <h2 style="margin-bottom:4px;">Recommended Test Checklist</h2>
+  <p style="color:#777;font-size:13px;margin-top:0;">Bring this list to your diagnostic centre. Complete before your specialist appointment.</p>
+  <table><thead><tr><th>Status / Test</th><th>Why Needed</th><th>Preparation</th></tr></thead><tbody>${cards}</tbody></table>
+  <p style="font-size:11px;color:#aaa;margin-top:24px;">AI-generated suggestion — confirm with your doctor. Printed from MedicalConvo.</p>
+  <script>window.onload=()=>window.print();<\/script>
+  </body></html>`);
+  w.document.close();
+}
+
+async function loadRouting() {
+  const el = document.getElementById('next-steps-section');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/api/session/${sessionId}/routing`, { headers: { ...authHeaders() } });
+    if (!res.ok) {
+      const detail = await res.text();
+      el.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Specialist routing unavailable (${res.status}: ${escHtml(detail)})</div>`;
+      return;
+    }
+    const r = await res.json();
+    el.innerHTML = buildNextSteps(r);
+  } catch (e) {
+    el.innerHTML = `<div style="font-size:12px;color:var(--text-muted);padding:8px 0;">Specialist routing unavailable: ${escHtml(e.message)}</div>`;
+  }
+}
+
+async function loadTestOrders() {
+  const el = document.getElementById('test-orders-section');
+  const summaryEl = document.getElementById('doctors-note-section');
+  const rxEl = document.getElementById('rx-section');
+  try {
+    if (!getAuthToken()) return; // guest — skip
+    const res = await fetch(`${API}/api/appointments`, { headers: { ...authHeaders() } });
+    if (!res.ok) return;
+    const data = await res.json();
+    const appts = data.appointments || data;
+    const appt = Array.isArray(appts)
+      ? appts.find(a => a.session_id === sessionId)
+      : Object.values(appts).find(a => a.session_id === sessionId);
+    if (!appt) return;
+    // Wire up "Send to Doctor" button if appointment exists
+    window._reportApptId = appt.appointment_id;
+    // Wire up suggested-test upload tracking
+    _sugApptId = appt.appointment_id;
+    _sugUploads = appt.suggested_test_uploads || {};
+    // Refresh upload buttons if cards already rendered
+    Object.entries(_sugUploads).forEach(([testId, info]) => {
+      const el2 = document.getElementById('sug-upload-' + testId);
+      if (el2) el2.innerHTML = `<span class="sug-uploaded-badge"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg> Result uploaded</span>`;
+    });
+    const sendBtn = document.getElementById('btn-send-doctor');
+    if (sendBtn) sendBtn.style.display = '';
+    if (el && appt.test_orders && appt.test_orders.length) {
+      el.innerHTML = buildTestOrdersBlock(appt.test_orders, appt.doctor_name, appt.id);
+    }
+    const refEl = document.getElementById('referral-section');
+    if (refEl && appt.referral) {
+      refEl.innerHTML = buildReferralBlock(appt.referral, appt.id);
+    }
+    if (summaryEl && appt.doctor_summary) {
+      summaryEl.innerHTML = `
+        <div class="report-section">
+          <div class="report-section-title">Doctor's Note</div>
+          <div class="doctors-note-card">
+            <div class="doctors-note-label">From your doctor</div>
+            <div class="doctors-note-text">${escHtml(appt.doctor_summary)}</div>
+          </div>
+        </div>`;
+    }
+    if (rxEl && appt.prescriptions && appt.prescriptions.length) {
+      rxEl.innerHTML = `
+        <div class="report-section">
+          <div class="report-section-title">Prescriptions</div>
+          ${appt.prescriptions.map(p => `
+            <div style="display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid rgba(255,255,255,.05);">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(139,92,246,.1);border:1px solid rgba(139,92,246,.2);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;">💊</div>
+              <div style="flex:1;">
+                <div style="font-weight:700;font-size:14px;color:var(--text);">${escHtml(p.drug || '')}</div>
+                ${p.dose ? `<div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${escHtml(p.dose)}${p.frequency ? ' · ' + escHtml(p.frequency) : ''}${p.duration ? ' · ' + escHtml(p.duration) : ''}</div>` : ''}
+                ${p.instructions ? `<div style="font-size:12px;color:var(--text-dim);margin-top:3px;font-style:italic;">${escHtml(p.instructions)}</div>` : ''}
+              </div>
+            </div>`).join('')}
+        </div>`;
+    }
+    // Scroll to section if URL hash is present
+    const hash = window.location.hash;
+    if (hash) {
+      const target = document.querySelector(hash);
+      if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+    }
+  } catch {
+    // silently ignore — test orders are a nice-to-have, not critical
+  }
+}
+
+let _uploadApptId = null;
+let _uploadTestOrderId = null;
+
+function openResultUpload(apptId, testOrderId) {
+  _uploadApptId = apptId;
+  _uploadTestOrderId = testOrderId;
+  document.getElementById('result-upload-overlay').classList.add('open');
+}
+function closeResultUpload() {
+  document.getElementById('result-upload-overlay').classList.remove('open');
+  _uploadApptId = null; _uploadTestOrderId = null;
+  document.getElementById('result-upload-input').value = '';
+  document.getElementById('result-upload-status').textContent = '';
+}
+async function submitResultUpload() {
+  const fileInput = document.getElementById('result-upload-input');
+  if (!fileInput.files.length) return;
+  const file = fileInput.files[0];
+  const status = document.getElementById('result-upload-status');
+  const btn = document.getElementById('result-upload-btn');
+  btn.disabled = true; btn.textContent = 'Uploading…'; status.textContent = '';
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    const url = `/api/patient/appointments/${_uploadApptId}/files${_uploadTestOrderId ? '?test_order_id=' + encodeURIComponent(_uploadTestOrderId) : ''}`;
+    const res = await fetch(url, { method: 'POST', headers: authHeaders(), body: fd });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Upload failed');
+    status.textContent = '✓ Uploaded successfully';
+    status.style.color = '#4edea3';
+    // Refresh the test orders block
+    setTimeout(() => { closeResultUpload(); loadTestOrders(); }, 1200);
+  } catch (e) {
+    status.textContent = 'Upload failed: ' + e.message;
+    status.style.color = '#ff6b6b';
+    btn.disabled = false; btn.textContent = 'Upload';
+  }
+}
+
+function buildTestOrdersBlock(orders, doctorName, apptId) {
+  const iconMap = { blood: '🩸', imaging: '🩻', urine: '🧪', other: '🔬' };
+  const iconCls = { blood: 'pti-blood', imaging: 'pti-imaging', urine: 'pti-urine', other: 'pti-other' };
+  const priCls  = { stat: 'ptp-stat', urgent: 'ptp-urgent', routine: 'ptp-routine' };
+
+  const statOrUrgent = orders.filter(o => o.priority === 'stat' || o.priority === 'urgent');
+  const alertLevel = statOrUrgent.length ? 'stat' : 'routine';
+
+  const items = orders.map(o => `
+    <div class="patient-test-item">
+      <div class="patient-test-icon ${iconCls[o.category] || 'pti-other'}">${iconMap[o.category] || '🔬'}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="patient-test-name">${escHtml(o.test)}</div>
+        <div class="patient-test-meta">
+          <span class="patient-test-priority ${priCls[o.priority] || 'ptp-routine'}">${escHtml(o.priority || 'routine')}</span>
+          <span style="font-size:11px;color:var(--text-muted);text-transform:capitalize;">${escHtml(o.category)}</span>
+        </div>
+        ${o.notes ? `<div class="patient-test-notes">📋 ${escHtml(o.notes)}</div>` : ''}
+      </div>
+      <div style="flex-shrink:0;display:flex;align-items:center;gap:8px;">
+        ${o.results_uploaded
+          ? `<span style="font-size:11px;font-weight:700;color:#4edea3;background:rgba(78,222,163,.1);border:1px solid rgba(78,222,163,.2);border-radius:6px;padding:2px 9px;">✓ Results uploaded</span>`
+          : apptId ? `<button onclick="openResultUpload('${escHtml(apptId)}','${escHtml(o.id||'')}')\" style="font-size:11px;font-weight:700;padding:4px 11px;border-radius:7px;border:1px solid rgba(0,180,216,.35);background:rgba(0,180,216,.08);color:var(--primary);cursor:pointer;">Upload Results</button>` : ''}
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="report-section">
+      <div class="report-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px;"><path d="M18 8h1a4 4 0 010 8h-1"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+        Tests Ordered by Your Doctor
+      </div>
+      <div class="test-orders-alert">
+        <div class="test-orders-alert-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/>
+          </svg>
+        </div>
+        <div>
+          <div class="test-orders-alert-title">Action Required: Pre-appointment Tests</div>
+          <div class="test-orders-alert-text">
+            ${doctorName ? `<strong>${escHtml(doctorName)}</strong> has ordered ${orders.length} test${orders.length !== 1 ? 's' : ''} that you should complete <em>before your appointment</em>.` : `Your doctor has ordered ${orders.length} test${orders.length !== 1 ? 's' : ''} to complete before your appointment.`}
+            ${alertLevel === 'stat' ? ' <strong style="color:#ef4444;">One or more tests are marked STAT — complete as soon as possible.</strong>' : ''}
+          </div>
+        </div>
+      </div>
+      <div class="patient-test-orders">${items}</div>
+      <div class="test-action-note">
+        Bring all test results to your appointment. If you have questions about where to get these tests done, contact your doctor's office directly.
+      </div>
+    </div>`;
+}
+
+function buildNextSteps(r) {
+  const urgencyClass = `urgency-${r.urgency}`;
+  const urgencyLabel = r.urgency.toUpperCase();
+
+  const doctorCards = (r.doctors || []).map(d => `
+    <div class="doctor-card">
+      <div class="doctor-card-header">
+        <div class="doctor-avatar">${escHtml(d.avatar_initials)}</div>
+        <div>
+          <div class="doctor-name">${escHtml(d.name)}</div>
+          <div class="doctor-hospital">${escHtml(d.hospital)}</div>
+          <div class="doctor-rating">★ ${d.rating}</div>
+        </div>
+      </div>
+      <div class="doctor-card-footer">
+        <button class="book-btn" onclick="openModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+          Book Appointment
+        </button>
+      </div>
+    </div>
+  `).join('');
+
+  if (r.is_emergency) {
+    const hospitals = [
+      { name: "City General Hospital — Emergency", dist: "0.8 km away", phone: "999", maps: "https://maps.google.com/?q=City+General+Hospital+Emergency" },
+      { name: "St. Mary's Medical Centre — A&E", dist: "1.4 km away", phone: "999", maps: "https://maps.google.com/?q=St+Marys+Medical+Centre" },
+      { name: "Royal Infirmary — Trauma & Emergency", dist: "2.1 km away", phone: "999", maps: "https://maps.google.com/?q=Royal+Infirmary+Emergency" },
+    ];
+
+    const hospitalCards = hospitals.map(h => `
+      <div class="hospital-card">
+        <div class="hospital-card-name">${escHtml(h.name)}</div>
+        <div class="hospital-card-dist">📍 ${escHtml(h.dist)}</div>
+        <div class="hospital-card-actions">
+          <a href="tel:${escHtml(h.phone)}" class="hospital-btn hospital-btn-call">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.5 10.8 19.79 19.79 0 011.52 2.18 2 2 0 013.5 0h3a2 2 0 012 1.72 12.84 12.84 0 00.7 2.81 2 2 0 01-.45 2.11L7.91 7.91a16 16 0 006.29 6.29l.75-.75a2 2 0 012.11-.45 12.84 12.84 0 002.81.7A2 2 0 0122 16.92z"/></svg>
+            Call ${escHtml(h.phone)}
+          </a>
+          <a href="${h.maps}" target="_blank" rel="noopener" class="hospital-btn hospital-btn-maps">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Directions
+          </a>
+        </div>
+      </div>
+    `).join('');
+
+    return `
+      <div class="report-section-title">Next Steps</div>
+      <div class="emergency-alert" style="margin-bottom:22px;">
+        <div class="emergency-alert-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+        </div>
+        <div>
+          <div class="emergency-alert-title">⚠ Emergency Care Required — Call 999 Now</div>
+          <div class="emergency-alert-body">
+            ${escHtml(r.reasoning)}<br>
+            <span style="font-size:12px;color:var(--text-muted);margin-top:4px;display:block;">
+              Do not drive yourself. Call an ambulance or have someone take you to the nearest Emergency Department immediately.
+            </span>
+          </div>
+        </div>
+      </div>
+      <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#ef4444;margin-bottom:12px;">
+        Nearby Emergency Hospitals
+      </div>
+      <div class="hospital-grid">${hospitalCards}</div>
+    `;
+  }
+
+  _recommendedSpecialty = r.specialty;
+
+  return `
+    <div class="report-section-title">Next Steps</div>
+    <div style="margin-bottom:18px;">
+      <div style="font-size:14px;color:var(--text-dim);margin-bottom:10px;">
+        Based on your diagnosis, we recommend seeing a <strong style="color:var(--text);">${escHtml(r.specialty)}</strong>.
+      </div>
+      <span class="urgency-badge ${urgencyClass}">${urgencyLabel}</span>
+      <div style="font-size:13px;color:var(--text-muted);margin-top:6px;">${escHtml(r.reasoning)}</div>
+    </div>
+
+    ${doctorCards ? `
+    <div class="doctor-grid" id="doctor-grid">${doctorCards}</div>
+    <div id="booking-confirmed-banner" style="display:none;margin-top:14px;"></div>
+    ` : ''}
+
+    <div class="own-doctor-section">
+      <button class="own-doctor-toggle" id="own-doctor-toggle" onclick="toggleOwnDoctor()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        Have a doctor in mind?
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="own-doctor-body" id="own-doctor-body">
+        <div class="own-doctor-search-wrap">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input class="own-doctor-input" id="own-doctor-input" type="text"
+            placeholder="Search by name or specialty…"
+            oninput="filterOwnDoctors(this.value)">
+        </div>
+        <div class="own-doctor-filters" id="own-doctor-filters"></div>
+        <div class="own-doctor-results" id="own-doctor-results">
+          <div style="font-size:13px;color:var(--text-muted);padding:8px 0;">Start typing to search…</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function openModal(doctor, preselectedSlot) {
+  _pendingDoctor = doctor;
+  _pendingSlot = preselectedSlot || null;
+
+  // Gate on auth — show login modal for guests
+  if (!getAuthToken()) {
+    openAuthModal();
+    return;
+  }
+
+  _showSlotModal(doctor, preselectedSlot);
+}
+
+function _showSlotModal(doctor, preselectedSlot) {
+  document.getElementById('modal-doctor-name').textContent = doctor.name;
+  document.getElementById('modal-doctor-hospital').textContent = doctor.hospital;
+  const slotList = document.getElementById('slot-list');
+  slotList.innerHTML = (doctor.available_slots || []).map(s => {
+    const pre = preselectedSlot === s;
+    return `<button class="slot-btn${pre ? ' selected' : ''}" onclick="selectSlot(this, '${s}')">${formatSlot(s)}</button>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:13px;">No available slots.</div>';
+  document.getElementById('confirm-book-btn').disabled = !preselectedSlot;
+  document.getElementById('slot-modal').classList.remove('hidden');
+}
+
+// ---- Auth modal ----
+function openAuthModal() {
+  document.getElementById('auth-login-error').textContent = '';
+  document.getElementById('auth-reg-error').textContent = '';
+  document.getElementById('auth-modal').classList.remove('hidden');
+  setTimeout(() => document.getElementById('auth-login-email').focus(), 80);
+}
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').classList.add('hidden');
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('auth-form-login').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('auth-form-register').style.display = tab === 'register' ? '' : 'none';
+  const focusId = tab === 'login' ? 'auth-login-email' : 'auth-reg-name';
+  setTimeout(() => document.getElementById(focusId).focus(), 60);
+}
+
+async function doAuthLogin() {
+  const email = document.getElementById('auth-login-email').value.trim();
+  const password = document.getElementById('auth-login-password').value;
+  const errEl = document.getElementById('auth-login-error');
+  const btn = document.getElementById('auth-login-btn');
+  errEl.textContent = '';
+  if (!email || !password) { errEl.textContent = 'Email and password are required.'; return; }
+  btn.disabled = true; btn.textContent = 'Signing in…';
+  try {
+    const res = await fetch(`${API}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Login failed.');
+    setAuth(data.token, data.user);
+    closeAuthModal();
+    updateNavAuth();
+    _showSlotModal(_pendingDoctor);
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Sign In & Book';
+  }
+}
+
+async function doAuthRegister() {
+  const name = document.getElementById('auth-reg-name').value.trim();
+  const email = document.getElementById('auth-reg-email').value.trim();
+  const password = document.getElementById('auth-reg-password').value;
+  const errEl = document.getElementById('auth-reg-error');
+  const btn = document.getElementById('auth-reg-btn');
+  errEl.textContent = '';
+  if (!name || !email || !password) { errEl.textContent = 'All fields are required.'; return; }
+  if (password.length < 6) { errEl.textContent = 'Password must be at least 6 characters.'; return; }
+  btn.disabled = true; btn.textContent = 'Creating account…';
+  try {
+    const res = await fetch(`${API}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Registration failed.');
+    setAuth(data.token, data.user);
+    closeAuthModal();
+    updateNavAuth();
+    _showSlotModal(_pendingDoctor);
+  } catch (e) {
+    errEl.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Create Account & Book';
+  }
+}
+
+function selectSlot(btn, slot) {
+  document.querySelectorAll('.slot-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  _pendingSlot = slot;
+  document.getElementById('confirm-book-btn').disabled = false;
+}
+
+function closeModal() {
+  document.getElementById('slot-modal').classList.add('hidden');
+  _pendingDoctor = null;
+  _pendingSlot = null;
+}
+
+async function confirmBooking() {
+  if (!_pendingDoctor || !_pendingSlot) return;
+  const btn = document.getElementById('confirm-book-btn');
+  btn.disabled = true; btn.textContent = 'Booking…';
+  try {
+    const res = await fetch(`${API}/api/session/${sessionId}/book`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ doctor_id: _pendingDoctor.id, slot: _pendingSlot }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || 'Booking failed.');
+    closeModal();
+    // Replace doctor grid with confirmation
+    const grid = document.getElementById('doctor-grid');
+    if (grid) grid.style.display = 'none';
+    const banner = document.getElementById('booking-confirmed-banner');
+    if (banner) {
+      banner.style.display = 'flex';
+      banner.innerHTML = `
+        <div class="booking-confirmed">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          Appointment confirmed with ${escHtml(data.doctor_name)} on ${formatSlot(data.slot)}.
+        </div>
+      `;
+    }
+  } catch (e) {
+    btn.disabled = false; btn.textContent = 'Confirm Booking';
+    alert('Booking failed: ' + e.message);
+  }
+}
+
+function formatSlot(iso) {
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) +
+           ' at ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  } catch { return iso; }
+}
+
+function buildReferralBlock(ref, apptId) {
+  const hasSpecificDoc = ref.to_doctor && ref.to_doctor.trim();
+  const date = ref.referred_at ? new Date(ref.referred_at).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'}) : '';
+
+  const doctorLine = hasSpecificDoc
+    ? `<div class="ref-pt-to">Referred to: <strong>Dr. ${escHtml(ref.to_doctor)}</strong></div>`
+    : `<div class="ref-pt-to">Referred to: <strong>Any Available ${escHtml(ref.specialty)} Specialist</strong></div>`;
+
+  const chooserSection = hasSpecificDoc ? '' : `
+    <div class="ref-pt-chooser" id="ref-pt-chooser-${apptId}">
+      <div class="ref-pt-chooser-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a8.38 8.38 0 0113 0"/></svg>
+        Your doctor has left the specialist choice to you. Select a ${escHtml(ref.specialty)} specialist below:
+      </div>
+      <div class="ref-pt-doc-list" id="ref-pt-doc-list-${apptId}">
+        <div class="ref-pt-loading">Loading available specialists…</div>
+      </div>
+    </div>`;
+
+  setTimeout(() => {
+    if (!hasSpecificDoc) loadReferralDoctors(ref.specialty, apptId);
+  }, 0);
+
+  return `
+    <div class="report-section">
+      <div class="report-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#00b4d8" stroke-width="2.5" style="vertical-align:-2px;margin-right:6px;"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Doctor's Referral
+      </div>
+      <div class="ref-pt-card">
+        <div class="ref-pt-header">
+          <div class="ref-pt-icon">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          </div>
+          <div>
+            <div class="ref-pt-specialty">${escHtml(ref.specialty)} Referral</div>
+            ${doctorLine}
+          </div>
+          <span class="ref-pt-urgency ref-urg-${(ref.urgency||'routine').toLowerCase()}">${escHtml(ref.urgency||'Routine')}</span>
+        </div>
+        ${ref.notes ? `<div class="ref-pt-notes"><strong>Doctor's notes:</strong> ${escHtml(ref.notes)}</div>` : ''}
+        <div class="ref-pt-meta">Referred by ${escHtml(ref.referring_doctor||'your doctor')}${date ? ' · ' + date : ''}</div>
+        ${chooserSection}
+      </div>
+    </div>`;
+}
+
+async function loadReferralDoctors(specialty, apptId) {
+  const listEl = document.getElementById(`ref-pt-doc-list-${apptId}`);
+  if (!listEl) return;
+  try {
+    const res = await fetch(`${API}/api/doctors`, { headers: { ...authHeaders() } });
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const all = data.doctors || data || [];
+    const specLower = specialty.toLowerCase();
+    const now = new Date().toISOString().slice(0,16);
+    const matched = all.filter(d => (d.specialty||'').toLowerCase().includes(specLower) || specLower.includes((d.specialty||'').toLowerCase().split(' ')[0]));
+    if (!matched.length) {
+      listEl.innerHTML = `<div class="ref-pt-none">No ${escHtml(specialty)} specialists found. Please contact the clinic to arrange your referral.</div>`;
+      return;
+    }
+    listEl.innerHTML = matched.map(d => {
+      const futureSlots = (d.available_slots||d.slots||[]).filter(s=>s>=now);
+      const slotTxt = futureSlots.length ? `${futureSlots.length} slot${futureSlots.length>1?'s':''} available` : 'No slots — contact clinic';
+      const init = (d.name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      return `<div class="ref-pt-doc-card" onclick="bookReferralDoctor(${JSON.stringify(d.name||'')},${JSON.stringify(specialty)})">
+        <div class="ref-pt-doc-av">${init}</div>
+        <div style="flex:1;min-width:0;">
+          <div class="ref-pt-doc-name">${escHtml(d.name||'')}</div>
+          <div class="ref-pt-doc-meta">${escHtml(d.specialty||'')}${d.clinic?' · '+escHtml(d.clinic):''}</div>
+        </div>
+        <span class="ref-pt-doc-slots" style="${futureSlots.length?'':'opacity:.5;'}">${slotTxt}</span>
+      </div>`;
+    }).join('');
+  } catch {
+    listEl.innerHTML = `<div class="ref-pt-none">Could not load specialists. Please try again later.</div>`;
+  }
+}
+
+function bookReferralDoctor(doctorName, specialty) {
+  const params = new URLSearchParams({ specialty, referral: '1' });
+  if (doctorName) params.set('doctor', doctorName);
+  window.location.href = `/find-doctors.html?${params}`;
+}
+
+function buildReport(d) {
+  const agg = d.aggregate || {};
+  const turns = d.turns || [];
+  const closing = d.closing_turn;
+  const diff = d.final_differential || [];
+
+  return `
+    <!-- HERO -->
+    <div class="diagnosis-hero">
+      <div class="diagnosis-eyebrow">Primary Diagnosis</div>
+      <div class="diagnosis-name">${escHtml(d.final_diagnosis || '—')}</div>
+      <div class="diagnosis-chips">
+        <span class="badge badge-teal">${d.total_turns} turn${d.total_turns !== 1 ? 's' : ''}</span>
+        <span class="badge badge-dim">Terminated: ${escHtml(d.termination_reason || '—')}</span>
+        <span class="badge badge-dim">Patient: ${d.patient?.age ?? '?'}${d.patient?.sex ?? '?'}</span>
+      </div>
+    </div>
+
+    <!-- CLOSING STATEMENT -->
+    ${closing ? buildClosing(closing) : ''}
+
+    <!-- AGGREGATE METRICS -->
+    <div class="report-section">
+      <div class="report-section-title">Performance Overview</div>
+      <div class="metric-cards">
+        ${metricCard('Mean Q-Quality', agg.mean_question_quality)}
+        ${metricCard('Mean Diff-Quality', agg.mean_differential_quality)}
+        ${metricCard('Mean Reasoning', agg.mean_reasoning_quality)}
+      </div>
+    </div>
+
+    <!-- WEAKNESS BREAKDOWN -->
+    ${buildWeaknessSection(agg.weakness_category_counts)}
+
+    <!-- TURN TABLE -->
+    <div class="report-section">
+      <div class="report-section-title">Turn-by-Turn Critique</div>
+      ${buildTable(turns, agg)}
+    </div>
+
+    <!-- CONVERSATION VIEWER -->
+    ${buildConversation(d.turn_history || [])}
+
+    <!-- DIFFERENTIAL EVOLUTION -->
+    ${buildDiffEvolution(d.turn_history || [])}
+
+    <!-- FINAL DIFFERENTIAL -->
+    ${diff.length > 0 ? buildFinalDiff(diff) : ''}
+
+    <!-- DOCTOR'S NOTE — populated async after load -->
+    <div id="doctors-note-section"></div>
+
+    <!-- PRESCRIPTIONS — populated async after load -->
+    <div id="rx-section"></div>
+
+    <!-- TEST ORDERS — populated async after load (shown before booking) -->
+    <div id="test-orders-section"></div>
+
+    <!-- REFERRAL — populated async after load -->
+    <div id="referral-section"></div>
+
+    <!-- SUGGESTED TESTS — populated async after load -->
+    <div class="report-section suggested-tests-section" id="suggested-tests-section">
+      <div class="sug-loading">
+        <div class="spinner"></div> Analysing test requirements…
+      </div>
+    </div>
+
+    <!-- NEXT STEPS (routing + booking) — populated async after load -->
+    <div class="report-section routing-block" id="next-steps-section">
+      <div class="thinking-row" style="padding:16px 0;">
+        <div class="spinner"></div> Loading specialist recommendation…
+      </div>
+    </div>
+
+    <!-- SYMPTOM HISTORY — populated async -->
+    <div id="symptom-history-section" style="display:none;"></div>
+
+    <!-- ACTIONS -->
+    <div class="action-bar-bottom">
+      <button id="btn-new" class="btn btn-ghost">← New Session</button>
+      <button id="btn-send-doctor" class="btn btn-ghost" onclick="sendReportToDoctor()" style="display:none;">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        Send to Doctor
+      </button>
+      <button id="btn-share" class="btn btn-ghost" onclick="shareReport()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Share
+      </button>
+      <button id="btn-download" class="btn btn-ghost" onclick="downloadReportJson()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Download
+      </button>
+      <button id="btn-pdf" class="btn btn-secondary">Print / Export PDF ↓</button>
+    </div>
+  `;
+}
+
+function buildClosing(c) {
+  const steps = (c.recommended_next_steps || []).map(s => `<li>${escHtml(s)}</li>`).join('');
+  return `
+    <div class="report-section">
+      <div class="report-section-title">Doctor's Assessment</div>
+      <div class="closing-card">
+        <div class="closing-header">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Closing Statement
+        </div>
+        <div class="closing-section">
+          <div class="closing-section-title">Leading Diagnosis</div>
+          <div class="closing-text">${escHtml(c.leading_diagnosis)}</div>
+        </div>
+        <div class="closing-section">
+          <div class="closing-section-title">Differential Summary</div>
+          <div class="closing-text">${escHtml(c.differential_summary)}</div>
+        </div>
+        ${steps ? `
+        <div class="closing-section">
+          <div class="closing-section-title">Recommended Next Steps</div>
+          <ul class="closing-steps">${steps}</ul>
+        </div>` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function buildConversation(turnHistory) {
+  if (!turnHistory.length) return '';
+  const turns = turnHistory.map((t, i) => {
+    const confPct = Math.round((t.confidence || 0) * 100);
+    const confColor = t.confidence >= 0.55 ? 'var(--success)' : t.confidence >= 0.35 ? 'var(--warning)' : 'var(--primary)';
+    const rid = `cr-${i}`;
+    return `
+      <div class="conv-turn">
+        <div class="conv-turn-label">
+          <span class="conv-turn-num">Turn ${i + 1}</span>
+          Doctor's Question
+        </div>
+        <div class="conv-bubble-doctor">${escHtml(t.question)}</div>
+        ${t.patient_answer ? `
+          <div class="conv-turn-label" style="margin-top:10px;">Patient's Answer</div>
+          <div class="conv-bubble-patient">${escHtml(t.patient_answer)}</div>
+        ` : ''}
+        <div class="conv-confidence">
+          Diagnostic confidence:
+          <div class="conv-conf-bar">
+            <div class="conv-conf-fill" style="width:${confPct}%;background:${confColor};"></div>
+          </div>
+          <span>${confPct}%</span>
+        </div>
+        ${t.rationale ? `
+          <button class="conv-rationale-toggle" onclick="toggleRationale('${rid}',this)">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            AI reasoning
+          </button>
+          <div class="conv-rationale-body" id="${rid}">${escHtml(t.rationale)}</div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="report-section">
+      <div class="report-section-title">Session Conversation</div>
+      <button class="conv-toggle-btn" id="conv-toggle" onclick="toggleConversation()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
+        </svg>
+        View Full Conversation (${turnHistory.length} turns)
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:auto;">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </button>
+      <div class="conv-scroll-wrap" id="conv-scroll">${turns}</div>
+    </div>
+  `;
+}
+
+function toggleConversation() {
+  const btn = document.getElementById('conv-toggle');
+  const wrap = document.getElementById('conv-scroll');
+  if (!btn || !wrap) return;
+  const open = wrap.classList.toggle('open');
+  btn.classList.toggle('open', open);
+}
+
+function toggleRationale(id, btn) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.toggle('open');
+  btn.style.color = el.classList.contains('open') ? 'var(--primary)' : '';
+}
+
+// ---- differential palette for top-5 diagnoses ----
+function buildDiffEvolution(turnHistory) {
+  if (turnHistory.length < 2) return '';
+
+  // Collect unique dx names (top 3 per turn, max 5 total)
+  const allDx = [];
+  for (const t of turnHistory) {
+    for (const d of (t.differential || []).slice(0, 3)) {
+      if (!allDx.includes(d.dx)) allDx.push(d.dx);
+    }
+  }
+  const topDx = allDx.slice(0, 5);
+
+  // Single primary colour, dimming by rank so bars stay readable
+  const _BASE = 'var(--primary)';
+  const _OPACITIES = [1, 0.7, 0.5, 0.36, 0.25];
+  const opacityMap = {};
+  topDx.forEach((dx, i) => { opacityMap[dx] = _OPACITIES[i] ?? 0.2; });
+
+  // Legend — all same colour, differentiated by label only
+  const legend = topDx.map((dx, i) =>
+    `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-dim);margin-right:14px;margin-bottom:6px;">
+       <span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:${_OPACITIES[i]};flex-shrink:0;"></span>
+       ${escHtml(dx)}
+     </span>`
+  ).join('');
+
+  // Per-turn blocks
+  const turnBlocks = turnHistory.map((t, i) => {
+    const probMap = {};
+    for (const d of (t.differential || [])) probMap[d.dx] = d.prob ?? 0;
+    const bars = topDx.map(dx => {
+      const pct = Math.round((probMap[dx] || 0) * 100);
+      const op = opacityMap[dx];
+      return `
+        <div class="diff-evo-bar-row">
+          <div class="diff-evo-bar-header">
+            <span style="color:var(--text-dim)">${escHtml(dx)}</span>
+            <span style="font-weight:700;color:var(--text-dim)">${pct}%</span>
+          </div>
+          <div class="diff-evo-bar-track">
+            <div class="diff-evo-bar-fill" style="width:${pct}%;background:var(--primary);opacity:${pct > 0 ? op : 0.1};"></div>
+          </div>
+        </div>`;
+    }).join('');
+    const confPct = Math.round((t.confidence || 0) * 100);
+    return `
+      <div class="diff-evo-turn">
+        <div class="diff-evo-turn-label">
+          Turn ${i + 1}
+          <span style="float:right;font-weight:400;text-transform:none;letter-spacing:0;">Confidence ${confPct}%</span>
+        </div>
+        ${bars}
+      </div>`;
+  }).join('');
+
+  return `
+    <div class="report-section">
+      <div class="report-section-title">Differential Evolution</div>
+      <div style="margin-bottom:14px;flex-wrap:wrap;display:flex;">${legend}</div>
+      ${turnBlocks}
+    </div>
+  `;
+}
+
+function buildTable(turns, agg) {
+  if (!turns.length) return '<div class="history-empty">No turns recorded.</div>';
+  const rows = turns.map(t => `
+    <tr>
+      <td>${t.turn + 1}</td>
+      <td class="score-cell ${scoreClass(t.question_quality_score)}">${fmt(t.question_quality_score)}</td>
+      <td class="score-cell ${scoreClass(t.differential_quality_score)}">${fmt(t.differential_quality_score)}</td>
+      <td class="score-cell ${scoreClass(t.reasoning_quality_score)}">${fmt(t.reasoning_quality_score)}</td>
+      <td>${t.confidence_calibration ? `<span class="badge badge-dim" style="font-size:11px;">${t.confidence_calibration}</span>` : '—'}</td>
+      <td>${t.weakness_category ? `<span class="badge badge-amber" style="font-size:11px;">${t.weakness_category.replace(/_/g,' ')}</span>` : '—'}</td>
+    </tr>
+  `).join('');
+
+  const meanRow = `
+    <tr class="mean-row">
+      <td>Mean</td>
+      <td class="score-cell ${scoreClass(agg.mean_question_quality)}">${fmt(agg.mean_question_quality)}</td>
+      <td class="score-cell ${scoreClass(agg.mean_differential_quality)}">${fmt(agg.mean_differential_quality)}</td>
+      <td class="score-cell ${scoreClass(agg.mean_reasoning_quality)}">${fmt(agg.mean_reasoning_quality)}</td>
+      <td colspan="2"></td>
+    </tr>
+  `;
+
+  return `
+    <div style="overflow-x:auto;">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Turn</th><th>Q-Quality</th><th>Diff-Quality</th>
+            <th>Reasoning</th><th>Calibration</th><th>Weakness</th>
+          </tr>
+        </thead>
+        <tbody>${rows}${meanRow}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+function buildWeaknessSection(counts) {
+  if (!counts || Object.keys(counts).length === 0) return '';
+  const chips = Object.entries(counts).map(([k, v]) =>
+    `<span class="badge badge-amber">${k.replace(/_/g,' ')} ×${v}</span>`
+  ).join('');
+  return `
+    <div class="report-section">
+      <div class="report-section-title">Weakness Breakdown</div>
+      <div class="tag-list">${chips}</div>
+    </div>
+  `;
+}
+
+function buildFinalDiff(diff) {
+  const bars = diff.map((d, i) => `
+    <div class="diff-bar-row${i === 0 ? ' top-dx' : ''}">
+      <div class="diff-bar-header">
+        <span class="diff-bar-name">${i + 1}. ${escHtml(d.dx)}</span>
+        <span class="diff-bar-prob">${Math.round((d.prob ?? 0) * 100)}%</span>
+      </div>
+      <div class="diff-bar-track">
+        <div class="diff-bar-fill" style="width:${Math.round((d.prob ?? 0) * 100)}%"></div>
+      </div>
+    </div>
+  `).join('');
+
+  return `
+    <div class="report-section">
+      <div class="report-section-title">Final Differential Diagnosis</div>
+      <div class="card"><div class="final-diff">${bars}</div></div>
+    </div>
+  `;
+}
+
+function metricCard(label, val) {
+  const pct = Math.round((val ?? 0) * 100);
+  const r = 30;
+  const circ = 2 * Math.PI * r;
+  const offset = circ - (pct / 100) * circ;
+  const color = val >= 0.7 ? 'var(--success)' : val >= 0.5 ? 'var(--warning)' : 'var(--danger)';
+  return `
+    <div class="metric-card">
+      <div class="metric-ring">
+        <svg width="72" height="72" viewBox="0 0 72 72">
+          <circle cx="36" cy="36" r="${r}" fill="none" stroke="var(--surface-4)" stroke-width="5"/>
+          <circle cx="36" cy="36" r="${r}" fill="none" stroke="${color}" stroke-width="5"
+            stroke-dasharray="${circ}" stroke-dashoffset="${offset}"
+            stroke-linecap="round"/>
+        </svg>
+        <div class="metric-ring-val" style="color:${color}">${val != null ? val.toFixed(2) : '—'}</div>
+      </div>
+      <div class="metric-card-label">${label}</div>
+    </div>
+  `;
+}
+
+function updateNavAuth() { initAuthNav(); }
+
+function fmt(v) { return v != null ? v.toFixed(2) : '—'; }
+function scoreClass(v) {
+  if (v == null) return '';
+  if (v >= 0.7) return 'score-green';
+  if (v >= 0.5) return 'score-yellow';
+  return 'score-red';
+}
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ---- Own doctor search ----
+let _allDoctors = null;
+let _recommendedSpecialty = '';
+let _mismatchDoctor = null;
+let _ownDocFilter = 'all';
+
+async function _fetchAllDoctors() {
+  if (_allDoctors) return _allDoctors;
+  try {
+    const res = await fetch(`${API}/api/doctors`);
+    _allDoctors = res.ok ? (await res.json()).doctors || [] : [];
+  } catch { _allDoctors = []; }
+  return _allDoctors;
+}
+
+function toggleOwnDoctor() {
+  const toggle = document.getElementById('own-doctor-toggle');
+  const body   = document.getElementById('own-doctor-body');
+  const open   = body.classList.toggle('open');
+  toggle.classList.toggle('open', open);
+  if (open) {
+    document.getElementById('own-doctor-input')?.focus();
+    _loadOwnDoctorPanel();
+  }
+}
+
+async function _loadOwnDoctorPanel() {
+  const doctors = await _fetchAllDoctors();
+  // Build specialty filter chips
+  const specs = [...new Set(doctors.map(d => d.specialty).filter(Boolean))].sort();
+  const filtersEl = document.getElementById('own-doctor-filters');
+  if (filtersEl) {
+    filtersEl.innerHTML = ['All', ...specs].map(s => {
+      const isRec = s === _recommendedSpecialty;
+      const active = (s === 'All' && _ownDocFilter === 'all') || s === _ownDocFilter;
+      return `<button class="own-doc-chip${active ? ' active' : ''}" onclick="setOwnDocFilter('${escHtml(s)}')">${escHtml(s)}${isRec ? ' ·&nbsp;Recommended' : ''}</button>`;
+    }).join('');
+  }
+  _renderOwnDoctors('');
+}
+
+function setOwnDocFilter(spec) {
+  _ownDocFilter = spec === 'All' ? 'all' : spec;
+  _ownDocPage = 0;
+  document.querySelectorAll('.own-doc-chip').forEach(c => {
+    const label = c.textContent.split(' ·')[0].trim();
+    c.classList.toggle('active',
+      (_ownDocFilter === 'all' && label === 'All') || label === _ownDocFilter
+    );
+  });
+  _renderOwnDoctors(document.getElementById('own-doctor-input')?.value || '');
+}
+
+function filterOwnDoctors(query) {
+  _ownDocPage = 0;
+  _renderOwnDoctors(query);
+}
+
+function searchOwnDoctor(query) { _ownDocPage = 0; _renderOwnDoctors(query); }
+
+const _DOCS_PER_PAGE = 6;
+let _ownDocPage = 0;
+
+async function _renderOwnDoctors(query) {
+  const resultsEl = document.getElementById('own-doctor-results');
+  if (!resultsEl) return;
+  const doctors = await _fetchAllDoctors();
+  const q = query.trim().toLowerCase();
+
+  let list = doctors.filter(d => {
+    const matchSpec = _ownDocFilter === 'all' || d.specialty === _ownDocFilter;
+    const matchQ    = !q || d.name.toLowerCase().includes(q) || (d.specialty || '').toLowerCase().includes(q);
+    return matchSpec && matchQ;
+  });
+
+  // Sort: recommended specialty first, then alphabetical
+  list.sort((a, b) => {
+    const aRec = a.specialty === _recommendedSpecialty ? 0 : 1;
+    const bRec = b.specialty === _recommendedSpecialty ? 0 : 1;
+    return aRec - bRec || a.name.localeCompare(b.name);
+  });
+
+  if (list.length === 0) {
+    resultsEl.innerHTML = `
+      <div class="own-doctor-not-found">
+        <div class="own-doctor-not-found-title">No doctors found</div>
+        <div class="own-doctor-not-found-sub">This doctor isn't listed in our network. You can print your report and share it with them directly.</div>
+        <button class="btn btn-primary btn-sm" onclick="window.print()" style="margin:0 auto;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px;vertical-align:middle;"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print Report
+        </button>
+      </div>`;
+    return;
+  }
+
+  const totalPages = Math.ceil(list.length / _DOCS_PER_PAGE);
+  _ownDocPage = Math.max(0, Math.min(_ownDocPage, totalPages - 1));
+  const pageSlice = list.slice(_ownDocPage * _DOCS_PER_PAGE, (_ownDocPage + 1) * _DOCS_PER_PAGE);
+
+  const bookedSet = new Set();
+  const cards = pageSlice.map(d => {
+    const isMismatch = _recommendedSpecialty && d.specialty !== _recommendedSpecialty;
+    const freeSlots  = (d.available_slots || [])
+      .filter(s => s >= new Date().toISOString() && !bookedSet.has(s))
+      .slice(0, 3);
+    const initials = d.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
+    const slotChips = freeSlots.length
+      ? freeSlots.map(s => {
+          const dt = new Date(s);
+          const lbl = dt.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'})
+                    + ' ' + dt.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
+          return `<button class="own-doctor-slot-chip"
+            onclick="bookOwnDoctor(${JSON.stringify(d).replace(/"/g,'&quot;')}, '${s}')">${lbl}</button>`;
+        }).join('')
+      : '<span class="own-doctor-no-slots">No upcoming slots available</span>';
+
+    return `<div class="own-doctor-card${isMismatch ? ' mismatch-card' : ''}">
+      <div class="own-doctor-card-top">
+        <div class="doctor-avatar" style="width:38px;height:38px;font-size:13px;flex-shrink:0;">${initials}</div>
+        <div class="own-doctor-card-info">
+          <div class="own-doctor-name">${escHtml(d.name)}</div>
+          <div class="own-doctor-meta">${escHtml(d.specialty)}${d.hospital ? ' · ' + escHtml(d.hospital) : ''}</div>
+        </div>
+        ${isMismatch ? '<span class="own-doctor-mismatch-badge">Different specialty</span>' : ''}
+      </div>
+      <div class="own-doctor-slots">${slotChips}</div>
+      <div class="own-doctor-card-actions">
+        <button class="book-btn" style="width:auto;padding:6px 18px;font-size:12px;"
+          onclick="bookOwnDoctor(${JSON.stringify(d).replace(/"/g,'&quot;')}, null)">
+          Choose Slot
+        </button>
+      </div>
+    </div>`;
+  }).join('');
+
+  const pagination = totalPages > 1 ? `
+    <div style="display:flex;align-items:center;justify-content:center;gap:10px;margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <button onclick="ownDocGoPage(${_ownDocPage - 1})"
+        style="background:none;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);padding:5px 13px;font-size:12px;cursor:pointer;font-family:var(--font);transition:border-color .12s;"
+        ${_ownDocPage === 0 ? 'disabled style="opacity:.4;cursor:default;background:none;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);padding:5px 13px;font-size:12px;font-family:var(--font);"' : ''}>
+        ← Prev
+      </button>
+      <span style="font-size:12px;color:var(--text-muted);">Page ${_ownDocPage + 1} of ${totalPages} &nbsp;·&nbsp; ${list.length} doctors</span>
+      <button onclick="ownDocGoPage(${_ownDocPage + 1})"
+        style="background:none;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);padding:5px 13px;font-size:12px;cursor:pointer;font-family:var(--font);transition:border-color .12s;"
+        ${_ownDocPage >= totalPages - 1 ? 'disabled style="opacity:.4;cursor:default;background:none;border:1px solid var(--border);border-radius:var(--radius);color:var(--text-dim);padding:5px 13px;font-size:12px;font-family:var(--font);"' : ''}>
+        Next →
+      </button>
+    </div>` : '';
+
+  resultsEl.innerHTML = cards + pagination;
+}
+
+function ownDocGoPage(page) {
+  _ownDocPage = page;
+  const query = document.getElementById('own-doctor-search')?.value || '';
+  _renderOwnDoctors(query);
+}
+
+function bookOwnDoctor(doctor, preselectedSlot) {
+  if (doctor.specialty === _recommendedSpecialty || !_recommendedSpecialty) {
+    openModal(doctor, preselectedSlot);
+    return;
+  }
+  _mismatchDoctor = { doctor, slot: preselectedSlot };
+  document.getElementById('mismatch-body').innerHTML =
+    `<strong>${escHtml(doctor.name)}</strong> is a <strong>${escHtml(doctor.specialty)}</strong> specialist.<br><br>
+     Based on your diagnosis, a <strong>${escHtml(_recommendedSpecialty)}</strong> specialist is recommended.<br><br>
+     You can still book with them if you prefer.`;
+  document.getElementById('mismatch-confirm-btn').onclick = () => {
+    const { doctor: d, slot } = _mismatchDoctor;
+    closeMismatch();
+    openModal(d, slot);
+  };
+  document.getElementById('mismatch-overlay').classList.remove('hidden');
+}
+
+function closeMismatch() {
+  document.getElementById('mismatch-overlay').classList.add('hidden');
+  _mismatchDoctor = null;
+}
+
+// Close mismatch on backdrop click
+document.getElementById('mismatch-overlay')?.addEventListener('click', function(e) {
+  if (e.target === this) closeMismatch();
+});
+
+// ── Report download (JSON) ────────────────────────────────────────────────
+let _reportData = null;
+const _origLoad = load;
+async function load() {
+  const el = document.getElementById('content');
+  try {
+    const res = await fetch(`${API}/api/session/${sessionId}/report`, { headers: { ...authHeaders() } });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    _reportData = data;
+    el.innerHTML = buildReport(data);
+    document.getElementById('btn-pdf')?.addEventListener('click', () => window.print());
+    document.getElementById('btn-new')?.addEventListener('click', () => {
+      sessionStorage.clear();
+      window.location.href = '/';
+    });
+
+async function sendReportToDoctor() {
+  const apptId = window._reportApptId;
+  if (!apptId) { alert('No linked appointment found.'); return; }
+  const r = _reportData;
+  const dx = r?.primary_diagnosis || r?.final_differential?.[0]?.dx || 'Pending';
+  const complaint = r?.final_profile?.chief_complaint || '';
+  const msg = `📋 AI Diagnostic Report shared\n\nChief complaint: ${complaint}\nPrimary diagnosis: ${dx}\n\nFull session details are in your MedicalConvo portal. Please review before our appointment.`;
+  const btn = document.getElementById('btn-send-doctor');
+  btn.disabled = true; btn.textContent = 'Sending…';
+  try {
+    const res = await fetch(`${API}/api/messages`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ appointment_id: apptId, body: msg }),
+    });
+    if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
+    btn.textContent = '✓ Sent';
+    btn.style.color = 'var(--success)';
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send to Doctor`;
+      btn.style.color = '';
+    }, 3000);
+  } catch (e) {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:5px;"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>Send to Doctor`;
+    alert('Could not send: ' + e.message);
+  }
+}
+    loadRouting();
+    loadTestOrders();
+    loadSuggestedTests();
+    loadSymptomHistory();
+  } catch (e) {
+    let msg = e.message || '';
+    let isDeleted = false;
+    try {
+      const parsed = JSON.parse(msg);
+      if (parsed.detail && /not found|deleted/i.test(parsed.detail)) isDeleted = true;
+    } catch (_) {
+      if (/not found|deleted/i.test(msg)) isDeleted = true;
+    }
+    if (isDeleted) {
+      el.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:280px;gap:16px;text-align:center;padding:40px 40px 24px;">
+          <div style="width:64px;height:64px;border-radius:18px;background:rgba(255,185,95,.08);border:1px solid rgba(255,185,95,.22);display:flex;align-items:center;justify-content:center;color:#ffb95f;">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+          </div>
+          <div style="font-size:20px;font-weight:800;color:var(--text);letter-spacing:-.02em;">Session Deleted</div>
+          <div style="font-size:14px;color:var(--text-muted);max-width:340px;line-height:1.6;">The session report has been deleted. Any referrals, prescriptions, or test orders from your doctor are still shown below.</div>
+          <a href="/my-sessions.html" class="btn btn-ghost" style="margin-top:4px;">← Back to My Sessions</a>
+        </div>
+        <div id="doctors-note-section"></div>
+        <div id="rx-section"></div>
+        <div id="test-orders-section"></div>
+        <div id="referral-section"></div>`;
+      loadTestOrders();
+    } else {
+      el.innerHTML = `<div class="error-msg">Error loading report: ${msg}<br><a href="/my-sessions.html">← Back to My Sessions</a></div>`;
+    }
+  }
+}
+
+function downloadReportJson() {
+  if (!_reportData) return;
+  const blob = new Blob([JSON.stringify(_reportData, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `report_${sessionId}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function shareReport() {
+  const url = window.location.href;
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: 'My Diagnostic Report', url });
+      return;
+    } catch { /* fall through to modal */ }
+  }
+  document.getElementById('share-link-input').value = url;
+  document.getElementById('share-copy-btn').textContent = '';
+  document.getElementById('share-copy-btn').innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy';
+  document.getElementById('share-modal').classList.remove('hidden');
+  setTimeout(() => {
+    const inp = document.getElementById('share-link-input');
+    inp.select(); inp.setSelectionRange(0, 99999);
+  }, 80);
+}
+
+function closeShareModal() {
+  document.getElementById('share-modal').classList.add('hidden');
+}
+
+async function copyShareLink() {
+  const inp = document.getElementById('share-link-input');
+  const btn = document.getElementById('share-copy-btn');
+  try {
+    await navigator.clipboard.writeText(inp.value);
+  } catch {
+    inp.select(); document.execCommand('copy');
+  }
+  btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px;"><polyline points="20 6 9 17 4 12"/></svg>Copied!';
+  setTimeout(() => {
+    btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy';
+  }, 2000);
+}
+
+function _showReportToast(msg) {
+  let t = document.getElementById('_report-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = '_report-toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:12px 22px;border-radius:10px;font-size:13px;color:#fff;background:#10b981;z-index:9999;transition:opacity .3s;pointer-events:none;font-family:Inter,sans-serif;';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._t);
+  t._t = setTimeout(() => { t.style.opacity = '0'; }, 2500);
+}
+
+// ── Symptom history across sessions ─────────────────────────────────────
+async function loadSymptomHistory() {
+  const el = document.getElementById('symptom-history-section');
+  if (!el) return;
+  try {
+    const res = await fetch(`${API}/api/patient/symptom-history`, { headers: authHeaders() });
+    if (!res.ok) return;
+    const data = await res.json();
+    const history = (data.history || []).filter(e => e.appointment_id !== (window._currentApptId || ''));
+    if (!history.length) { el.style.display = 'none'; return; }
+    el.innerHTML = `
+      <div class="report-section">
+        <div class="report-section-title" style="display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3h18v18H3z" opacity="0"/><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+          Past Symptom History
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          ${history.slice(0,5).map(e => {
+            const d = e.slot ? new Date(e.slot).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) : '';
+            return `
+              <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                  <span style="font-size:12px;font-weight:700;color:var(--text);">${escHtml(e.primary_diagnosis||'Consultation')}</span>
+                  <span style="font-size:11px;color:var(--text-muted);">${d}</span>
+                  <span style="font-size:11px;color:var(--text-muted);">· ${escHtml(e.doctor_name||'')}</span>
+                </div>
+                ${e.symptoms.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px;">${e.symptoms.map(s=>`<span style="font-size:11px;padding:2px 9px;border-radius:99px;background:var(--surface-3);border:1px solid var(--border);color:var(--text-dim);">${escHtml(s)}</span>`).join('')}</div>` : ''}
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+    el.style.display = '';
+  } catch { el.style.display = 'none'; }
+}
+
+load();
+updateNavAuth();
+</script>
+
+<!-- Mismatch warning dialog -->
+<div class="mismatch-overlay hidden" id="mismatch-overlay">
+  <div class="mismatch-box">
+    <div class="mismatch-icon">
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    </div>
+    <div class="mismatch-title" id="mismatch-title">Specialty Mismatch</div>
+    <div class="mismatch-body" id="mismatch-body"></div>
+    <div class="mismatch-actions">
+      <button class="btn btn-ghost btn-sm" onclick="closeMismatch()">Cancel</button>
+      <button class="btn btn-primary btn-sm" id="mismatch-confirm-btn">Book Anyway</button>
+    </div>
+  </div>
+</div>
+<!-- Result Upload Modal -->
+<div class="modal-overlay hidden" id="result-upload-overlay" onclick="if(event.target===this)closeResultUpload()" style="z-index:500;">
+  <div class="modal-box" style="max-width:400px;padding:28px;">
+    <div style="font-size:17px;font-weight:800;color:var(--text);letter-spacing:-.02em;margin-bottom:6px;">Upload Test Results</div>
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:20px;line-height:1.5;">Upload a PDF or image of your results. Your doctor will be notified.</div>
+    <input type="file" id="result-upload-input" accept=".pdf,.jpg,.jpeg,.png,.webp" style="display:block;width:100%;padding:10px;border:1px dashed rgba(0,180,216,.35);border-radius:10px;background:rgba(0,180,216,.04);color:var(--text);font-size:13px;cursor:pointer;margin-bottom:12px;">
+    <div id="result-upload-status" style="font-size:12px;min-height:18px;margin-bottom:14px;"></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-secondary" onclick="closeResultUpload()" style="flex:1;">Cancel</button>
+      <button class="btn btn-primary" id="result-upload-btn" onclick="submitResultUpload()" style="flex:1;">Upload</button>
+    </div>
+  </div>
+</div>
+<!-- Print helpers -->
+<script>
+window.addEventListener('beforeprint', function () {
+  // Expand conversation viewer so it renders in the PDF
+  const wrap = document.querySelector('.conv-scroll-wrap');
+  const btn  = document.querySelector('.conv-toggle-btn');
+  if (wrap) wrap.style.display = 'block';
+  if (btn)  btn.classList.add('open');
+});
+window.addEventListener('afterprint', function () {
+  // Restore collapsed state
+  const wrap = document.querySelector('.conv-scroll-wrap');
+  const btn  = document.querySelector('.conv-toggle-btn');
+  if (wrap) wrap.style.display = '';
+  if (btn)  btn.classList.remove('open');
+});
+</script>
+
+<!-- Share link modal -->
+<div id="share-modal" class="modal-overlay hidden" onclick="if(event.target===this)closeShareModal()" style="z-index:1200;">
+  <div class="modal-box" style="max-width:400px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+      <div style="font-size:16px;font-weight:700;color:var(--text);">Share Report</div>
+      <button onclick="closeShareModal()" style="display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;border:none;background:rgba(255,255,255,.06);color:var(--text-muted);cursor:pointer;transition:background .15s;" onmouseenter="this.style.background='rgba(255,255,255,.12)'" onmouseleave="this.style.background='rgba(255,255,255,.06)'">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin:0 0 14px;">Copy the link below to share this report.</p>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input id="share-link-input" type="text" readonly
+        style="flex:1;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--text);font-size:13px;padding:10px 12px;outline:none;font-family:var(--font);min-width:0;">
+      <button id="share-copy-btn" onclick="copyShareLink()"
+        style="display:flex;align-items:center;gap:6px;padding:10px 14px;border-radius:8px;border:none;background:var(--primary);color:#051424;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:opacity .15s;" onmouseenter="this.style.opacity='.85'" onmouseleave="this.style.opacity='1'">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy
+      </button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

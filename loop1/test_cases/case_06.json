@@ -1,0 +1,52 @@
+{
+  "session_id": "case_06",
+  "demographics": {
+    "age": 3,
+    "sex": "F",
+    "other": {}
+  },
+  "chief_complaint": "high fever, rash and irritability for 2 days",
+  "symptoms": [
+    {
+      "name": "fever",
+      "onset": "2 days ago",
+      "severity": "high",
+      "notes": "39.5C, not responding well to paracetamol"
+    },
+    {
+      "name": "rash",
+      "onset": "1 day ago",
+      "severity": "moderate",
+      "notes": "erythematous maculopapular, started on trunk spreading to limbs"
+    },
+    {
+      "name": "irritability",
+      "onset": "2 days ago",
+      "severity": "moderate",
+      "notes": "crying more than usual, inconsolable at times"
+    },
+    {
+      "name": "conjunctival injection",
+      "onset": "1 day ago",
+      "severity": "mild",
+      "notes": "bilateral red eyes without discharge"
+    }
+  ],
+  "history": {
+    "medical": [],
+    "medications": [
+      "paracetamol PRN"
+    ],
+    "allergies": [],
+    "family": [],
+    "social": [
+      "attends daycare",
+      "vaccinations up to date",
+      "no sick contacts known"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "Lips appear dry and cracked. Hands mildly swollen.",
+  "running_summary": ""
+}

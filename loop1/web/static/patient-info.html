@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Patient Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <style>
+    .form-section {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px;
+    }
+    .form-section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--primary);
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 20px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-row { display: grid; gap: 14px; margin-bottom: 14px; }
+    .form-row-2 { grid-template-columns: 1fr 1fr; }
+    .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .form-row-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 12px; font-weight: 600; color: var(--text-dim);
+      letter-spacing: .04em;
+    }
+    .form-label .req { color: var(--danger); margin-left: 2px; }
+    .form-input, .form-select, .form-textarea {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 10px 14px; outline: none;
+      transition: border-color .15s;
+      width: 100%;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: var(--primary);
+    }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+    .form-select option { background: var(--surface-3); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+
+    /* Sex selector */
+    .sex-group { display: flex; gap: 8px; }
+    .sex-btn {
+      flex: 1; padding: 10px; border-radius: var(--radius);
+      border: 1px solid var(--border); background: var(--surface-3);
+      color: var(--text-dim); font-size: 14px; font-weight: 600;
+      cursor: pointer; text-align: center; transition: all .15s;
+    }
+    .sex-btn:hover { border-color: var(--primary); color: var(--text); }
+    .sex-btn.active {
+      background: rgba(0,180,216,.15); border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    /* Symptoms */
+    .symptom-list { display: flex; flex-direction: column; gap: 12px; }
+    .symptom-row {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px;
+      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
+      gap: 10px; align-items: end;
+    }
+    .remove-btn {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-muted); padding: 8px; border-radius: var(--radius);
+      transition: color .15s, background .15s;
+      display: flex; align-items: center;
+    }
+    .remove-btn:hover { color: var(--danger); background: rgba(255,107,107,.1); }
+    .add-symptom-btn {
+      background: none; border: 1px dashed var(--border);
+      border-radius: var(--radius); color: var(--text-dim);
+      font-size: 13px; padding: 10px; cursor: pointer;
+      width: 100%; text-align: center; transition: all .15s;
+    }
+    .add-symptom-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    .severity-select option { background: #1c2b3c; }
+    .action-bar { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+    .required-note { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+
+    /* ── premium patient-info overrides ── */
+    .form-section {
+      background: rgba(255,255,255,.025);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 16px; padding: 26px;
+      transition: border-color .15s;
+    }
+    .form-section:hover { border-color: rgba(255,255,255,.11); }
+    .form-section-title {
+      font-size: 11px; font-weight: 800; letter-spacing: .09em;
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding-bottom: 14px;
+    }
+    .form-input, .form-select, .form-textarea {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 10px; font-size: 14px;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+      border-color: rgba(0,180,216,.55);
+      background: rgba(0,180,216,.04);
+      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
+    }
+    .form-label { font-weight: 700; font-size: 11px; letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; }
+    .sex-btn {
+      border-radius: 10px;
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    .sex-btn:hover { border-color: rgba(0,180,216,.4); color: var(--primary); }
+    .sex-btn.active {
+      background: rgba(0,180,216,.12);
+      border-color: rgba(0,180,216,.5);
+      box-shadow: 0 0 12px rgba(0,180,216,.1);
+    }
+    .symptom-row {
+      background: rgba(255,255,255,.03);
+      border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px;
+    }
+    .add-symptom-btn {
+      border: 1.5px dashed rgba(255,255,255,.1);
+      border-radius: 12px; font-weight: 600;
+    }
+    .add-symptom-btn:hover { border-color: rgba(0,180,216,.5); background: rgba(0,180,216,.04); }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.href='/'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Home
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="steps">
+    <div class="step active"><div class="step-num">1</div><span>Profile</span></div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">2</div><span>History</span></div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">3</div><span>Session</span></div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">4</div><span>Report</span></div>
+  </div>
+  <div class="spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+
+</nav>
+
+<div class="page">
+  <div class="section-title" style="margin-bottom:6px;">Step 1 of 3 — Patient Profile</div>
+  <div class="required-note">Fields marked <span style="color:var(--danger)">*</span> are required.</div>
+
+  <form id="profile-form" onsubmit="return false">
+
+    <!-- Demographics -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Patient Demographics
+      </div>
+
+      <div class="form-row form-row-4">
+        <div class="form-group">
+          <label class="form-label">Age <span class="req">*</span></label>
+          <input id="age" class="form-input" type="number" min="0" max="120" placeholder="e.g. 45">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sex <span class="req">*</span></label>
+          <div class="sex-group">
+            <div class="sex-btn" data-val="M" onclick="selectSex(this)">Male</div>
+            <div class="sex-btn" data-val="F" onclick="selectSex(this)">Female</div>
+          </div>
+          <input type="hidden" id="sex">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Occupation</label>
+          <input id="occupation" class="form-input" type="text" placeholder="e.g. teacher">
+        </div>
+        <div class="form-group">
+          <label class="form-label">BMI</label>
+          <input id="bmi" class="form-input" type="number" step="0.1" min="10" max="60" placeholder="e.g. 24.5">
+        </div>
+      </div>
+    </div>
+
+    <!-- Chief Complaint -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        Chief Complaint <span style="color:var(--danger);font-weight:400;font-size:12px;margin-left:4px;">*</span>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Describe the main reason for this visit</label>
+        <textarea id="chief-complaint" class="form-textarea" rows="3"
+          placeholder="e.g. Chest pain and shortness of breath for 2 hours, started at rest…"></textarea>
+      </div>
+    </div>
+
+    <!-- Symptoms -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Presenting Symptoms
+      </div>
+      <div id="symptom-list" class="symptom-list"></div>
+      <button type="button" class="add-symptom-btn" onclick="addSymptom()" style="margin-top:12px;">
+        + Add Symptom
+      </button>
+    </div>
+
+    <div id="form-error" class="error-msg" style="display:none;margin-bottom:16px;"></div>
+
+    <div class="action-bar">
+      <button type="button" class="btn btn-ghost" onclick="window.location.href='/'">← Back</button>
+      <button type="button" class="btn btn-primary" onclick="handleNext()">
+        Review Medical History →
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+let selectedSex = '';
+
+function selectSex(el) {
+  document.querySelectorAll('.sex-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  selectedSex = el.dataset.val;
+  document.getElementById('sex').value = selectedSex;
+}
+
+let symptomCount = 0;
+
+function addSymptom(prefill = {}) {
+  const id = ++symptomCount;
+  const list = document.getElementById('symptom-list');
+  const div = document.createElement('div');
+  div.className = 'symptom-row';
+  div.id = `sym-${id}`;
+  div.innerHTML = `
+    <div class="form-group">
+      <label class="form-label">Symptom name</label>
+      <input class="form-input sym-name" placeholder="e.g. chest pain" value="${esc(prefill.name || '')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Onset</label>
+      <input class="form-input sym-onset" placeholder="e.g. 2 hours ago" value="${esc(prefill.onset || '')}">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Severity</label>
+      <select class="form-input form-select sym-severity">
+        <option value="">— select —</option>
+        <option value="mild" ${prefill.severity === 'mild' ? 'selected' : ''}>Mild</option>
+        <option value="moderate" ${prefill.severity === 'moderate' ? 'selected' : ''}>Moderate</option>
+        <option value="severe" ${prefill.severity === 'severe' ? 'selected' : ''}>Severe</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Notes</label>
+      <input class="form-input sym-notes" placeholder="any additional detail" value="${esc(prefill.notes || '')}">
+    </div>
+    <button type="button" class="remove-btn" onclick="document.getElementById('sym-${id}').remove()" title="Remove">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+    </button>
+  `;
+  list.appendChild(div);
+}
+
+function collectSymptoms() {
+  const rows = document.querySelectorAll('.symptom-row');
+  const out = [];
+  for (const row of rows) {
+    const name = row.querySelector('.sym-name').value.trim();
+    if (!name) continue;
+    out.push({
+      name,
+      onset:    row.querySelector('.sym-onset').value.trim(),
+      severity: row.querySelector('.sym-severity').value,
+      notes:    row.querySelector('.sym-notes').value.trim(),
+    });
+  }
+  return out;
+}
+
+function handleNext() {
+  const errEl = document.getElementById('form-error');
+  errEl.style.display = 'none';
+
+  const age = document.getElementById('age').value.trim();
+  const complaint = document.getElementById('chief-complaint').value.trim();
+
+  const errs = [];
+  if (!age) errs.push('Age is required.');
+  if (!selectedSex) errs.push('Sex is required.');
+  if (!complaint) errs.push('Chief complaint is required.');
+
+  if (errs.length) {
+    errEl.textContent = errs.join(' ');
+    errEl.style.display = 'block';
+    errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    return;
+  }
+
+  const profile = {
+    age: parseInt(age),
+    sex: selectedSex,
+    occupation: document.getElementById('occupation').value.trim() || null,
+    bmi: document.getElementById('bmi').value ? parseFloat(document.getElementById('bmi').value) : null,
+    chief_complaint: complaint,
+    symptoms: collectSymptoms(),
+  };
+
+  sessionStorage.setItem('patientProfile', JSON.stringify(profile));
+  window.location.href = '/history.html';
+}
+
+function esc(s) {
+  return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Autofill from saved user profile
+async function autofillFromProfile() {
+  if (!getAuthToken()) return;
+  try {
+    const res = await fetch('/api/auth/profile', { headers: authHeaders() });
+    if (!res.ok) return;
+    const p = await res.json();
+
+    if (p.age && !document.getElementById('age').value) {
+      document.getElementById('age').value = p.age;
+    }
+    if (p.gender && !selectedSex) {
+      const g = p.gender.toLowerCase();
+      const sexVal = (g === 'male' || g === 'm') ? 'M' : (g === 'female' || g === 'f') ? 'F' : '';
+      if (sexVal) {
+        const btn = document.querySelector(`.sex-btn[data-val="${sexVal}"]`);
+        if (btn) selectSex(btn);
+      }
+    }
+  } catch (_) {}
+}
+
+// Add one blank symptom row by default, then autofill
+addSymptom();
+autofillFromProfile();
+</script>
+</body>
+</html>

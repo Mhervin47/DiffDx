@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Health History</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <script src="/notif-toggle.js"></script>
+  <script src="/patient-nav.js"></script>
+  <style>
+    .chip-row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:28px; }
+    .spec-chip {
+      padding:5px 14px; border-radius:99px; font-size:12px; font-weight:600;
+      cursor:pointer; border:1px solid var(--border); background:var(--surface-3);
+      color:var(--text-muted); transition:all .12s;
+    }
+    .spec-chip:hover { color:var(--text); border-color:var(--text-muted); }
+    .spec-chip.active { background:var(--primary); color:#000; border-color:var(--primary); }
+
+    .timeline { position:relative; }
+    .tl-entry { display:grid; grid-template-columns:88px 28px 1fr; gap:0; }
+    .tl-date {
+      text-align:right; padding-right:14px; padding-top:2px;
+      font-family:'SF Mono',ui-monospace,Menlo,monospace;
+    }
+    .tl-day { font-size:26px; font-weight:700; color:var(--text); line-height:1; }
+    .tl-monyear { font-size:11px; color:var(--text-muted); margin-top:4px; }
+    .tl-connector { position:relative; display:flex; justify-content:center; }
+    .tl-connector::before {
+      content:''; position:absolute; top:6px; bottom:-18px; width:2px;
+      background:linear-gradient(var(--primary), rgba(0,180,216,.15));
+    }
+    .tl-entry:last-child .tl-connector::before { bottom:18px; }
+    .tl-dot {
+      width:12px; height:12px; border-radius:50%; background:var(--primary);
+      box-shadow:0 0 0 4px rgba(0,180,216,.15); margin-top:4px; z-index:1; flex-shrink:0;
+    }
+    .tl-card {
+      background:var(--surface-2); border:1px solid var(--border); border-radius:var(--radius);
+      padding:16px; margin-bottom:18px; margin-left:8px;
+    }
+    .tl-doc-row { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .tl-avatar {
+      width:36px; height:36px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(135deg,var(--primary-dim),var(--primary));
+      display:flex; align-items:center; justify-content:center;
+      font-size:13px; font-weight:700; color:#000d1a;
+    }
+    .tl-doc-name { font-size:13px; font-weight:600; color:var(--text); }
+    .tl-doc-spec { font-size:11px; color:var(--text-muted); }
+    .tl-dx { font-size:16px; font-weight:700; color:var(--text); margin-bottom:8px; }
+    .tl-meta-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+    .tl-rx { font-size:11px; color:var(--text-dim); }
+    .empty-state { text-align:center; padding:60px 24px; color:var(--text-muted); font-size:14px; }
+    .empty-title { font-size:16px; font-weight:600; color:var(--text-dim); margin-bottom:6px; }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Medical<span>Convo</span>
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page" style="max-width:840px;">
+  <div class="patient-page-header">
+    <div>
+      <div class="patient-page-title">Health History</div>
+      <div class="patient-page-sub" id="hh-count"></div>
+    </div>
+  </div>
+
+  <div class="chip-row" id="spec-chips"></div>
+  <div id="timeline-container">
+    <div class="thinking-row" id="hh-spinner"><div class="spinner"></div> Loading history…</div>
+  </div>
+</div>
+
+<script>
+const user = getAuthUser();
+if (!user) window.location.replace('/login.html?next=/health-history.html');
+
+let _history = [];
+let _activeSpec = 'All';
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function initials(name) {
+  return (name || 'D').replace(/^Dr\.?\s*/i,'').split(' ').map(n=>n[0]).join('').slice(0,2).toUpperCase();
+}
+function statusBadge(s) {
+  if (s === 'seen') return `<span class="badge badge-green">Seen</span>`;
+  if (s === 'no_show') return `<span class="badge badge-red">No-show</span>`;
+  return `<span class="badge badge-teal">Upcoming</span>`;
+}
+
+function renderChips() {
+  const specs = ['All', ...Array.from(new Set(_history.map(h => h.specialty).filter(Boolean)))];
+  document.getElementById('spec-chips').innerHTML = specs.map(s =>
+    `<span class="spec-chip ${s === _activeSpec ? 'active' : ''}" onclick="setSpec('${escHtml(s).replace(/'/g,"\\'")}')">${escHtml(s)}</span>`
+  ).join('');
+}
+
+function setSpec(s) { _activeSpec = s; renderChips(); renderTimeline(); }
+
+function renderTimeline() {
+  const container = document.getElementById('timeline-container');
+  const entries = _activeSpec === 'All' ? _history : _history.filter(h => h.specialty === _activeSpec);
+  if (entries.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-title">No visits yet</div>
+      <p>Your appointment history will appear here.</p></div>`;
+    return;
+  }
+  container.innerHTML = `<div class="timeline">${entries.map(e => {
+    const d = e.slot ? new Date(e.slot) : null;
+    const day = d ? d.getDate() : '—';
+    const monyear = d ? d.toLocaleDateString('en-US',{month:'short',year:'numeric'}) : '';
+    const rxCount = (e.prescriptions || []).length;
+    const canView = !!e.session_id;
+    return `
+    <div class="tl-entry">
+      <div class="tl-date">
+        <div class="tl-day">${day}</div>
+        <div class="tl-monyear">${monyear}</div>
+      </div>
+      <div class="tl-connector"><div class="tl-dot"></div></div>
+      <div class="tl-card">
+        <div class="tl-doc-row">
+          <div class="tl-avatar">${initials(e.doctor_name)}</div>
+          <div>
+            <div class="tl-doc-name">${escHtml(e.doctor_name || 'Doctor')}</div>
+            <div class="tl-doc-spec">${escHtml(e.specialty || '')}</div>
+          </div>
+        </div>
+        <div class="tl-dx">${escHtml(e.primary_diagnosis || 'Consultation')}</div>
+        <div class="tl-meta-row">
+          ${statusBadge(e.status)}
+          <span class="tl-rx">${rxCount} prescription${rxCount !== 1 ? 's' : ''}</span>
+          ${canView ? `<button class="btn btn-ghost btn-sm" style="margin-left:auto;" onclick="viewReport('${e.session_id}')">View Report</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function viewReport(sessionId) {
+  sessionStorage.setItem('sessionId', sessionId);
+  window.location.href = '/report.html';
+}
+
+async function load() {
+  const container = document.getElementById('timeline-container');
+  const spinnerTimeout = setTimeout(() => {
+    const sp = document.getElementById('hh-spinner');
+    if (sp) sp.innerHTML = '<span style="color:var(--text-muted);font-size:13px;">Taking longer than expected… please wait.</span>';
+  }, 6000);
+  try {
+    const res = await fetch('/api/patient/history', { headers: { ...authHeaders() } });
+    clearTimeout(spinnerTimeout);
+    if (!res.ok) {
+      if (res.status === 401) { clearAuth(); window.location.replace('/login.html'); return; }
+      throw new Error(await res.text());
+    }
+    const data = await res.json();
+    _history = data.history || [];
+    document.getElementById('hh-count').textContent =
+      _history.length === 0 ? 'No visits yet' :
+      _history.length === 1 ? '1 visit' : `${_history.length} visits`;
+    renderChips();
+    renderTimeline();
+  } catch (e) {
+    clearTimeout(spinnerTimeout);
+    container.innerHTML = `<div class="error-msg">Error loading history: ${escHtml(e.message)}</div>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

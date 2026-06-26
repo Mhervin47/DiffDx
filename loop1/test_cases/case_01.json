@@ -1,0 +1,52 @@
+{
+  "session_id": "case_01",
+  "demographics": {
+    "age": 58,
+    "sex": "M",
+    "other": {}
+  },
+  "chief_complaint": "chest pain and shortness of breath for 2 hours",
+  "symptoms": [
+    {
+      "name": "chest pain",
+      "onset": "2 hours ago",
+      "severity": "severe",
+      "notes": "pressure-like, central, radiating to left arm"
+    },
+    {
+      "name": "shortness of breath",
+      "onset": "2 hours ago",
+      "severity": "moderate",
+      "notes": "worse on exertion"
+    },
+    {
+      "name": "diaphoresis",
+      "onset": "2 hours ago",
+      "severity": "mild",
+      "notes": "cold sweats"
+    }
+  ],
+  "history": {
+    "medical": [
+      "hypertension",
+      "hypercholesterolaemia"
+    ],
+    "medications": [
+      "lisinopril 10mg",
+      "atorvastatin 40mg"
+    ],
+    "allergies": [
+      "penicillin"
+    ],
+    "family": [
+      "father: MI at age 62"
+    ],
+    "social": [
+      "former smoker, quit 5 years ago"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "Diaphoretic on presentation.",
+  "running_summary": ""
+}

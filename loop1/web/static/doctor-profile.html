@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Doctor Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <style>
+    .profile-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 580px) { .profile-grid { grid-template-columns: 1fr; } }
+
+    .profile-section {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 20px 22px; margin-bottom: 16px;
+    }
+    .profile-section-title {
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted);
+      margin-bottom: 14px; display: flex; align-items: center; gap: 7px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 12px; font-weight: 600; color: var(--text-dim); }
+    .form-group small { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .form-control {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 9px 12px; width: 100%;
+      transition: border-color .15s; outline: none;
+      -webkit-appearance: none; appearance: none;
+    }
+    .form-control:focus { border-color: var(--primary); }
+    .form-control[readonly] { color: var(--text-muted); cursor: default; background: var(--surface-2); }
+    .form-control option { background: var(--surface-3); }
+    textarea.form-control { resize: vertical; min-height: 80px; }
+
+    select.form-control {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .phone-row { display: flex; }
+    .phone-cc {
+      flex: 0 0 110px; width: 110px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-right: none; border-radius: var(--radius) 0 0 var(--radius);
+      color: var(--text); font-family: var(--font); font-size: 13px;
+      padding: 9px 8px; outline: none; cursor: pointer;
+      -webkit-appearance: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234d647e'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+      padding-right: 24px;
+    }
+    .phone-cc:focus { border-color: var(--primary); z-index: 1; position: relative; }
+    .phone-num {
+      flex: 1; min-width: 0;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      color: var(--text); font-family: var(--font); font-size: 14px;
+      padding: 9px 12px; outline: none;
+    }
+    .phone-num:focus { border-color: var(--primary); z-index: 1; position: relative; }
+    .phone-num::placeholder { color: var(--text-muted); }
+    .phone-cc option { background: var(--surface-3); }
+    .field-error { font-size: 11px; color: var(--danger); margin-top: 3px; display: none; }
+    .field-error.show { display: block; }
+
+    /* Avatar */
+    .avatar-block { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; }
+    .avatar-large {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-dim), var(--primary));
+      color: #fff; font-size: 22px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .avatar-info { flex: 1; }
+    .avatar-name { font-size: 17px; font-weight: 700; margin-bottom: 2px; }
+    .avatar-since { font-size: 12px; color: var(--text-muted); }
+
+    /* Certification chips */
+    .cert-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+    .cert-chip {
+      display: flex; align-items: center; gap: 5px;
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: 99px; padding: 3px 10px 3px 12px;
+      font-size: 12px; color: var(--text-dim);
+    }
+    .cert-chip-x {
+      background: none; border: none; cursor: pointer; color: var(--text-muted);
+      line-height: 1; padding: 0; display: flex; align-items: center;
+      transition: color .12s;
+    }
+    .cert-chip-x:hover { color: var(--danger); }
+    .cert-add-row { display: flex; gap: 7px; }
+    .cert-add-input {
+      flex: 1; background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text); font-family: var(--font);
+      font-size: 13px; padding: 7px 12px; outline: none;
+    }
+    .cert-add-input:focus { border-color: var(--primary); }
+    .cert-add-btn {
+      background: none; border: 1px solid var(--border); border-radius: var(--radius);
+      color: var(--text-muted); cursor: pointer; font-size: 12px; font-weight: 600;
+      padding: 7px 14px; font-family: var(--font); white-space: nowrap;
+      transition: border-color .12s, color .12s;
+    }
+    .cert-add-btn:hover { border-color: var(--primary); color: var(--primary); }
+
+    /* Save bar */
+    .save-bar {
+      display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+      padding-top: 4px; margin-bottom: 32px;
+    }
+    .save-status { font-size: 13px; color: var(--success); opacity: 0; transition: opacity .3s; margin-right: auto; }
+    .save-status.show { opacity: 1; }
+
+    /* Collapsible education section */
+    .section-toggle {
+      background: none; border: none; cursor: pointer; width: 100%;
+      display: flex; align-items: center; gap: 8px;
+      font-size: 11px; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--text-muted);
+      padding: 0; font-family: var(--font); margin-bottom: 0;
+    }
+    .section-toggle svg.chevron { margin-left: auto; transition: transform .2s; }
+    .section-toggle.open svg.chevron { transform: rotate(180deg); }
+    .section-body { display: none; margin-top: 14px; }
+    .section-body.open { display: block; }
+
+    /* Incomplete banner */
+    .incomplete-banner {
+      background: rgba(255,185,95,.08); border: 1px solid rgba(255,185,95,.25);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 13px; color: var(--warning);
+      display: flex; align-items: center; gap: 8px; margin-bottom: 18px;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.replace('/doctor-portal.html')">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Portal
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+</nav>
+
+<div class="page" style="max-width:720px;">
+  <div style="margin-bottom:24px;">
+    <div class="section-title" style="margin-bottom:4px;">Doctor Profile</div>
+    <div style="font-size:13px;color:var(--text-muted);">Manage your professional details and clinic information</div>
+  </div>
+
+  <div id="incomplete-banner" class="incomplete-banner" style="display:none;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+    Complete your profile so patients can find and trust you during booking.
+  </div>
+
+  <div id="profile-loading" class="thinking-row"><div class="spinner"></div> Loading profile…</div>
+
+  <form id="profile-form" style="display:none;" onsubmit="saveProfile(event)">
+
+    <!-- Account -->
+    <div class="profile-section">
+      <div class="avatar-block">
+        <div class="avatar-large" id="avatar-initials">?</div>
+        <div class="avatar-info">
+          <div class="avatar-name" id="display-name">—</div>
+          <div class="avatar-since" id="display-specialty">—</div>
+        </div>
+      </div>
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        Account
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Full Name</label>
+          <input class="form-control" type="text" id="field-name" placeholder="Your full name" required>
+        </div>
+        <div class="form-group">
+          <label>Email Address</label>
+          <input class="form-control" type="email" id="field-email" readonly tabindex="-1">
+        </div>
+      </div>
+    </div>
+
+    <!-- Professional Details -->
+    <div class="profile-section">
+      <div class="profile-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>
+        Professional Details
+      </div>
+      <div class="profile-grid">
+        <div class="form-group">
+          <label>Specialty</label>
+          <select class="form-control" id="field-specialty">
+            <option value="">Select specialty</option>
+            <option>Cardiology</option><option>Neurology</option><option>Orthopedics</option>
+            <option>Dermatology</option><option>Gastroenterology</option><option>Pulmonology</option>
+            <option>Endocrinology</option><option>Nephrology</option><option>Oncology</option>
+            <option>Rheumatology</option><option>Urology</option><option>Gynecology</option>
+            <option>Ophthalmology</option><option>Psychiatry</option><option>Pediatrics</option>
+            <option>General Practice</option><option>Internal Medicine</option><option>ENT</option>
+            <option>Emergency Medicine</option><option>Anesthesiology</option><option>Radiology</option>
+            <option>Pathology</option><option>Surgery</option><option>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Hospital / Clinic Name</label>
+          <input class="form-control" type="text" id="field-hospital" placeholder="e.g. City Heart Hospital">
+        </div>
+        <div class="form-group">
+          <label>Mobile Number</label>
+          <div class="phone-row">
+            <select class="phone-cc" id="field-mobile-cc"></select>
+            <input class="phone-num" type="tel" id="field-mobile" placeholder="10-digit number" maxlength="10" inputmode="numeric">
+          </div>
+          <span class="field-error" id="mobile-err">Enter exactly 10 digits</span>
+        </div>
+        <div class="form-group">
+          <label>Years of Experience</label>
+          <input class="form-control" type="number" id="field-experience" min="0" max="60" placeholder="e.g. 12">
+        </div>
+        <div class="form-group">
+          <label>Medical License Number</label>
+          <input class="form-control" type="text" id="field-license" placeholder="e.g. MCI-2024-12345">
+        </div>
+        <div class="form-group">
+          <label>Consultation Fee (optional)</label>
+          <input class="form-control" type="text" id="field-fee" placeholder="e.g. ₹500">
+        </div>
+      </div>
+      <div class="profile-grid" style="margin-top:14px;">
+        <div class="form-group" style="grid-column:1/-1;">
+          <label>Short Bio</label>
+          <textarea class="form-control" id="field-bio" placeholder="Brief professional summary visible to patients…" rows="3"></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Education — collapsible optional section -->
+    <div class="profile-section">
+      <button type="button" class="section-toggle" id="edu-toggle" onclick="toggleEdu()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+        Education &amp; Qualifications
+        <span style="font-size:10px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--text-muted);margin-left:6px;">(optional)</span>
+        <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+      </button>
+      <div class="section-body" id="edu-body">
+        <div class="profile-grid">
+          <div class="form-group">
+            <label>Medical School / University</label>
+            <input class="form-control" type="text" id="field-school" placeholder="e.g. AIIMS New Delhi">
+          </div>
+          <div class="form-group">
+            <label>Graduation Year</label>
+            <input class="form-control" type="number" id="field-grad-year" min="1960" max="2030" placeholder="e.g. 2010">
+          </div>
+          <div class="form-group">
+            <label>Residency / Fellowship</label>
+            <input class="form-control" type="text" id="field-residency" placeholder="e.g. Cardiology Fellowship, AIIMS">
+          </div>
+          <div class="form-group">
+            <label>Post-graduate Degree</label>
+            <input class="form-control" type="text" id="field-pg-degree" placeholder="e.g. MD, DM, DNB, FRCS">
+          </div>
+        </div>
+        <div class="form-group" style="margin-top:14px;">
+          <label>Certifications &amp; Achievements</label>
+          <div class="cert-chips" id="cert-chips"></div>
+          <div class="cert-add-row">
+            <input class="cert-add-input" type="text" id="cert-input" placeholder="Add a certification and press Enter"
+              onkeydown="if(event.key==='Enter'){event.preventDefault();addCert();}">
+            <button type="button" class="cert-add-btn" onclick="addCert()">Add</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-bar">
+      <span class="save-status" id="save-status">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:4px;vertical-align:middle;"><polyline points="20 6 9 17 4 12"/></svg>
+        Profile saved
+      </span>
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const API = '';
+let _certs = [];
+
+const _COUNTRY_CODES = [
+  { code: 'IN', dial: '+91', name: 'India' },
+  { code: 'US', dial: '+1',  name: 'United States' },
+  { code: 'GB', dial: '+44', name: 'United Kingdom' },
+  { code: 'AU', dial: '+61', name: 'Australia' },
+  { code: 'CA', dial: '+1',  name: 'Canada' },
+  { code: 'SG', dial: '+65', name: 'Singapore' },
+  { code: 'AE', dial: '+971',name: 'UAE' },
+  { code: 'SA', dial: '+966',name: 'Saudi Arabia' },
+  { code: 'DE', dial: '+49', name: 'Germany' },
+  { code: 'FR', dial: '+33', name: 'France' },
+  { code: 'JP', dial: '+81', name: 'Japan' },
+  { code: 'CN', dial: '+86', name: 'China' },
+  { code: 'BR', dial: '+55', name: 'Brazil' },
+  { code: 'ZA', dial: '+27', name: 'South Africa' },
+  { code: 'NG', dial: '+234',name: 'Nigeria' },
+];
+
+function _buildCCSelect() {
+  const sel = document.getElementById('field-mobile-cc');
+  sel.innerHTML = _COUNTRY_CODES.map(c =>
+    `<option value="${c.dial}">${c.code} ${c.dial}</option>`
+  ).join('');
+  sel.value = '+91';
+}
+
+function _parsePhone(stored) {
+  if (!stored) return { dial: '+91', num: '' };
+  const match = stored.match(/^(\+\d+)\s(.+)$/);
+  return match ? { dial: match[1], num: match[2] } : { dial: '+91', num: stored };
+}
+
+function toggleEdu() {
+  document.getElementById('edu-toggle').classList.toggle('open');
+  document.getElementById('edu-body').classList.toggle('open');
+}
+
+function _renderCerts() {
+  document.getElementById('cert-chips').innerHTML = _certs.map((c, i) =>
+    `<span class="cert-chip">${escHtml(c)}
+      <button type="button" class="cert-chip-x" onclick="removeCert(${i})" title="Remove">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </span>`
+  ).join('');
+}
+
+function addCert() {
+  const inp = document.getElementById('cert-input');
+  const val = inp.value.trim();
+  if (!val || _certs.includes(val)) return;
+  _certs.push(val);
+  inp.value = '';
+  _renderCerts();
+}
+
+function removeCert(i) {
+  _certs.splice(i, 1);
+  _renderCerts();
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function init() {
+  const token = getAuthToken();
+  if (!token) { window.location.replace('/login.html'); return; }
+
+  _buildCCSelect();
+
+  try {
+    const [meRes, profRes] = await Promise.all([
+      fetch(`${API}/api/auth/me`, { headers: authHeaders() }),
+      fetch(`${API}/api/doctor/profile`, { headers: authHeaders() }),
+    ]);
+    if (!meRes.ok) { clearAuth(); window.location.replace('/login.html'); return; }
+    const me = await meRes.json();
+    if (me.role !== 'doctor') { window.location.replace('/'); return; }
+
+    const profData = profRes.ok ? await profRes.json() : {};
+    const doc = profData.doctor || {};
+
+    // Fill account fields
+    document.getElementById('field-name').value  = me.name || '';
+    document.getElementById('field-email').value = me.email || '';
+
+    // Avatar
+    const initials = (me.name || '?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    document.getElementById('avatar-initials').textContent = initials;
+    document.getElementById('display-name').textContent    = me.name || '—';
+    document.getElementById('display-specialty').textContent = doc.specialty || 'Doctor';
+
+    // Professional fields
+    const prof = doc.profile || {};
+    document.getElementById('field-specialty').value   = doc.specialty || '';
+    document.getElementById('field-hospital').value    = doc.hospital  || prof.hospital || '';
+    document.getElementById('field-experience').value  = prof.experience || '';
+    document.getElementById('field-license').value     = prof.license   || '';
+    document.getElementById('field-fee').value         = prof.fee       || '';
+    document.getElementById('field-bio').value         = prof.bio       || '';
+
+    // Mobile
+    const { dial, num } = _parsePhone(prof.mobile || '');
+    document.getElementById('field-mobile-cc').value = dial;
+    document.getElementById('field-mobile').value    = num;
+
+    // Education
+    const edu = prof.education || {};
+    document.getElementById('field-school').value     = edu.school     || '';
+    document.getElementById('field-grad-year').value  = edu.grad_year  || '';
+    document.getElementById('field-residency').value  = edu.residency  || '';
+    document.getElementById('field-pg-degree').value  = edu.pg_degree  || '';
+    _certs = Array.isArray(edu.certifications) ? [...edu.certifications] : [];
+    _renderCerts();
+
+    // Incomplete banner
+    const incomplete = !prof.mobile || !doc.specialty || !prof.hospital;
+    document.getElementById('incomplete-banner').style.display = incomplete ? '' : 'none';
+
+    document.getElementById('profile-loading').style.display = 'none';
+    document.getElementById('profile-form').style.display    = '';
+  } catch (e) {
+    document.getElementById('profile-loading').textContent = 'Failed to load profile.';
+  }
+}
+
+// Digit-only enforcement for phone
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('field-mobile')?.addEventListener('input', function() {
+    this.value = this.value.replace(/\D/g, '').slice(0, 10);
+  });
+});
+
+async function saveProfile(e) {
+  e.preventDefault();
+  const name     = document.getElementById('field-name').value.trim();
+  const mobile   = document.getElementById('field-mobile').value.trim();
+  const mobileCc = document.getElementById('field-mobile-cc').value;
+  const mobileErr = document.getElementById('mobile-err');
+
+  if (mobile && mobile.length !== 10) {
+    mobileErr.classList.add('show');
+    document.getElementById('field-mobile').focus();
+    return;
+  }
+  mobileErr.classList.remove('show');
+
+  const payload = {
+    name,
+    specialty:  document.getElementById('field-specialty').value,
+    hospital:   document.getElementById('field-hospital').value.trim(),
+    mobile:     mobile ? `${mobileCc} ${mobile}` : '',
+    experience: document.getElementById('field-experience').value || null,
+    license:    document.getElementById('field-license').value.trim(),
+    fee:        document.getElementById('field-fee').value.trim(),
+    bio:        document.getElementById('field-bio').value.trim(),
+    education: {
+      school:    document.getElementById('field-school').value.trim(),
+      grad_year: document.getElementById('field-grad-year').value || null,
+      residency: document.getElementById('field-residency').value.trim(),
+      pg_degree: document.getElementById('field-pg-degree').value.trim(),
+      certifications: _certs,
+    },
+  };
+
+  const btn = e.submitter || document.querySelector('[type=submit]');
+  btn.disabled = true; btn.textContent = 'Saving…';
+
+  try {
+    const r = await fetch(`${API}/api/doctor/profile-details`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify(payload),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    // Sync name in localStorage if auth.js stored it
+    const stored = localStorage.getItem('authUser');
+    if (stored) {
+      try {
+        const u = JSON.parse(stored); u.name = name;
+        localStorage.setItem('authUser', JSON.stringify(u));
+      } catch {}
+    }
+    document.getElementById('display-name').textContent        = name;
+    document.getElementById('display-specialty').textContent   = payload.specialty || 'Doctor';
+    document.getElementById('avatar-initials').textContent     =
+      name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const status = document.getElementById('save-status');
+    status.classList.add('show');
+    setTimeout(() => status.classList.remove('show'), 2500);
+    // Hide incomplete banner if now complete
+    if (payload.mobile && payload.specialty && payload.hospital)
+      document.getElementById('incomplete-banner').style.display = 'none';
+  } catch (err) {
+    alert('Save failed: ' + err.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Changes';
+  }
+}
+
+init();
+</script>
+</body>
+</html>

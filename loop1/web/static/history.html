@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MedicalConvo — Medical History</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+  <script src="/auth.js"></script>
+  <style>
+    .form-section {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px;
+    }
+    .form-section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .07em; color: var(--primary);
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 18px; padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-label { font-size: 12px; font-weight: 600; color: var(--text-dim); letter-spacing: .04em; }
+    .form-input, .form-textarea {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); color: var(--text);
+      font-family: var(--font); font-size: 14px;
+      padding: 10px 14px; outline: none;
+      transition: border-color .15s; width: 100%;
+    }
+    .form-input:focus, .form-textarea:focus { border-color: var(--primary); }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+
+    /* Tag input */
+    .tag-input-wrap {
+      background: var(--surface-3); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 8px;
+      display: flex; flex-wrap: wrap; gap: 6px;
+      cursor: text; transition: border-color .15s; min-height: 44px;
+    }
+    .tag-input-wrap:focus-within { border-color: var(--primary); }
+    .tag-chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: rgba(0,180,216,.15); border: 1px solid rgba(0,180,216,.3);
+      border-radius: 99px; padding: 3px 10px 3px 12px;
+      font-size: 13px; font-weight: 500; color: var(--primary);
+    }
+    .tag-chip-remove {
+      background: none; border: none; cursor: pointer;
+      color: var(--primary); line-height: 1; padding: 0; font-size: 14px;
+      opacity: .7; transition: opacity .1s;
+    }
+    .tag-chip-remove:hover { opacity: 1; }
+    .tag-real-input {
+      background: none; border: none; outline: none;
+      color: var(--text); font-family: var(--font); font-size: 14px;
+      min-width: 120px; flex: 1; padding: 3px 2px;
+    }
+    .tag-real-input::placeholder { color: var(--text-muted); }
+    .tag-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    .action-bar { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+
+    /* Session start full-page loader */
+    #session-start-loader {
+      display: none;
+      position: fixed; inset: 0; z-index: 999;
+      background: var(--surface-1);
+      flex-direction: column; align-items: center; justify-content: center; gap: 0;
+    }
+    #session-start-loader.active { display: flex; }
+    .ssl-icon {
+      width: 72px; height: 72px; margin-bottom: 28px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, rgba(0,180,216,.15), transparent 70%);
+      display: flex; align-items: center; justify-content: center;
+      animation: ssl-pulse 2s ease-in-out infinite;
+    }
+    @keyframes ssl-pulse {
+      0%,100% { transform: scale(1); opacity: .9; }
+      50%      { transform: scale(1.1); opacity: 1; }
+    }
+    .ssl-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+    .ssl-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
+    .ssl-tip {
+      font-size: 13px; color: var(--text-muted); font-style: italic;
+      max-width: 360px; text-align: center; line-height: 1.6;
+      min-height: 44px;
+      animation: ssl-fade .6s ease;
+    }
+    @keyframes ssl-fade { from { opacity: 0; } to { opacity: 1; } }
+    .ssl-bar-track {
+      width: 200px; height: 3px; background: var(--surface-4);
+      border-radius: 99px; overflow: hidden; margin-top: 28px;
+    }
+    .ssl-bar-fill {
+      height: 100%; border-radius: 99px;
+      background: linear-gradient(90deg, var(--primary-dim), var(--primary));
+      width: 0%; transition: width .5s ease;
+    }
+    .ssl-dots { display: flex; gap: 7px; margin-top: 20px; }
+    .ssl-dots span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--primary); opacity: .25;
+      animation: dot-pulse .9s ease-in-out infinite;
+    }
+    .ssl-dots span:nth-child(2) { animation-delay: .18s; }
+    .ssl-dots span:nth-child(3) { animation-delay: .36s; }
+    @keyframes dot-pulse {
+      0%,80%,100% { opacity: .2; transform: scale(.8); }
+      40%          { opacity: 1; transform: scale(1.15); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Full-page loading overlay shown while LLM starts the session -->
+<div id="session-start-loader">
+  <div class="ssl-icon">
+    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+  </div>
+  <div class="ssl-title">Starting Diagnostic Session</div>
+  <div class="ssl-sub">Preparing your AI doctor…</div>
+  <div class="ssl-tip" id="ssl-tip">An apple a day keeps the doctor away.</div>
+  <div class="ssl-bar-track"><div class="ssl-bar-fill" id="ssl-bar"></div></div>
+  <div class="ssl-dots"><span></span><span></span><span></span></div>
+</div>
+
+<nav class="nav">
+  <button class="nav-back" onclick="window.location.href='/patient-info.html'">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+    Profile
+  </button>
+  <div class="nav-brand" style="margin-left:8px;">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    AI Diagnostic Assistant
+  </div>
+  <div class="nav-spacer"></div>
+  <div class="steps">
+    <div class="step done"><div class="step-num">✓</div><span>Profile</span></div>
+    <div class="step-sep"></div>
+    <div class="step active"><div class="step-num">2</div><span>History</span></div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">3</div><span>Session</span></div>
+    <div class="step-sep"></div>
+    <div class="step"><div class="step-num">4</div><span>Report</span></div>
+  </div>
+  <div class="spacer"></div>
+  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+
+</nav>
+
+<div class="page">
+  <div class="section-title" style="margin-bottom:6px;">Step 2 of 3 — Medical History</div>
+  <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">All fields are optional — add only what applies. Press <kbd style="background:var(--surface-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px;">Enter</kbd> or comma to add each item.</p>
+
+  <form id="history-form" onsubmit="return false">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+      <!-- Past Medical History -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Past Medical History
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrap" onclick="focusTagInput('pmh-input')">
+            <div id="pmh-tags"></div>
+            <input id="pmh-input" class="tag-real-input" placeholder="e.g. hypertension, diabetes…"
+              onkeydown="tagKey(event,'pmh')" oninput="tagComma(event,'pmh')">
+          </div>
+          <div class="tag-hint">Type and press Enter or comma to add</div>
+        </div>
+      </div>
+
+      <!-- Medications -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11M5 13H3m6 0h10m0 0v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6m14 0H5"/></svg>
+          Current Medications
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrap" onclick="focusTagInput('meds-input')">
+            <div id="meds-tags"></div>
+            <input id="meds-input" class="tag-real-input" placeholder="e.g. metformin 500mg, aspirin…"
+              onkeydown="tagKey(event,'meds')" oninput="tagComma(event,'meds')">
+          </div>
+          <div class="tag-hint">Type and press Enter or comma to add</div>
+        </div>
+      </div>
+
+      <!-- Allergies -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Allergies
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrap" onclick="focusTagInput('allergy-input')">
+            <div id="allergy-tags"></div>
+            <input id="allergy-input" class="tag-real-input" placeholder="e.g. penicillin, peanuts…"
+              onkeydown="tagKey(event,'allergy')" oninput="tagComma(event,'allergy')">
+          </div>
+          <div class="tag-hint">Type and press Enter or comma to add</div>
+        </div>
+      </div>
+
+      <!-- Family History -->
+      <div class="form-section">
+        <div class="form-section-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          Family History
+        </div>
+        <div class="form-group">
+          <div class="tag-input-wrap" onclick="focusTagInput('family-input')">
+            <div id="family-tags"></div>
+            <input id="family-input" class="tag-real-input" placeholder="e.g. father: MI, mother: T2DM…"
+              onkeydown="tagKey(event,'family')" oninput="tagComma(event,'family')">
+          </div>
+          <div class="tag-hint">Type and press Enter or comma to add</div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Social History — full width -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
+        Social History
+      </div>
+      <div class="form-group">
+        <div class="tag-input-wrap" onclick="focusTagInput('social-input')">
+          <div id="social-tags"></div>
+          <input id="social-input" class="tag-real-input" placeholder="e.g. smoker 10 pack-years, drinks socially, sedentary job…"
+            onkeydown="tagKey(event,'social')" oninput="tagComma(event,'social')">
+        </div>
+        <div class="tag-hint">Type and press Enter or comma to add</div>
+      </div>
+    </div>
+
+    <!-- Free Notes -->
+    <div class="form-section">
+      <div class="form-section-title">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        Additional Notes
+      </div>
+      <div class="form-group">
+        <label class="form-label">Anything else the doctor should know</label>
+        <textarea id="free-notes" class="form-textarea" rows="3"
+          placeholder="e.g. recent travel, recent surgery, relevant lifestyle details…"></textarea>
+      </div>
+    </div>
+
+    <div id="form-error" class="error-msg" style="display:none;margin-bottom:16px;"></div>
+
+    <div class="action-bar">
+      <button type="button" class="btn btn-ghost" onclick="window.location.href='/patient-info.html'">← Back</button>
+      <button type="button" class="btn btn-ghost" onclick="window.location.href='/book-slot.html'">Book Appointment →</button>
+      <button type="button" id="start-btn" class="btn btn-primary" onclick="handleStart()" style="min-width:210px;padding:12px 28px;font-size:15px;">
+        Start Diagnostic Session →
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+const API = '';
+const tagData = { pmh: [], meds: [], allergy: [], family: [], social: [] };
+
+function focusTagInput(id) { document.getElementById(id).focus(); }
+
+function tagKey(e, key) {
+  if (e.key === 'Enter' || e.key === ',') {
+    e.preventDefault();
+    commitTag(key);
+  } else if (e.key === 'Backspace' && e.target.value === '') {
+    removeLastTag(key);
+  }
+}
+
+function tagComma(e, key) {
+  if (e.target.value.endsWith(',')) {
+    e.target.value = e.target.value.slice(0, -1);
+    commitTag(key);
+  }
+}
+
+function commitTag(key) {
+  const input = document.getElementById(`${key}-input`);
+  const val = input.value.trim();
+  if (!val) return;
+  tagData[key].push(val);
+  input.value = '';
+  renderTags(key);
+}
+
+function removeTag(key, i) {
+  tagData[key].splice(i, 1);
+  renderTags(key);
+}
+
+function removeLastTag(key) {
+  if (tagData[key].length === 0) return;
+  tagData[key].pop();
+  renderTags(key);
+}
+
+function renderTags(key) {
+  const container = document.getElementById(`${key}-tags`);
+  container.innerHTML = tagData[key].map((v, i) => `
+    <span class="tag-chip">
+      ${escHtml(v)}
+      <button type="button" class="tag-chip-remove" onclick="removeTag('${key}',${i})">×</button>
+    </span>
+  `).join('');
+}
+
+const _SSL_TIPS = [
+  "An apple a day keeps the doctor away.",
+  "Early diagnosis is the best medicine.",
+  "Your health is your greatest wealth.",
+  "Prevention is better than cure.",
+  "Listen to your body — it knows best.",
+  "A good laugh and a long sleep are the best cures.",
+  "Take care of your body. It's the only place you have to live.",
+  "Walking is the best medicine.",
+  "Let food be thy medicine and medicine be thy food.",
+  "Sleep is the golden chain that ties health and our bodies together.",
+  "The first wealth is health.",
+  "A healthy outside starts from the inside.",
+];
+let _sslTimers = {};
+
+function showSessionLoader() {
+  const loader = document.getElementById('session-start-loader');
+  const tipEl  = document.getElementById('ssl-tip');
+  const barEl  = document.getElementById('ssl-bar');
+  loader.classList.add('active');
+
+  let tipIdx = Math.floor(Math.random() * _SSL_TIPS.length);
+  tipEl.textContent = _SSL_TIPS[tipIdx];
+  _sslTimers.tip = setInterval(() => {
+    tipIdx = (tipIdx + 1) % _SSL_TIPS.length;
+    tipEl.style.animation = 'none';
+    tipEl.offsetHeight;
+    tipEl.style.animation = '';
+    tipEl.textContent = _SSL_TIPS[tipIdx];
+  }, 2400);
+
+  let pct = 0;
+  _sslTimers.bar = setInterval(() => {
+    pct = Math.min(pct + (Math.random() * 10 + 3), 88);
+    barEl.style.width = pct + '%';
+  }, 500);
+}
+
+function hideSessionLoader() {
+  clearInterval(_sslTimers.tip);
+  clearInterval(_sslTimers.bar);
+  const loader = document.getElementById('session-start-loader');
+  const barEl  = document.getElementById('ssl-bar');
+  if (barEl) barEl.style.width = '100%';
+  loader.style.transition = 'opacity .3s ease';
+  loader.style.opacity = '0';
+  setTimeout(() => loader.classList.remove('active'), 320);
+}
+
+async function handleStart() {
+  const errEl  = document.getElementById('form-error');
+  const btn    = document.getElementById('start-btn');
+  errEl.style.display = 'none';
+
+  const profile = JSON.parse(sessionStorage.getItem('patientProfile') || 'null');
+  if (!profile) {
+    errEl.textContent = 'Patient profile not found. Please go back and fill in your profile.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const history = {
+    medical:     tagData.pmh,
+    medications: tagData.meds,
+    allergies:   tagData.allergy,
+    family:      tagData.family,
+    social:      tagData.social,
+  };
+  const freeNotes = document.getElementById('free-notes').value.trim();
+  sessionStorage.setItem('patientHistory', JSON.stringify(history));
+  sessionStorage.setItem('patientFreeNotes', freeNotes);
+
+  btn.disabled = true;
+  showSessionLoader();
+  try {
+    const res = await fetch(`${API}/api/session/start-custom`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...authHeaders() },
+      body: JSON.stringify({ ...profile, history, free_notes: freeNotes }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    sessionStorage.setItem('sessionId', data.session_id);
+    sessionStorage.setItem('sessionStart', JSON.stringify(data));
+    localStorage.setItem('activeSessionId', data.session_id);
+    localStorage.setItem('activeSessionStart', JSON.stringify(data));
+    window.location.href = '/session.html';
+  } catch (e) {
+    hideSessionLoader();
+    btn.disabled = false;
+    errEl.textContent = 'Error starting session: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function escHtml(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

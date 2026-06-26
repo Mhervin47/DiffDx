@@ -1,0 +1,50 @@
+{
+  "session_id": "case_03",
+  "demographics": {
+    "age": 45,
+    "sex": "F",
+    "other": {}
+  },
+  "chief_complaint": "right upper quadrant abdominal pain after eating",
+  "symptoms": [
+    {
+      "name": "right upper quadrant pain",
+      "onset": "3 days",
+      "severity": "moderate to severe",
+      "notes": "worse after fatty meals, colicky"
+    },
+    {
+      "name": "nausea",
+      "onset": "3 days",
+      "severity": "moderate",
+      "notes": "without vomiting"
+    },
+    {
+      "name": "bloating",
+      "onset": "1 week",
+      "severity": "mild",
+      "notes": "postprandial"
+    }
+  ],
+  "history": {
+    "medical": [
+      "obesity",
+      "type 2 diabetes"
+    ],
+    "medications": [
+      "metformin 500mg BD"
+    ],
+    "allergies": [],
+    "family": [
+      "sister: gallstones"
+    ],
+    "social": [
+      "non-smoker",
+      "high fat diet"
+    ]
+  },
+  "ruled_out": [],
+  "ruled_in": [],
+  "free_notes": "Pain radiates to right shoulder tip.",
+  "running_summary": ""
+}
