@@ -103,8 +103,11 @@ def _call_llm_raw(model: str, messages: list[dict[str, str]], **kwargs: Any) -> 
         api_key = _openrouter_api_key()
         model_name = model.removeprefix("openrouter/")
     elif model.startswith("cerebras/"):
+        key = os.environ.get("CEREBRAS_API_KEY", "")
+        if not key:
+            raise _RateLimitError("CEREBRAS_API_KEY not set — skipping cerebras model")
         base_url = _CEREBRAS_BASE
-        api_key = _cerebras_api_key()
+        api_key = key
         model_name = model.removeprefix("cerebras/")
         # Reasoning models burn tokens on CoT before output — require generous headroom
         defaults.setdefault("max_tokens", 8192)
