@@ -89,6 +89,8 @@ Loop 3 runs after a session concludes and classifies the diagnosis into a care p
 
 ## Architecture
 
+![DiffDx architecture diagram](architecture.svg)
+
 ```
 Patient / Doctor browser
         │  REST + JSON
