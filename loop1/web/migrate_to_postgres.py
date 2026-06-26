@@ -58,11 +58,31 @@ def main():
         print("Usage: DATABASE_URL=postgresql://... python migrate_to_postgres.py")
         sys.exit(1)
 
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-
     import psycopg2
-    conn = psycopg2.connect(url)
+    # Parse URL manually to handle '@' characters in passwords.
+    raw = url
+    for prefix in ("postgresql://", "postgres://"):
+        if raw.startswith(prefix):
+            raw = raw[len(prefix):]
+            break
+    at = raw.rfind("@")
+    creds, hostpart = raw[:at], raw[at + 1:]
+    colon = creds.find(":")
+    pg_user = creds[:colon]
+    pg_password = creds[colon + 1:]
+    if "/" in hostpart:
+        hostport, dbname = hostpart.split("/", 1)
+    else:
+        hostport, dbname = hostpart, "postgres"
+    if ":" in hostport:
+        host, port_str = hostport.rsplit(":", 1)
+        pg_port = int(port_str)
+    else:
+        host, pg_port = hostport, 5432
+    conn = psycopg2.connect(
+        host=host, port=pg_port, dbname=dbname,
+        user=pg_user, password=pg_password, sslmode="require"
+    )
     cur = conn.cursor()
 
     cur.execute("""

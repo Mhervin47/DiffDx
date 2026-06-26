@@ -408,16 +408,44 @@ _USE_POSTGRES: bool = bool(_DATABASE_URL)
 _pg_pool = None   # psycopg2 SimpleConnectionPool
 
 
+def _parse_pg_url(url: str) -> dict:
+    """Parse a postgres(ql):// URL into psycopg2 keyword args.
+
+    Handles passwords that contain '@' by splitting on the *last* '@'
+    before the host portion.
+    """
+    url = url.strip()
+    for prefix in ("postgresql://", "postgres://"):
+        if url.startswith(prefix):
+            url = url[len(prefix):]
+            break
+    # Split credentials from host on the last '@'
+    at = url.rfind("@")
+    creds, hostpart = url[:at], url[at + 1:]
+    colon = creds.find(":")
+    user = creds[:colon]
+    password = creds[colon + 1:]
+    # hostpart may be  host/dbname  or  host:port/dbname
+    if "/" in hostpart:
+        hostport, dbname = hostpart.split("/", 1)
+    else:
+        hostport, dbname = hostpart, "postgres"
+    if ":" in hostport:
+        host, port_str = hostport.rsplit(":", 1)
+        port = int(port_str)
+    else:
+        host, port = hostport, 5432
+    return dict(host=host, port=port, dbname=dbname, user=user, password=password, sslmode="require")
+
+
 def _get_pg():
     global _pg_pool
     if _pg_pool is not None:
         return _pg_pool
+    import psycopg2
     from psycopg2 import pool as pg_pool
-    url = _DATABASE_URL
-    # Railway uses postgres:// but psycopg2 needs postgresql://
-    if url and url.startswith("postgres://"):
-        url = "postgresql://" + url[len("postgres://"):]
-    _pg_pool = pg_pool.ThreadedConnectionPool(1, 10, url)
+    kwargs = _parse_pg_url(_DATABASE_URL)
+    _pg_pool = pg_pool.ThreadedConnectionPool(1, 10, **kwargs)
     # Ensure table exists
     conn = _pg_pool.getconn()
     try:
