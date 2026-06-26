@@ -22,15 +22,11 @@ _RETRYABLE_STATUS = {500, 502, 503, 504}  # 429 handled separately via fallback
 
 # When a provider hits 429, try these fallbacks in order
 _FALLBACK_CHAIN: dict[str, list[str]] = {
-    "groq":       ["cerebras/gpt-oss-120b",
-                   "cerebras/zai-glm-4.7",
-                   "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+    "groq":       ["openrouter/meta-llama/llama-3.3-70b-instruct:free",
                    "openrouter/google/gemma-4-31b-it:free"],
     "gemini":     ["groq/llama-3.3-70b-versatile",
-                   "cerebras/gpt-oss-120b",
                    "openrouter/google/gemma-4-31b-it:free"],
-    "openrouter": ["groq/llama-3.3-70b-versatile",
-                   "cerebras/gpt-oss-120b"],
+    "openrouter": ["groq/llama-3.3-70b-versatile"],
     "cerebras":   ["groq/llama-3.3-70b-versatile",
                    "openrouter/meta-llama/llama-3.3-70b-instruct:free"],
 }
