@@ -25,3 +25,9 @@ build/
 # Skills / agents (internal tooling, not part of the app)
 .agents/
 skills-lock.json
+
+# Claude Code local config (may contain API keys in permissions)
+.claude/
+
+# Stitch design tool metadata
+.stitch/

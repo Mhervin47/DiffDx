@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: diffdx
+    runtime: python
+    rootDir: loop1
+    buildCommand: pip install -r requirements.txt && pip install -e .
+    startCommand: PYTHONPATH=src uvicorn web.api:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
