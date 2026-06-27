@@ -22,13 +22,32 @@ _RETRYABLE_STATUS = {500, 502, 503, 504}  # 429 handled separately via fallback
 
 # When a provider hits 429, try these fallbacks in order
 _FALLBACK_CHAIN: dict[str, list[str]] = {
-    "groq":       ["openrouter/meta-llama/llama-3.3-70b-instruct:free",
-                   "openrouter/google/gemma-4-31b-it:free"],
-    "gemini":     ["groq/llama-3.3-70b-versatile",
-                   "openrouter/google/gemma-4-31b-it:free"],
-    "openrouter": ["groq/llama-3.3-70b-versatile"],
-    "cerebras":   ["groq/llama-3.3-70b-versatile",
-                   "openrouter/meta-llama/llama-3.3-70b-instruct:free"],
+    "groq": [
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter/google/gemma-4-31b-it:free",
+        "openrouter/deepseek/deepseek-r1:free",
+        "openrouter/qwen/qwen3-30b-a3b:free",
+        "openrouter/mistralai/mistral-7b-instruct:free",
+        "openrouter/meta-llama/llama-3.1-8b-instruct:free",
+    ],
+    "gemini": [
+        "groq/llama-3.3-70b-versatile",
+        "openrouter/google/gemma-4-31b-it:free",
+        "openrouter/deepseek/deepseek-r1:free",
+        "openrouter/qwen/qwen3-30b-a3b:free",
+    ],
+    "openrouter": [
+        "groq/llama-3.3-70b-versatile",
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter/deepseek/deepseek-r1:free",
+        "openrouter/qwen/qwen3-30b-a3b:free",
+        "openrouter/mistralai/mistral-7b-instruct:free",
+        "openrouter/meta-llama/llama-3.1-8b-instruct:free",
+    ],
+    "cerebras": [
+        "groq/llama-3.3-70b-versatile",
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+    ],
 }
 
 
