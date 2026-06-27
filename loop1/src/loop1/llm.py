@@ -23,6 +23,8 @@ _RETRYABLE_STATUS = {500, 502, 503, 504}  # 429 handled separately via fallback
 # When a provider hits 429, try these fallbacks in order
 _FALLBACK_CHAIN: dict[str, list[str]] = {
     "groq": [
+        "groq/llama-3.1-8b-instant",
+        "groq/gemma2-9b-it",
         "openrouter/meta-llama/llama-3.3-70b-instruct:free",
         "openrouter/google/gemma-4-31b-it:free",
         "openrouter/deepseek/deepseek-r1:free",
@@ -61,21 +63,21 @@ def _groq_api_key() -> str:
 def _openrouter_api_key() -> str:
     key = os.environ.get("OPENROUTER_API_KEY", "")
     if not key:
-        raise RuntimeError("OPENROUTER_API_KEY environment variable not set")
+        raise _RateLimitError("OPENROUTER_API_KEY not set — skipping openrouter model")
     return key
 
 
 def _cerebras_api_key() -> str:
     key = os.environ.get("CEREBRAS_API_KEY", "")
     if not key:
-        raise RuntimeError("CEREBRAS_API_KEY environment variable not set")
+        raise _RateLimitError("CEREBRAS_API_KEY not set — skipping cerebras model")
     return key
 
 
 def _gemini_api_key() -> str:
     key = os.environ.get("GEMINI_API_KEY", "")
     if not key:
-        raise RuntimeError("GEMINI_API_KEY environment variable not set")
+        raise _RateLimitError("GEMINI_API_KEY not set — skipping gemini model")
     return key
 
 
