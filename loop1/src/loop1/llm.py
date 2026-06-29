@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import re
 from typing import Any
+
+_log = logging.getLogger(__name__)
 
 from tenacity import (
     retry,
@@ -132,7 +135,10 @@ def _call_llm_raw(model: str, messages: list[dict[str, str]], **kwargs: Any) -> 
         )
 
     if response.status_code == 429:
-        raise _RateLimitError(f"HTTP 429: {response.text[:300]}")
+        # Surface reset time so caller can wait the right amount
+        reset_tokens = response.headers.get("x-ratelimit-reset-tokens", "")
+        reset_requests = response.headers.get("x-ratelimit-reset-requests", "")
+        raise _RateLimitError(f"HTTP 429 reset-tokens={reset_tokens} reset-requests={reset_requests}")
     if response.status_code in _RETRYABLE_STATUS:
         raise _RetryableHTTPError(f"HTTP {response.status_code}: {response.text[:200]}")
     if response.status_code != 200:
@@ -149,18 +155,37 @@ def _call_llm_raw(model: str, messages: list[dict[str, str]], **kwargs: Any) -> 
     return content, prompt_tokens
 
 
+def _parse_reset_seconds(msg: str) -> float:
+    """Parse reset time from Groq 429 message, e.g. 'reset-tokens=4.5s'."""
+    import re
+    # Find the shortest reset time across tokens and requests
+    matches = re.findall(r"reset-(?:tokens|requests)=([\d.]+)([smh]?)", msg)
+    if not matches:
+        return 5.0
+    seconds = []
+    for val, unit in matches:
+        v = float(val)
+        if unit == "m":
+            v *= 60
+        elif unit == "h":
+            v *= 3600
+        seconds.append(v)
+    return min(seconds) + 0.5  # small buffer
+
+
 def _call_with_fallback(model: str, messages: list[dict[str, str]], **kwargs: Any) -> tuple[str, int]:
-    """Try model; on 429 retry with backoff then walk the fallback chain."""
+    """Try model; on 429 wait the exact reset time then retry once."""
     import time
-    # Retry the primary model up to 2 times with short backoff
-    for attempt in range(2):
+    last_err = ""
+    for attempt in range(3):
         try:
             return _call_llm_raw(model, messages, **kwargs)
-        except _RateLimitError:
-            if attempt < 1:
-                time.sleep(2)
-            else:
-                break
+        except _RateLimitError as e:
+            last_err = str(e)
+            if attempt < 2:
+                wait = _parse_reset_seconds(last_err)
+                _log.warning("Groq 429 — waiting %.1fs before retry %d", wait, attempt + 1)
+                time.sleep(min(wait, 30))  # cap at 30s per attempt
     prefix = _provider_prefix(model)
     fallbacks = _FALLBACK_CHAIN.get(prefix, [])
     for fb_model in fallbacks:
@@ -169,7 +194,7 @@ def _call_with_fallback(model: str, messages: list[dict[str, str]], **kwargs: An
         except _RateLimitError:
             continue
     raise RuntimeError(
-        "Groq is busy right now. Please wait a few seconds and try again."
+        "Groq is rate-limited. Please wait a moment and try again."
     )
 
 
