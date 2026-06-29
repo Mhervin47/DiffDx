@@ -32,7 +32,13 @@ _FALLBACK_CHAIN: dict[str, list[str]] = {
         "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
     ],
     "gemini": ["groq/llama-3.3-70b-versatile"],
-    "openrouter": ["groq/llama-3.3-70b-versatile"],
+    "openrouter": [
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free",
+        "openrouter/nvidia/nemotron-3-super-120b-a12b:free",
+        "openrouter/nvidia/nemotron-3-ultra-550b-a55b:free",
+        "openrouter/openai/gpt-oss-20b:free",
+        "meta-llama/llama-4-scout-17b-16e-instruct",  # groq fallback last resort
+    ],
     "cerebras": ["groq/llama-3.3-70b-versatile"],
 }
 

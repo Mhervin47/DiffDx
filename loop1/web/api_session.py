@@ -305,6 +305,8 @@ class APISession:
     def _fire_critic(self, event: dict, turn_index: int) -> None:
         """Submit a critique task and return immediately. Result stored in self._critiques."""
         def _run() -> None:
+            import time
+            time.sleep(turn_index * 2)  # stagger calls so they don't all hit rate limits together
             try:
                 result = critique_turn(event, self._live_events, self.session_id)
                 if result:
