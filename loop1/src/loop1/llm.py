@@ -179,27 +179,17 @@ def _parse_reset_seconds(msg: str) -> float:
 
 
 def _call_with_fallback(model: str, messages: list[dict[str, str]], **kwargs: Any) -> tuple[str, int]:
-    """Try model; on 429 wait the exact reset time then retry once."""
-    import time
-    last_err = ""
-    for attempt in range(3):
-        try:
-            return _call_llm_raw(model, messages, **kwargs)
-        except _RateLimitError as e:
-            last_err = str(e)
-            if attempt < 2:
-                wait = _parse_reset_seconds(last_err)
-                _log.warning("Groq 429 — waiting %.1fs before retry %d", wait, attempt + 1)
-                time.sleep(min(wait, 30))  # cap at 30s per attempt
+    """Try model then immediately walk fallbacks on 429 — no blocking sleeps."""
     prefix = _provider_prefix(model)
-    fallbacks = _FALLBACK_CHAIN.get(prefix, [])
-    for fb_model in fallbacks:
+    all_models = [model] + _FALLBACK_CHAIN.get(prefix, [])
+    for m in all_models:
         try:
-            return _call_llm_raw(fb_model, messages, **kwargs)
-        except _RateLimitError:
+            return _call_llm_raw(m, messages, **kwargs)
+        except _RateLimitError as e:
+            _log.warning("429 on %s — trying next fallback. (%s)", m, str(e)[:80])
             continue
     raise RuntimeError(
-        "Groq is rate-limited. Please wait a moment and try again."
+        "All models are currently rate-limited. Please wait a moment and try again."
     )
 
 
