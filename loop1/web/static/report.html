@@ -2093,7 +2093,7 @@ function buildDiffEvolution(turnHistory) {
 }
 
 function buildTable(turns, agg) {
-  if (!turns.length) return '<div class="history-empty">No turns recorded.</div>';
+  if (!turns.length) return '<div class="history-empty">Critic scores are generated asynchronously and may not be available for all sessions. The conversation and diagnosis below are complete.</div>';
   const rows = turns.map(t => `
     <tr>
       <td>${t.turn + 1}</td>
