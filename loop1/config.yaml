@@ -16,7 +16,7 @@ thresholds:
   compression_token_threshold: 3000
   confidence_to_stop: 0.55
   exemplar_pool_size: 50
-  llm_max_tokens: 4096
+  llm_max_tokens: 1024
   llm_temperature: 0.3
   max_turns: 15
   mmr_lambda: 0.5

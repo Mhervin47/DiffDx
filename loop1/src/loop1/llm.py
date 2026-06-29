@@ -152,13 +152,13 @@ def _call_llm_raw(model: str, messages: list[dict[str, str]], **kwargs: Any) -> 
 def _call_with_fallback(model: str, messages: list[dict[str, str]], **kwargs: Any) -> tuple[str, int]:
     """Try model; on 429 retry with backoff then walk the fallback chain."""
     import time
-    # Retry the primary model up to 3 times with backoff before falling back
-    for attempt in range(3):
+    # Retry the primary model up to 2 times with short backoff
+    for attempt in range(2):
         try:
             return _call_llm_raw(model, messages, **kwargs)
         except _RateLimitError:
-            if attempt < 2:
-                time.sleep(5 * (attempt + 1))  # 5s, 10s
+            if attempt < 1:
+                time.sleep(2)
             else:
                 break
     prefix = _provider_prefix(model)
