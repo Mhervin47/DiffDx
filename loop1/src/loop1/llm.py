@@ -172,20 +172,27 @@ def _call_llm_raw(model: str, messages: list[dict[str, str]], **kwargs: Any) -> 
 
 
 def _call_with_fallback(model: str, messages: list[dict[str, str]], **kwargs: Any) -> tuple[str, int]:
-    """Try model; on 429 walk the fallback chain for that provider."""
-    try:
-        return _call_llm_raw(model, messages, **kwargs)
-    except _RateLimitError:
-        prefix = _provider_prefix(model)
-        fallbacks = _FALLBACK_CHAIN.get(prefix, [])
-        for fb_model in fallbacks:
-            try:
-                return _call_llm_raw(fb_model, messages, **kwargs)
-            except _RateLimitError:
-                continue
-        raise RuntimeError(
-            f"All providers rate-limited for model '{model}' and its fallbacks {fallbacks}."
-        )
+    """Try model; on 429 retry with backoff then walk the fallback chain."""
+    import time
+    # Retry the primary model up to 3 times with backoff before falling back
+    for attempt in range(3):
+        try:
+            return _call_llm_raw(model, messages, **kwargs)
+        except _RateLimitError:
+            if attempt < 2:
+                time.sleep(5 * (attempt + 1))  # 5s, 10s
+            else:
+                break
+    prefix = _provider_prefix(model)
+    fallbacks = _FALLBACK_CHAIN.get(prefix, [])
+    for fb_model in fallbacks:
+        try:
+            return _call_llm_raw(fb_model, messages, **kwargs)
+        except _RateLimitError:
+            continue
+    raise RuntimeError(
+        f"Groq is rate-limited. Please wait a moment and try again."
+    )
 
 
 def call_llm(model: str, messages: list[dict[str, str]], **kwargs: Any) -> str:
