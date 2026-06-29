@@ -3044,7 +3044,7 @@ function buildDetail(data) {
     ${turns.length > 0 ? buildCriticTable(turns, agg) : ''}
 
     <!-- AI rationale -->
-    ${buildRationales(turns)}
+    ${buildRationales(turns, turnHistory)}
 
     <!-- Routing reasoning -->
     ${routing.reasoning ? `
@@ -4952,16 +4952,20 @@ function buildCriticTable(turns, agg) {
 }
 
 // ---- Rationales ----
-function buildRationales(turns) {
-  const items = turns.filter(t => t.rationale).map(t => `
+function buildRationales(turns, turnHistory) {
+  // Prefer critic rationale; fall back to doctor's own rationale from turn_history
+  const source = turns.filter(t => t.rationale).length > 0
+    ? turns.map(t => ({ turn: t.turn ?? t.turn_index ?? 0, rationale: t.rationale }))
+    : (turnHistory || []).filter(t => t.rationale).map(t => ({ turn: t.turn_index ?? 0, rationale: t.rationale }));
+  if (!source.length) return '';
+  const items = source.map(t => `
     <div class="rationale-block">
       <button class="rationale-toggle">
-        <span>Turn ${(t.turn_index ?? t.turn ?? 0) + 1}: AI Reasoning</span>
+        <span>Turn ${t.turn + 1}: AI Reasoning</span>
         <svg class="chevron" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:auto;flex-shrink:0;transition:transform .2s;"><polyline points="6 9 12 15 18 9"/></svg>
       </button>
       <div class="rationale-body">${escHtml(t.rationale)}</div>
     </div>`).join('');
-  if (!items) return '';
   return `<div class="portal-section">
     <div class="portal-section-title">AI Reasoning (per turn)</div>${items}
   </div>`;
