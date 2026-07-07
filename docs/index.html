@@ -486,6 +486,23 @@
   .pre-label{font-family:system-ui,sans-serif;font-size:.72rem;color:var(--ink-faint);display:block;margin-bottom:6px;letter-spacing:.04em}
   .pre-label::before{display:none}
 
+  /* Bilingual conversation demo */
+  .lang-picker{display:flex;align-items:center;gap:10px;margin:20px 0 0}
+  .lang-picker label{font-family:system-ui,sans-serif;font-size:.78rem;color:var(--ink-faint)}
+  .lang-picker select{font-family:system-ui,sans-serif;font-size:.84rem;padding:5px 10px;border:1px solid var(--line);border-radius:4px;background:var(--paper);color:var(--ink);cursor:pointer;appearance:auto}
+  .bilingual-demo{border:1px solid var(--line);border-radius:4px;overflow:hidden;margin:12px 0 28px;font-size:.88rem}
+  .bd-header{background:var(--paper-2);border-bottom:1px solid var(--line);padding:9px 16px;font-family:system-ui,sans-serif;font-size:.7rem;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:10px}
+  .bd-header span{color:var(--ink-soft);font-weight:600}
+  .bd-turn{padding:14px 18px;border-bottom:1px solid var(--line)}
+  .bd-turn:last-child{border-bottom:none}
+  .bd-turn.doctor{background:var(--paper)}
+  .bd-turn.patient{background:var(--paper-2)}
+  .bd-role{font-family:system-ui,sans-serif;font-size:.65rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+  .bd-lang{font-family:system-ui,sans-serif;font-size:.6rem;padding:1px 5px;border-radius:3px;border:1px solid var(--line);color:var(--ink-faint);background:var(--paper-3);font-weight:500;letter-spacing:.04em}
+  .bd-primary{font-family:Georgia,'Times New Roman',serif;color:var(--ink);line-height:1.5;margin-bottom:5px}
+  .bd-translation{font-family:system-ui,sans-serif;font-size:.78rem;color:var(--ink-faint);font-style:italic}
+  .bd-translation::before{content:'→ ';opacity:.5}
+
   /* Callouts — simple left rule, no icons */
   .callout{background:var(--paper-2);border-left:2px solid var(--line-strong);border-radius:0;padding:14px 18px;backdrop-filter:none}
   .callout.warn{border-left-color:#C05621}
@@ -604,6 +621,7 @@
         <li><a href="#ddxplus">DDXPlus evaluation</a></li>
         <li><a href="#loop3">Loop 3 — routing</a></li>
         <li><a href="#web">From pipeline to product</a></li>
+        <li><a href="#multilingual">Ten languages via Sarvam AI</a></li>
         <li><a href="#decisions">Decisions that paid off</a></li>
         <li><a href="#open">Open problems</a></li>
       </ol>
@@ -932,7 +950,7 @@
 
       <!-- 07 -->
       <h2 id="profile"><span class="num">07 — the state</span>PatientProfile and the profile updater</h2>
-      <p>The <code>PatientProfile</code> is the SARAVAM State. It accumulates everything known about the patient and is the document passed to the doctor actor on every turn. Its schema is locked: fields can be added across versions, but nothing is renamed or removed — so evaluators and critics written today can read sessions from any prior phase.</p>
+      <p>The <code>PatientProfile</code> is the Actor-Critic <em>state</em> — the structured representation of everything known about the patient at a given point in the session. It is the document passed to the doctor actor on every turn. Its schema is locked: fields can be added across versions, but nothing is renamed or removed — so evaluators and critics written today can read sessions from any prior phase.</p>
       <div class="schema-grid">
         <div class="scard">
           <h4>PatientProfile</h4>
@@ -1114,10 +1132,10 @@ score(e) = λ · sim(query, e) − (1 − λ) · max_sim(e, already_selected)
           <div class="sfield"><span class="fn">0.50–0.69</span><span class="ft">Acceptable — missed opportunities</span></div>
           <div class="sfield"><span class="fn">0.30–0.49</span><span class="ft">Weak — significant reasoning gap</span></div>
           <div class="sfield"><span class="fn">&lt;0.30</span><span class="ft">Poor — question actively misleads</span></div>
-          <div class="sfield"><span class="fn">SARAVAM reward R</span><span class="ft">= mean(Q + D + Reasoning) / 3</span></div>
+          <div class="sfield"><span class="fn">Composite reward R</span><span class="ft">= mean(Q + D + Reasoning) / 3</span></div>
         </div>
       </div>
-      <p>Across a session, the aggregator in <code>loop2/critic/aggregator.py</code> rolls up per-turn scores into session-level statistics. Sessions where the actor consistently produced high advantage (R &gt; V(s)) become the "chosen" side of DPO preference pairs in future training. Sessions where the actor underperformed the expected baseline become "rejected" pairs. The SARAVAM framework names this directly: advantage A(s,a) = R &minus; V(s) is the scalar the DPO trainer will use.</p>
+      <p>Across a session, the aggregator in <code>loop2/critic/aggregator.py</code> rolls up per-turn scores into session-level statistics. Sessions where the actor consistently produced high advantage (R &gt; V(s)) become the "chosen" side of DPO preference pairs in future training. Sessions where the actor underperformed the expected baseline become "rejected" pairs. In Actor-Critic terms, advantage A(s,a) = R &minus; V(s) is the scalar the DPO trainer will use — it measures how much better a given action was than the baseline the value function expected.</p>
 
       <!-- 13 -->
       <h2 id="ddxplus"><span class="num">13 — the ground truth</span>DDXPlus evaluation</h2>
@@ -1248,7 +1266,63 @@ score(e) = λ · sim(query, e) − (1 − λ) · max_sim(e, already_selected)
       <p>When a doctor opens a patient in the portal, the browser's <code>SpeechSynthesis</code> API automatically dictates a pre-consultation brief: patient name, demographics, chief complaint, reported symptoms, predicted top diagnosis, allergies, medications, and past medical history. No API key — it runs fully client-side. Percentages are deliberately omitted from the verbal brief to avoid anchoring bias; the doctor hears the diagnosis name, not a confidence number.</p>
 
       <!-- 16 -->
-      <h2 id="decisions"><span class="num">16 — in hindsight</span>Decisions that paid off</h2>
+      <h2 id="multilingual"><span class="num">16 — the language layer</span>Ten languages via Sarvam AI</h2>
+      <p>Medical histories don't arrive in English. A patient describing chest pain in Kannada or a parent reporting a child's fever in Bengali shouldn't need a translator to interact with the system. DiffDx handles this through <a href="https://sarvam.ai">Sarvam AI</a> — an Indian-language foundation model provider — covering ten languages without changing any of the diagnostic logic.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Language</th><th>Code</th><th>TTS voice</th></tr></thead>
+          <tbody>
+            <tr><td>Hindi</td><td><code>hi-IN</code></td><td>Anushka</td></tr>
+            <tr><td>Tamil</td><td><code>ta-IN</code></td><td>Anushka</td></tr>
+            <tr><td>Telugu</td><td><code>te-IN</code></td><td>Manisha</td></tr>
+            <tr><td>Kannada</td><td><code>kn-IN</code></td><td>Vidya</td></tr>
+            <tr><td>Malayalam</td><td><code>ml-IN</code></td><td>Arya</td></tr>
+            <tr><td>Bengali</td><td><code>bn-IN</code></td><td>Manisha</td></tr>
+            <tr><td>Marathi</td><td><code>mr-IN</code></td><td>Vidya</td></tr>
+            <tr><td>Gujarati</td><td><code>gu-IN</code></td><td>Anushka</td></tr>
+            <tr><td>Punjabi</td><td><code>pa-IN</code></td><td>Anushka</td></tr>
+            <tr><td>English (Indian)</td><td><code>en-IN</code></td><td>Anushka</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <h3>English as the LLM's lingua franca</h3>
+      <p>The design principle is simple: the LLM always sees English. Sarvam does the boundary work. When a patient submits an answer in Tamil, <code>_sarvam_translate()</code> converts it to English before the session passes it to the doctor model. When the model produces the next question, the <code>/api/tts</code> endpoint translates English back to the session language and synthesises audio using Sarvam's <code>bulbul:v2</code> voices — returning both the translated text and a base64 WAV. The frontend plays the audio and displays the translated text in parallel.</p>
+      <div class="callout">
+        <p class="c-lab">Why this boundary is the right place to translate</p>
+        <p>Translating at the API boundary — not inside the prompt — means the reasoning model never has to be multilingual. Prompts, exemplars, DDXPlus records, and critic scoring all stay in English. A future swap of the translation layer (a different provider, a local model) touches two functions, not the entire pipeline.</p>
+      </div>
+      <pre><span class="pre-label">api.py — turn boundary translation</span># Patient answer arrives in session language → translate to English for LLM
+if lang and lang != "en-IN":
+    patient_answer = _sarvam_translate(patient_answer, lang, "en-IN")
+
+result = session.submit_answer(patient_answer)   # LLM sees English
+
+# /api/tts: English question → target language + audio
+translated = _sarvam_translate(text, "en-IN", lang) if lang != "en-IN" else text
+audio_b64  = _sarvam_tts_b64(translated, lang)
+return {"audio_b64": audio_b64, "translated_text": translated}</pre>
+
+      <h3>A bilingual session</h3>
+      <p>Select a language to see the same chest-pain session rendered in that language. Doctor questions flow English → target language; patient answers flow target language → English before the LLM sees them.</p>
+      <div class="lang-picker">
+        <label for="demoLangSelect">Language</label>
+        <select id="demoLangSelect">
+          <option value="ta-IN">Tamil (ta-IN)</option>
+          <option value="hi-IN">Hindi (hi-IN)</option>
+          <option value="te-IN">Telugu (te-IN)</option>
+          <option value="kn-IN">Kannada (kn-IN)</option>
+          <option value="ml-IN">Malayalam (ml-IN)</option>
+          <option value="bn-IN">Bengali (bn-IN)</option>
+          <option value="mr-IN">Marathi (mr-IN)</option>
+          <option value="gu-IN">Gujarati (gu-IN)</option>
+          <option value="pa-IN">Punjabi (pa-IN)</option>
+          <option value="en-IN">English / en-IN</option>
+        </select>
+      </div>
+      <div class="bilingual-demo" id="bilingualDemo"></div>
+
+      <!-- 17 -->
+      <h2 id="decisions"><span class="num">17 — in hindsight</span>Decisions that paid off</h2>
       <div class="tbl-wrap">
         <table>
           <thead><tr><th>Choice</th><th>Why it mattered</th></tr></thead>
@@ -1264,11 +1338,11 @@ score(e) = λ · sim(query, e) − (1 − λ) · max_sim(e, already_selected)
         </table>
       </div>
 
-      <!-- 17 -->
-      <h2 id="open"><span class="num">17 — honestly</span>Open problems and what's deferred</h2>
+      <!-- 18 -->
+      <h2 id="open"><span class="num">18 — honestly</span>Open problems and what's deferred</h2>
       <p>What exists today is the architecture and data-collection foundation. Several things are deliberately deferred.</p>
       <ul class="clean">
-        <li><strong>No fine-tuning yet.</strong> SARAVAM tuples are being collected. DPO/LoRA training on high-advantage sessions — the payoff the whole A2C framing is built toward — is the next loop. The data pipeline is the current deliverable.</li>
+        <li><strong>No fine-tuning yet.</strong> (State, action, reward) tuples are being collected per session turn. DPO/LoRA training on high-advantage sessions — the payoff the whole A2C framing is built toward — is the next loop. The data pipeline is the current deliverable.</li>
         <li><strong>Critic is post-hoc, not in-loop.</strong> Scores are computed after sessions end. A real-time quality gate — where a low critic score mid-session triggers a different exemplar injection or a prompt revision — is deferred.</li>
         <li><strong>Advantage estimation is approximate.</strong> V(s) is estimated implicitly from session-level baseline performance, not from a learned value network. A proper advantage function requires enough sessions at similar profile states to establish a baseline — that data is still accumulating.</li>
         <li><strong>Evaluation is narrow by design.</strong> Twenty stratified DDXPlus patients is enough to detect regressions and sanity-check, not to make statistical claims. Synthetic patients are also not real patients.</li>
@@ -1344,5 +1418,129 @@ score(e) = λ · sim(query, e) − (1 − λ) · max_sim(e, already_selected)
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e){
     if(!localStorage.getItem('diffdx-theme')) applyTheme(e.matches);
   });
+
+  /* ── Bilingual demo ── */
+  var VOICES = {'hi-IN':'Anushka','ta-IN':'Anushka','te-IN':'Manisha','kn-IN':'Vidya','ml-IN':'Arya','bn-IN':'Manisha','mr-IN':'Vidya','gu-IN':'Anushka','pa-IN':'Anushka','en-IN':'Anushka'};
+  var NAMES  = {'hi-IN':'Hindi','ta-IN':'Tamil','te-IN':'Telugu','kn-IN':'Kannada','ml-IN':'Malayalam','bn-IN':'Bengali','mr-IN':'Marathi','gu-IN':'Gujarati','pa-IN':'Punjabi','en-IN':'English'};
+
+  /* [doctor_primary, patient_primary] per turn — English translations are shared */
+  var TURNS_EN = [
+    ['Where exactly is the chest pain you are describing, and does it spread to your arm or jaw?',
+     'The pain is in the centre of the chest. There is also some pain in the left arm, particularly around the elbow.'],
+    ['How long have you had this pain, and did it come on suddenly or build up gradually?',
+     'About two hours now. It came on very suddenly — while I was climbing stairs.'],
+    ['Are you experiencing any shortness of breath or sweating, and do you have any history of heart disease?',
+     'Yes, there is some shortness of breath. My father had heart disease, and I have high blood pressure.']
+  ];
+
+  var CONVOS = {
+    'ta-IN': [
+      ['நீங்கள் விவரிக்கும் மார்பு வலி சரியாக எங்கே உள்ளது, மற்றும் அது உங்கள் கை அல்லது தாடைக்கு பரவுகிறதா?',
+       'வலி மார்பின் நடுவில் உள்ளது. இடது கையிலும் கொஞ்சம் வலிக்கிறது, குறிப்பாக முழங்கையில்.'],
+      ['இந்த வலி எவ்வளவு நேரமாக இருக்கிறது, மற்றும் அது திடீரென்று தொடங்கியதா அல்லது படிப்படியாக வந்ததா?',
+       'சுமார் இரண்டு மணி நேரம் ஆகிறது. மிகவும் திடீரென்று தொடங்கியது — நான் படிகளில் ஏறும்போது.'],
+      ['நீங்கள் மூச்சு திணறல் அல்லது வியர்வை அனுபவிக்கிறீர்களா, மற்றும் உங்களுக்கு இதய நோய் வரலாறு இருக்கிறதா?',
+       'ஆம், கொஞ்சம் மூச்சு திணறல் இருக்கிறது. என் தந்தைக்கு இதய நோய் இருந்தது, எனக்கு ரத்த அழுத்தம் அதிகமாக உள்ளது.']
+    ],
+    'hi-IN': [
+      ['आप जिस सीने के दर्द का वर्णन कर रहे हैं वह ठीक कहाँ है, और क्या यह आपकी बाँह या जबड़े तक फैलता है?',
+       'दर्द सीने के बीच में है। बाईं बाँह में भी थोड़ा दर्द है, खासकर कोहनी के पास।'],
+      ['यह दर्द कितने समय से है, और क्या यह अचानक शुरू हुआ या धीरे-धीरे?',
+       'लगभग दो घंटे से। यह बहुत अचानक शुरू हुआ — जब मैं सीढ़ियाँ चढ़ रहा था।'],
+      ['क्या आपको साँस लेने में तकलीफ या पसीना आ रहा है, और क्या परिवार में हृदय रोग का इतिहास है?',
+       'हाँ, थोड़ी साँस लेने में तकलीफ है। मेरे पिता को हृदय रोग था, और मुझे उच्च रक्तचाप है।']
+    ],
+    'te-IN': [
+      ['మీరు వివరిస్తున్న ఛాతీ నొప్పి సరిగ్గా ఎక్కడ ఉంది, మరియు అది మీ చేయి లేదా దవడకు వ్యాపిస్తుందా?',
+       'నొప్పి ఛాతీ మధ్యలో ఉంది. ఎడమ చేతిలో కూడా కొంచెం నొప్పి ఉంది, ముఖ్యంగా మోచేయి దగ్గర.'],
+      ['ఈ నొప్పి ఎంత కాలంగా ఉంది, మరియు అది హఠాత్తుగా వచ్చిందా లేదా క్రమంగా వచ్చిందా?',
+       'దాదాపు రెండు గంటలు. మెట్లు ఎక్కుతున్నప్పుడు చాలా హఠాత్తుగా వచ్చింది.'],
+      ['మీకు శ్వాస ఇబ్బంది లేదా చెమట వస్తుందా, మరియు మీకు గుండె జబ్బుల చరిత్ర ఉందా?',
+       'అవును, కొంచెం శ్వాస ఇబ్బంది ఉంది. మా నాన్నకు గుండె జబ్బు ఉంది, నాకు అధిక రక్తపోటు ఉంది.']
+    ],
+    'kn-IN': [
+      ['ನೀವು ವಿವರಿಸುತ್ತಿರುವ ಎದೆ ನೋವು ನಿಖರವಾಗಿ ಎಲ್ಲಿದೆ, ಮತ್ತು ಅದು ನಿಮ್ಮ ತೋಳು ಅಥವಾ ದವಡೆಗೆ ಹರಡುತ್ತಿದೆಯೇ?',
+       'ನೋವು ಎದೆಯ ಮಧ್ಯಭಾಗದಲ್ಲಿದೆ. ಎಡ ತೋಳಿನಲ್ಲಿಯೂ ಸ್ವಲ್ಪ ನೋವಿದೆ, ವಿಶೇಷವಾಗಿ ಮೊಣಕೈ ಬಳಿ.'],
+      ['ಈ ನೋವು ಎಷ್ಟು ಸಮಯದಿಂದ ಇದೆ, ಮತ್ತು ಅದು ಇದ್ದಕ್ಕಿದ್ದಂತೆ ಬಂತೇ ಅಥವಾ ಕ್ರಮೇಣ ಬಂತೇ?',
+       'ಸುಮಾರು ಎರಡು ಗಂಟೆಗಳಿಂದ. ಮೆಟ್ಟಿಲು ಏರುತ್ತಿದ್ದಾಗ ತುಂಬಾ ಇದ್ದಕ್ಕಿದ್ದಂತೆ ಬಂತು.'],
+      ['ನಿಮಗೆ ಉಸಿರಾಡಲು ತೊಂದರೆ ಅಥವಾ ಬೆವರು ಆಗುತ್ತಿದೆಯೇ, ಮತ್ತು ನಿಮಗೆ ಹೃದ್ರೋಗದ ಇತಿಹಾಸ ಇದೆಯೇ?',
+       'ಹೌದು, ಸ್ವಲ್ಪ ಉಸಿರಾಟದ ತೊಂದರೆ ಇದೆ. ನನ್ನ ತಂದೆಗೆ ಹೃದ್ರೋಗ ಇತ್ತು, ನನಗೆ ಅಧಿಕ ರಕ್ತದೊತ್ತಡ ಇದೆ.']
+    ],
+    'ml-IN': [
+      ['നിങ്ങൾ വിവരിക്കുന്ന നെഞ്ചുവേദന കൃത്യമായി എവിടെയാണ്, അത് കൈയിലേക്കോ താടിയെല്ലിലേക്കോ പടരുന്നുണ്ടോ?',
+       'വേദന നെഞ്ചിന്റെ മധ്യഭാഗത്താണ്. ഇടതു കൈയിലും കുറച്ച് വേദനയുണ്ട്, പ്രത്യേകിച്ച് മുട്ടിനടുത്ത്.'],
+      ['ഈ വേദന എത്ര സമയമായി ഉണ്ട്, അത് പൊടുന്നനെ വന്നതാണോ അതോ ക്രമേണ വന്നതാണോ?',
+       'ഏകദേശം രണ്ട് മണിക്കൂർ ആയി. ഞാൻ പടികൾ കയറുമ്പോൾ വളരെ പെട്ടെന്ന് വന്നു.'],
+      ['നിങ്ങൾക്ക് ശ്വാസം മുട്ടൽ അല്ലെങ്കിൽ വിയർക്കൽ അനുഭവപ്പെടുന്നുണ്ടോ, ഹൃദ്രോഗ ചരിത്രം ഉണ്ടോ?',
+       'അതെ, കുറച്ച് ശ്വാസം മുട്ടൽ ഉണ്ട്. എന്റെ അച്ഛന് ഹൃദ്രോഗം ഉണ്ടായിരുന്നു, എനിക്ക് ഉയർന്ന രക്തസമ്മർദ്ദം ഉണ്ട്.']
+    ],
+    'bn-IN': [
+      ['আপনি যে বুকের ব্যথার কথা বলছেন সেটি ঠিক কোথায়, এবং এটি কি আপনার হাত বা চোয়ালে ছড়িয়ে পড়ছে?',
+       'ব্যথা বুকের মাঝখানে। বাম হাতেও একটু ব্যথা আছে, বিশেষ করে কনুইয়ের কাছে।'],
+      ['এই ব্যথা কতক্ষণ ধরে আছে, এবং এটি কি হঠাৎ এসেছে নাকি ধীরে ধীরে?',
+       'প্রায় দুই ঘণ্টা হলো। সিঁড়ি বেয়ে উঠার সময় খুব হঠাৎ করে এসেছে।'],
+      ['আপনার কি শ্বাসকষ্ট বা ঘাম হচ্ছে, এবং পরিবারে হৃদরোগের ইতিহাস আছে কি?',
+       'হ্যাঁ, একটু শ্বাসকষ্ট হচ্ছে। আমার বাবার হৃদরোগ ছিল, এবং আমার উচ্চ রক্তচাপ আছে।']
+    ],
+    'mr-IN': [
+      ['तुम्ही सांगत असलेली छातीची वेदना नक्की कुठे आहे, आणि ती तुमच्या हातापर्यंत किंवा जबड्यापर्यंत पसरत आहे का?',
+       'वेदना छातीच्या मध्यभागी आहे। डाव्या हातातही थोडी वेदना आहे, विशेषतः कोपराजवळ.'],
+      ['ही वेदना किती वेळापासून आहे, आणि ती अचानक सुरू झाली की हळूहळू?',
+       'सुमारे दोन तासांपासून. जिना चढताना अचानक सुरू झाली.'],
+      ['तुम्हाला श्वास घेण्यास त्रास होत आहे का किंवा घाम येत आहे का, आणि हृदयरोगाचा कौटुंबिक इतिहास आहे का?',
+       'हो, थोडा श्वास घेण्यास त्रास होतो. माझ्या वडिलांना हृदयरोग होता, आणि मला उच्च रक्तदाब आहे.']
+    ],
+    'gu-IN': [
+      ['તમે જે છાતીના દુખાવાનું વર્ણન કરી રહ્યા છો તે બરાબર ક્યાં છે, અને શું તે તમારા હાથ અથવા જડબા સુધી ફેલાય છે?',
+       'દુખાવો છાતીની વચ્ચે છે. ડાબા હાથમાં પણ થોડો દુખાવો છે, ખાસ કરીને કોણી પાસે.'],
+      ['આ દુખાવો કેટલા સમયથી છે, અને તે અચાનક આવ્યો કે ધીમે ધીમે?',
+       'લગભગ બે કલાકથી. સીડી ચઢતી વખતે ખૂબ અચાનક આવ્યો.'],
+      ['તમને શ્વાસ લેવામાં તકલીફ અથવા પરસેવો થાય છે, અને હૃદય રોગનો પારિવારિક ઇતિહાસ છે?',
+       'હા, થોડી શ્વાસ લેવામાં તકલીફ છે. મારા પિતાને હૃદય રોગ હતો, અને મને ઉચ્ચ રક્તચાપ છે.']
+    ],
+    'pa-IN': [
+      ['ਤੁਸੀਂ ਜਿਸ ਛਾਤੀ ਦੇ ਦਰਦ ਬਾਰੇ ਦੱਸ ਰਹੇ ਹੋ ਉਹ ਬਿਲਕੁਲ ਕਿੱਥੇ ਹੈ, ਅਤੇ ਕੀ ਇਹ ਤੁਹਾਡੀ ਬਾਂਹ ਜਾਂ ਜਬਾੜੇ ਤੱਕ ਫੈਲਦਾ ਹੈ?',
+       'ਦਰਦ ਛਾਤੀ ਦੇ ਵਿਚਕਾਰ ਹੈ। ਖੱਬੀ ਬਾਂਹ ਵਿੱਚ ਵੀ ਥੋੜਾ ਦਰਦ ਹੈ, ਖਾਸ ਕਰਕੇ ਕੂਹਣੀ ਕੋਲ।'],
+      ['ਇਹ ਦਰਦ ਕਿੰਨੇ ਸਮੇਂ ਤੋਂ ਹੈ, ਅਤੇ ਕੀ ਇਹ ਅਚਾਨਕ ਆਇਆ ਜਾਂ ਹੌਲੀ ਹੌਲੀ?',
+       'ਲਗਭਗ ਦੋ ਘੰਟੇ ਤੋਂ। ਪੌੜੀਆਂ ਚੜ੍ਹਦੇ ਸਮੇਂ ਬਹੁਤ ਅਚਾਨਕ ਆਇਆ।'],
+      ['ਕੀ ਤੁਹਾਨੂੰ ਸਾਹ ਲੈਣ ਵਿੱਚ ਮੁਸ਼ਕਲ ਜਾਂ ਪਸੀਨਾ ਆ ਰਿਹਾ ਹੈ, ਅਤੇ ਕੀ ਦਿਲ ਦੀ ਬਿਮਾਰੀ ਦਾ ਪਰਿਵਾਰਕ ਇਤਿਹਾਸ ਹੈ?',
+       'ਹਾਂ, ਥੋੜੀ ਸਾਹ ਲੈਣ ਵਿੱਚ ਮੁਸ਼ਕਲ ਹੈ। ਮੇਰੇ ਪਿਤਾ ਜੀ ਨੂੰ ਦਿਲ ਦੀ ਬਿਮਾਰੀ ਸੀ, ਅਤੇ ਮੈਨੂੰ ਹਾਈ ਬਲੱਡ ਪ੍ਰੈਸ਼ਰ ਹੈ।']
+    ],
+    'en-IN': [
+      ['Where exactly is the chest pain you are describing, and does it spread to your arm or jaw?',
+       'The pain is in the centre of the chest. There is also some pain in the left arm, particularly around the elbow.'],
+      ['How long have you had this pain, and did it come on suddenly or build up gradually?',
+       'About two hours now. It came on very suddenly — while I was climbing stairs.'],
+      ['Are you experiencing any shortness of breath or sweating, and do you have any history of heart disease?',
+       'Yes, there is some shortness of breath. My father had heart disease, and I have high blood pressure.']
+    ]
+  };
+
+  function renderDemo(lang){
+    var demo = document.getElementById('bilingualDemo');
+    if(!demo) return;
+    var turns = CONVOS[lang];
+    var isEn = lang === 'en-IN';
+    var html = '<div class="bd-header">Live session &mdash; <span>' + NAMES[lang] + ' (' + lang + ')</span> &mdash; Sarvam bulbul:v2 · voice: ' + VOICES[lang] + '</div>';
+    for(var i=0;i<turns.length;i++){
+      var doctorFlow = isEn ? 'en-IN (no translation)' : 'LLM → en-IN → ' + lang;
+      var patientFlow = isEn ? 'en-IN (no translation)' : lang + ' → en-IN → LLM';
+      html += '<div class="bd-turn doctor"><div class="bd-role">Doctor <div class="bd-lang">' + doctorFlow + '</div></div>';
+      html += '<div class="bd-primary">' + turns[i][0] + '</div>';
+      if(!isEn) html += '<div class="bd-translation">' + TURNS_EN[i][0] + '</div>';
+      html += '</div>';
+      html += '<div class="bd-turn patient"><div class="bd-role">Patient <div class="bd-lang">' + patientFlow + '</div></div>';
+      html += '<div class="bd-primary">' + turns[i][1] + '</div>';
+      if(!isEn) html += '<div class="bd-translation">' + TURNS_EN[i][1] + '</div>';
+      html += '</div>';
+    }
+    demo.innerHTML = html;
+  }
+
+  var sel = document.getElementById('demoLangSelect');
+  if(sel){
+    renderDemo(sel.value);
+    sel.addEventListener('change', function(){ renderDemo(this.value); });
+  }
 })();
 </script>
