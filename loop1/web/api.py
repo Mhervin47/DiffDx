@@ -42,7 +42,7 @@ import httpx
 
 from fastapi import FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from pydantic import BaseModel
@@ -198,6 +198,7 @@ _CASES_DIR = _repo_root / "test_cases"
 
 class StartRequest(BaseModel):
     case_id: str
+    session_language: str = "en-IN"
 
 
 class SymptomIn(BaseModel):
@@ -225,6 +226,7 @@ class StartCustomRequest(BaseModel):
     symptoms: list[SymptomIn] = []
     history: HistoryIn = HistoryIn()
     free_notes: str = ""
+    session_language: str = "en-IN"
 
 
 class TurnRequest(BaseModel):
@@ -327,12 +329,14 @@ class PrescriptionItem(BaseModel):
     route: str = "oral"
     frequency: str
     duration: str
+    meal_timing: str = ""
     notes: str = ""
     prescribed_at: str
 
 
 class PrescriptionsRequest(BaseModel):
     prescriptions: list[PrescriptionItem]
+    force_new_batch: bool = False
 
 
 class FollowUpRequest(BaseModel):
@@ -530,7 +534,84 @@ def _db_save(collection: str, data) -> None:
             (collection, payload),
         )
         db.commit()
-_TOKENS: dict[str, str] = {}  # token → user_id, in-memory; repopulated on startup
+_TOKENS: dict[str, str] = {}       # token → user_id, in-memory; repopulated on startup
+_USER_CACHE: dict[str, dict] = {}  # user_id → user data, invalidated on every _save_users
+
+# ── Sarvam AI helpers ──────────────────────────────────────────────────────────
+_SARVAM_KEY = os.environ.get("SARVAM_API_KEY", "")
+_SARVAM_TRANSLATE_URL = "https://api.sarvam.ai/translate"
+_SARVAM_TTS_URL       = "https://api.sarvam.ai/text-to-speech"
+
+# BCP-47 → Sarvam language code mapping
+_SARVAM_LANG = {
+    "hi-IN": "hi-IN", "ta-IN": "ta-IN", "te-IN": "te-IN",
+    "kn-IN": "kn-IN", "ml-IN": "ml-IN", "bn-IN": "bn-IN",
+    "mr-IN": "mr-IN", "gu-IN": "gu-IN", "pa-IN": "pa-IN",
+    "en-IN": "en-IN",
+}
+
+# bulbul:v2 compatible speakers only: anushka, abhilash, manisha, vidya, arya, karun, hitesh
+_SARVAM_SPEAKER = {
+    "hi-IN": "anushka", "ta-IN": "anushka", "te-IN": "manisha",
+    "kn-IN": "vidya",   "ml-IN": "arya",    "bn-IN": "manisha",
+    "mr-IN": "vidya",   "gu-IN": "anushka", "pa-IN": "anushka",
+    "en-IN": "anushka",
+}
+
+
+def _sarvam_translate(text: str, source_lang: str, target_lang: str) -> str:
+    """Translate text via Sarvam API. Returns original text on any failure."""
+    if not _SARVAM_KEY or not text.strip():
+        return text
+    try:
+        import httpx
+        resp = httpx.post(
+            _SARVAM_TRANSLATE_URL,
+            headers={"api-subscription-key": _SARVAM_KEY, "Content-Type": "application/json"},
+            json={
+                "input": text,
+                "source_language_code": _SARVAM_LANG.get(source_lang, "en-IN"),
+                "target_language_code": _SARVAM_LANG.get(target_lang, "hi-IN"),
+                "speaker_gender": "Female",
+                "mode": "formal",
+                "model": "mayura:v1",
+                "enable_preprocessing": True,
+            },
+            timeout=15.0,
+        )
+        if resp.status_code == 200:
+            return resp.json().get("translated_text", text)
+        _log.warning("Sarvam translate %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:
+        _log.warning("Sarvam translate failed: %s", exc)
+    return text
+
+
+def _sarvam_tts_b64(text: str, lang: str) -> str | None:
+    """Call Sarvam TTS and return base64 WAV audio, or None on failure."""
+    if not _SARVAM_KEY or not text.strip():
+        return None
+    try:
+        import httpx
+        resp = httpx.post(
+            _SARVAM_TTS_URL,
+            headers={"api-subscription-key": _SARVAM_KEY, "Content-Type": "application/json"},
+            json={
+                "inputs": [text[:500]],
+                "target_language_code": _SARVAM_LANG.get(lang, "hi-IN"),
+                "speaker": _SARVAM_SPEAKER.get(lang, "anushka"),
+                "model": "bulbul:v2",
+                "enable_preprocessing": True,
+            },
+            timeout=20.0,
+        )
+        if resp.status_code == 200:
+            audios = resp.json().get("audios", [])
+            return audios[0] if audios else None
+        _log.warning("Sarvam TTS %s: %s", resp.status_code, resp.text[:200])
+    except Exception as exc:
+        _log.warning("Sarvam TTS failed: %s", exc)
+    return None
 
 
 def _load_users() -> dict:
@@ -539,6 +620,7 @@ def _load_users() -> dict:
 
 def _save_users(users: dict) -> None:
     _db_save("users", users)
+    _USER_CACHE.clear()  # invalidate on every write
 
 
 def _hash_password(password: str) -> str:
@@ -579,12 +661,18 @@ def _get_user_from_request(request: Request) -> dict | None:
         for uid, u in users.items():
             if token in u.get("tokens", []):
                 _TOKENS[token] = uid
+                _USER_CACHE[uid] = u
                 user_id = uid
                 break
-    if not user_id:
-        return None
-    users = _load_users()
-    return users.get(user_id)
+        if not user_id:
+            return None
+        return users.get(user_id)
+    if user_id in _USER_CACHE:
+        return _USER_CACHE[user_id]
+    user = _load_users().get(user_id)
+    if user:
+        _USER_CACHE[user_id] = user
+    return user
 
 
 def _add_session_to_user(user_id: str, session_meta: dict) -> None:
@@ -765,9 +853,11 @@ def _load_report_from_disk(session_id: str) -> dict | None:
                     "turn_index": tr.get("turn_index", i),
                     "question": tr.get("doctor_output", {}).get("chosen_question", ""),
                     "rationale": tr.get("doctor_output", {}).get("rationale", ""),
+                    "biggest_uncertainty": tr.get("doctor_output", {}).get("biggest_uncertainty", ""),
                     "patient_answer": tr.get("patient_answer", ""),
                     "differential": tr.get("doctor_output", {}).get("current_differential", []),
                     "confidence": tr.get("doctor_output", {}).get("confidence_to_stop", 0),
+                    "doctor_output": tr.get("doctor_output", {}),
                 }
                 for i, tr in enumerate(rec.get("turn_history", []))
             ],
@@ -816,6 +906,34 @@ def _profile_summary(profile: PatientProfile) -> dict:
 # Routes
 # ---------------------------------------------------------------------------
 
+# HTML page routes — serve clean URLs without .html extension
+_html = lambda name: FileResponse(
+    _static_dir / name,
+    media_type="text/html",
+    headers={"Cache-Control": "no-store"},
+)
+
+@app.get("/patient-info")
+async def page_patient_info(): return _html("patient-info.html")
+
+@app.get("/history")
+async def page_history(): return _html("history.html")
+
+@app.get("/login")
+async def page_login(): return _html("login.html")
+
+@app.get("/doctor-portal")
+async def page_doctor_portal(): return _html("doctor-portal.html")
+
+@app.get("/doctor-portal.html")
+async def page_doctor_portal_html(): return _html("doctor-portal.html")
+
+@app.get("/session/{session_id}")
+async def page_session(session_id: str): return _html("session.html")
+
+@app.get("/report/{session_id}")
+async def page_report(session_id: str): return _html("report.html")
+
 @app.get("/api/cases")
 async def list_cases():
     """Return metadata for all available test cases."""
@@ -844,6 +962,20 @@ async def get_case(case_id: str):
     return {"case_id": case_id, **_profile_summary(profile)}
 
 
+@app.post("/api/tts")
+async def tts_proxy(request: Request):
+    """Translate English text to target language, then synthesise via Sarvam TTS."""
+    body = await request.json()
+    text = body.get("text", "")
+    lang = body.get("lang", "hi-IN")
+    # Translate English → target language first
+    translated = _sarvam_translate(text, "en-IN", lang) if lang != "en-IN" else text
+    audio_b64  = _sarvam_tts_b64(translated, lang)
+    if not audio_b64:
+        raise HTTPException(status_code=503, detail="TTS unavailable")
+    return {"audio_b64": audio_b64, "translated_text": translated}
+
+
 @app.post("/api/session/start")
 def start_session(req: StartRequest):
     """
@@ -854,6 +986,7 @@ def start_session(req: StartRequest):
     profile.session_id = str(uuid.uuid4())
 
     session = APISession(profile, max_turns=6)
+    session.session_language = req.session_language
     try:
         turn_result = session.initialize()
     except Exception as exc:
@@ -865,6 +998,7 @@ def start_session(req: StartRequest):
     return {
         "session_id": session.session_id,
         "case_id": req.case_id,
+        "session_language": req.session_language,
         **_profile_summary(profile),
         **turn_result,
     }
@@ -939,7 +1073,44 @@ async def get_user_sessions(request: Request):
     user = _get_user_from_request(request)
     if not user:
         raise HTTPException(status_code=401, detail="Not authenticated.")
-    sessions = list(reversed(user.get("sessions", [])))
+    # Backfill: pick up sessions that were started anonymously but later linked
+    # to the user via appointment booking.
+    users = _load_users()
+    uid = user["id"]
+    existing_ids = {s.get("session_id") for s in users[uid].get("sessions", [])}
+    appointments = _load_appointments()
+    added = False
+    for appt in appointments.values():
+        sid = appt.get("session_id", "")
+        if not sid or appt.get("patient_user_id") != uid or sid in existing_ids:
+            continue
+        report = _load_session_report_from_db(sid)
+        chief_complaint = ""
+        started_at = appt.get("booked_at", datetime.now(timezone.utc).isoformat())
+        final_dx = None
+        ended_at = None
+        status = "active"
+        if report:
+            chief_complaint = report.get("patient", {}).get("chief_complaint", "")
+            started_at = report.get("started_at", started_at)
+            final_dx = (report.get("primary_diagnosis")
+                        or (report.get("final_differential") or [{}])[0].get("dx"))
+            ended_at = report.get("ended_at")
+            status = "complete" if report.get("termination_reason") else "active"
+        _add_session_to_user(uid, {
+            "session_id": sid,
+            "chief_complaint": chief_complaint,
+            "started_at": started_at,
+            "status": status,
+            "primary_diagnosis": final_dx,
+            "ended_at": ended_at,
+        })
+        existing_ids.add(sid)
+        added = True
+    if added:
+        # Re-read the updated user record
+        users = _load_users()
+    sessions = list(reversed(users[uid].get("sessions", [])))
     return {"sessions": sessions}
 
 
@@ -1106,6 +1277,7 @@ def start_custom_session(req: StartCustomRequest, request: Request):
     )
 
     session = APISession(profile, max_turns=6)
+    session.session_language = req.session_language
     try:
         turn_result = session.initialize()
     except Exception as exc:
@@ -1127,6 +1299,7 @@ def start_custom_session(req: StartCustomRequest, request: Request):
 
     return {
         "session_id": session.session_id,
+        "session_language": req.session_language,
         **_profile_summary(profile),
         **turn_result,
     }
@@ -1144,12 +1317,19 @@ def submit_turn(session_id: str, req: TurnRequest):
     if session.complete:
         raise HTTPException(status_code=400, detail="Session already complete.")
 
+    lang = getattr(session, "session_language", "en-IN")
+    patient_answer = req.patient_answer
+    if lang and lang != "en-IN":
+        # Translate patient answer to English so LLM always sees English
+        patient_answer = _sarvam_translate(patient_answer, lang, "en-IN")
+
     try:
-        result = session.submit_answer(req.patient_answer)
+        result = session.submit_answer(patient_answer)
     except Exception as exc:
         _log.error("Turn failed: %s", exc, exc_info=True)
         raise HTTPException(status_code=500, detail=str(exc))
 
+    # Return English question — frontend fetches translation+TTS in parallel
     return result
 
 
@@ -1235,6 +1415,11 @@ def get_routing(session_id: str):
     doctors = []
     if not is_emergency:
         all_doctors = _load_doctors()
+        blocked_data = _load_blocked_dates()
+        now_prefix = datetime.now(timezone.utc).isoformat()[:16]
+        def _future_slots_routing(doc_id, slots):
+            blocked = {d["date"] for d in blocked_data.get(doc_id, [])}
+            return sorted(s for s in slots if s >= now_prefix and s[:10] not in blocked)
         doctors = [
             {
                 "id": d["id"],
@@ -1242,7 +1427,7 @@ def get_routing(session_id: str):
                 "hospital": d["hospital"],
                 "rating": d["rating"],
                 "avatar_initials": d["avatar_initials"],
-                "available_slots": d["available_slots"],
+                "available_slots": _future_slots_routing(d.get("id", ""), d.get("available_slots", [])),
             }
             for d in all_doctors
             if d["specialty"] == primary.specialty
@@ -1484,6 +1669,7 @@ async def book_appointment(session_id: str, req: BookRequest, request: Request):
         "doctor_name": doctor["name"],
         "specialty": doctor["specialty"],
         "slot": req.slot,
+        "status": "upcoming",
         "booked_at": datetime.now(timezone.utc).isoformat(),
         "primary_diagnosis": primary_diagnosis,
         "urgency": urgency,
@@ -1498,7 +1684,20 @@ async def book_appointment(session_id: str, req: BookRequest, request: Request):
     mem_bucket = _session_test_uploads.get(session_id, {})
     pending_uploads = {**disk_bucket, **mem_bucket}  # mem wins on key conflict
     if pending_uploads:
-        appt["patient_files"] = list(pending_uploads.values())
+        # Migrate file data from session key to appointment key; strip data_b64 inline
+        for tid, rec in pending_uploads.items():
+            fname = rec.get("filename", "")
+            if fname:
+                file_data = (
+                    _load_file_data(f"session:{session_id}", fname)
+                    or rec.get("data_b64", "")
+                )
+                if file_data:
+                    _save_file_data(appt_id, fname, file_data)
+        appt["patient_files"] = [
+            {k: v for k, v in rec.items() if k != "data_b64"}
+            for rec in pending_uploads.values()
+        ]
         appt["suggested_test_uploads"] = {
             tid: {"filename": rec["filename"], "uploaded_at": rec["uploaded_at"],
                   "test_name": rec.get("suggested_test_name") or tid}
@@ -1519,6 +1718,35 @@ async def book_appointment(session_id: str, req: BookRequest, request: Request):
     # Remove the booked slot from the doctor's available slots
     doctor["available_slots"] = [s for s in doctor["available_slots"] if s != req.slot]
     _save_doctors(all_doctors)
+
+    # Ensure the session appears in the user's session history.
+    # If the session was started anonymously (not logged in), it won't be in the
+    # user's list yet even though the appointment links to it. Add it now.
+    if session_id and user:
+        users = _load_users()
+        uid = user["id"]
+        existing_ids = {s.get("session_id") for s in users[uid].get("sessions", [])}
+        if session_id not in existing_ids:
+            report = _load_session_report_from_db(session_id)
+            chief_complaint = ""
+            started_at = appt.get("booked_at", datetime.now(timezone.utc).isoformat())
+            final_dx = None
+            ended_at = None
+            status = "active"
+            if report:
+                chief_complaint = report.get("patient", {}).get("chief_complaint", "")
+                started_at = report.get("started_at", started_at)
+                final_dx = report.get("primary_diagnosis") or report.get("final_differential", [{}])[0].get("dx") if report.get("final_differential") else None
+                ended_at = report.get("ended_at")
+                status = "complete" if report.get("termination_reason") else "active"
+            _add_session_to_user(uid, {
+                "session_id": session_id,
+                "chief_complaint": chief_complaint,
+                "started_at": started_at,
+                "status": status,
+                "primary_diagnosis": final_dx,
+                "ended_at": ended_at,
+            })
 
     return {"appointment_id": appt_id, "confirmed": True, "doctor_name": doctor["name"], "slot": req.slot}
 
@@ -1940,7 +2168,11 @@ async def doctor_download_patient_file(appt_id: str, request: Request, filename:
     rec = next((f for f in appt.get("patient_files", []) if f.get("filename") == filename), None)
     if rec is None:
         raise HTTPException(status_code=404, detail="File not found.")
-    raw_b64 = _load_file_data(appt_id, filename) or rec.get("data_b64", "")
+    raw_b64 = (
+        _load_file_data(appt_id, filename)
+        or _load_file_data(f"session:{appt.get('session_id', '')}", filename)
+        or rec.get("data_b64", "")
+    )
     if not raw_b64:
         raise HTTPException(status_code=404, detail="File data not found.")
     data = base64.b64decode(raw_b64)
@@ -1976,10 +2208,31 @@ async def update_prescriptions(appt_id: str, req: PrescriptionsRequest, request:
         raise HTTPException(status_code=404, detail="Appointment not found.")
     if appt.get("doctor_id") != doctor.get("doctor_id"):
         raise HTTPException(status_code=403, detail="Not your appointment.")
-    appt["prescriptions"] = [p.model_dump() for p in req.prescriptions]
-    appt["prescriptions_updated_at"] = datetime.now(timezone.utc).isoformat()
+    now_iso = datetime.now(timezone.utc).isoformat()
+    new_rx = [p.model_dump() for p in req.prescriptions]
+    # Maintain history: update last batch in-place if saved < 10 min ago AND same IDs, else append
+    history = appt.get("prescription_history", [])
+    def _rx_ids(batch): return {p.get("id") for p in batch.get("prescriptions", [])}
+    new_ids = {p.id for p in req.prescriptions}
+    if not req.force_new_batch and history:
+        last_saved = history[-1].get("saved_at", "")
+        try:
+            age_s = (datetime.fromisoformat(now_iso) - datetime.fromisoformat(last_saved)).total_seconds()
+        except Exception:
+            age_s = 999
+        same_items = _rx_ids(history[-1]) == new_ids
+        if age_s < 600 and same_items:
+            history[-1]["prescriptions"] = new_rx
+            history[-1]["saved_at"] = now_iso
+        else:
+            history.append({"saved_at": now_iso, "prescriptions": new_rx})
+    else:
+        history.append({"saved_at": now_iso, "prescriptions": new_rx})
+    appt["prescription_history"] = history
+    appt["prescriptions"] = new_rx  # keep for backward compat
+    appt["prescriptions_updated_at"] = now_iso
     _save_appointments(appointments)
-    return {"saved": True, "count": len(req.prescriptions)}
+    return {"saved": True, "count": len(new_rx)}
 
 
 @app.post("/api/doctor/appointments/{appt_id}/followup")
@@ -2603,11 +2856,11 @@ async def upload_suggested_test_file(
     if len(raw) > _MAX_FILE_BYTES:
         raise HTTPException(status_code=413, detail="File too large (max 10 MB).")
 
+    data_b64 = base64.b64encode(raw).decode("ascii")
     record = {
         "filename": file.filename,
         "size_bytes": len(raw),
         "uploaded_at": datetime.now(timezone.utc).isoformat(),
-        "data_b64": base64.b64encode(raw).decode("ascii"),
         "mime_type": file.content_type or "application/octet-stream",
         "suggested_test_id": suggested_test_id or None,
         "suggested_test_name": suggested_test_name or None,
@@ -2615,7 +2868,10 @@ async def upload_suggested_test_file(
         "user_id": user["id"],
     }
 
-    # Store in memory bucket keyed by session and persist to disk
+    # Store binary data separately (not inline in appointments blob)
+    _save_file_data(f"session:{session_id}", file.filename, data_b64)
+
+    # Store metadata-only record in session uploads bucket
     bucket = _session_test_uploads.setdefault(session_id, {})
     tid = suggested_test_id or file.filename
     bucket[tid] = record
@@ -2625,6 +2881,8 @@ async def upload_suggested_test_file(
     appointments = _load_appointments()
     for appt in appointments.values():
         if appt.get("session_id") == session_id and appt.get("patient_user_id") == user["id"]:
+            appt_id = appt["appointment_id"]
+            _save_file_data(appt_id, file.filename, data_b64)
             files = appt.setdefault("patient_files", [])
             files[:] = [f for f in files if f.get("filename") != file.filename]
             files.append(record)
@@ -2768,7 +3026,11 @@ async def download_patient_file(appt_id: str, filename: str, request: Request):
     rec = next((f for f in appt.get("patient_files", []) if f.get("filename") == filename), None)
     if rec is None:
         raise HTTPException(status_code=404, detail="File not found.")
-    raw_b64 = _load_file_data(appt_id, filename) or rec.get("data_b64", "")
+    raw_b64 = (
+        _load_file_data(appt_id, filename)
+        or _load_file_data(f"session:{appt.get('session_id', '')}", filename)
+        or rec.get("data_b64", "")
+    )
     if not raw_b64:
         raise HTTPException(status_code=404, detail="File data not found.")
     data = base64.b64decode(raw_b64)
@@ -2821,7 +3083,7 @@ async def cancel_patient_appointment(appt_id: str, request: Request):
 
 @app.delete("/api/patient/appointments/{appt_id}/dismiss")
 async def patient_dismiss_appointment(appt_id: str, request: Request):
-    """Permanently remove a cancelled appointment from the patient's view."""
+    """Permanently remove a cancelled or missed appointment from the patient's view."""
     user = _get_user_from_request(request)
     appointments = _load_appointments()
     appt = appointments.get(appt_id)
@@ -2829,8 +3091,12 @@ async def patient_dismiss_appointment(appt_id: str, request: Request):
         raise HTTPException(status_code=404, detail="Appointment not found.")
     if appt.get("patient_user_id") != user.get("id"):
         raise HTTPException(status_code=403, detail="Not your appointment.")
-    if appt.get("status") != "cancelled":
-        raise HTTPException(status_code=400, detail="Only cancelled appointments can be removed.")
+    now_iso = datetime.now(timezone.utc).isoformat()[:16]
+    status = appt.get("status", "")
+    slot = appt.get("slot", "")
+    is_missed = status == "upcoming" and slot < now_iso
+    if status != "cancelled" and not is_missed:
+        raise HTTPException(status_code=400, detail="Only cancelled or missed appointments can be deleted.")
     del appointments[appt_id]
     _save_appointments(appointments)
     return {"dismissed": True}
@@ -2881,7 +3147,7 @@ async def patient_reschedule_appointment(appt_id: str, req: PatientRescheduleReq
         raise HTTPException(status_code=404, detail="Appointment not found.")
     if appt.get("patient_user_id") != user.get("id"):
         raise HTTPException(status_code=403, detail="Not your appointment.")
-    if appt.get("status") not in ("upcoming", "confirmed"):
+    if appt.get("status") not in (None, "upcoming", "confirmed"):
         raise HTTPException(status_code=400, detail="Only upcoming appointments can be rescheduled.")
 
     doctors = _load_doctors()

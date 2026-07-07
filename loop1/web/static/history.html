@@ -1,426 +1,661 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DiffDx — Medical History</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Medical History — DiffDx</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/auth.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800;900&family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
   <style>
-    .form-section {
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 16px;
-    }
-    .form-section-title {
-      font-size: 13px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: var(--primary);
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 18px; padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .form-group { display: flex; flex-direction: column; gap: 8px; }
-    .form-label { font-size: 12px; font-weight: 600; color: var(--text-dim); letter-spacing: .04em; }
-    .form-input, .form-textarea {
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-      font-family: var(--font); font-size: 14px;
-      padding: 10px 14px; outline: none;
-      transition: border-color .15s; width: 100%;
-    }
-    .form-input:focus, .form-textarea:focus { border-color: var(--primary); }
-    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-    .form-textarea { resize: vertical; min-height: 80px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #080810; color: #f1f5f9; font-family: 'Noto Sans', sans-serif; overflow-x: hidden; }
 
-    /* Tag input */
-    .tag-input-wrap {
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 8px;
-      display: flex; flex-wrap: wrap; gap: 6px;
-      cursor: text; transition: border-color .15s; min-height: 44px;
-    }
-    .tag-input-wrap:focus-within { border-color: var(--primary); }
-    .tag-chip {
-      display: inline-flex; align-items: center; gap: 5px;
-      background: rgba(0,180,216,.15); border: 1px solid rgba(0,180,216,.3);
-      border-radius: 99px; padding: 3px 10px 3px 12px;
-      font-size: 13px; font-weight: 500; color: var(--primary);
-    }
-    .tag-chip-remove {
-      background: none; border: none; cursor: pointer;
-      color: var(--primary); line-height: 1; padding: 0; font-size: 14px;
-      opacity: .7; transition: opacity .1s;
-    }
-    .tag-chip-remove:hover { opacity: 1; }
-    .tag-real-input {
-      background: none; border: none; outline: none;
-      color: var(--text); font-family: var(--font); font-size: 14px;
-      min-width: 120px; flex: 1; padding: 3px 2px;
-    }
-    .tag-real-input::placeholder { color: var(--text-muted); }
-    .tag-hint { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
-
-    .action-bar { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
-
-    /* Session start full-page loader */
-    #session-start-loader {
+    /* ── Loading overlay ── */
+    .loading-overlay {
       display: none;
-      position: fixed; inset: 0; z-index: 999;
-      background: var(--surface-1);
-      flex-direction: column; align-items: center; justify-content: center; gap: 0;
+      position: fixed; inset: 0; z-index: 9999;
+      background: #080810;
+      flex-direction: column; align-items: center; justify-content: center;
+      gap: 32px;
+      animation: fade-in .3s ease;
     }
-    #session-start-loader.active { display: flex; }
-    .ssl-icon {
-      width: 72px; height: 72px; margin-bottom: 28px;
-      border-radius: 50%;
-      background: radial-gradient(circle at 40% 40%, rgba(0,180,216,.15), transparent 70%);
+    .loading-overlay.active { display: flex; }
+    @keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+    /* Ambient glow behind the logo */
+    .lo-glow {
+      position: absolute; inset: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 60% 50% at 50% 40%, rgba(16,185,129,.12) 0%, transparent 65%),
+        radial-gradient(ellipse 40% 40% at 50% 60%, rgba(168,85,247,.08) 0%, transparent 60%);
+      animation: lo-breathe 3s ease-in-out infinite alternate;
+    }
+    @keyframes lo-breathe { from{opacity:.6} to{opacity:1} }
+
+    .lo-logo {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; gap: 12px;
+      font-family: 'Sora', sans-serif; font-size: 42px; font-weight: 900;
+      letter-spacing: -.05em;
+    }
+    .lo-logo svg {
+      filter: drop-shadow(0 0 18px rgba(16,185,129,.9));
+      animation: lo-pulse 2s ease-in-out infinite;
+    }
+    @keyframes lo-pulse {
+      0%,100% { filter: drop-shadow(0 0 18px rgba(16,185,129,.9)); }
+      50%      { filter: drop-shadow(0 0 32px rgba(16,185,129,1)) drop-shadow(0 0 60px rgba(16,185,129,.5)); }
+    }
+    .lo-logo-text {
+      background: linear-gradient(90deg, #10b981, #34d399, #a855f7, #10b981);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      animation: lo-flow 3s linear infinite;
+    }
+    @keyframes lo-flow { 0%{background-position:0%} 100%{background-position:300%} }
+
+    .lo-message {
+      position: relative; z-index: 1;
+      font-family: 'Sora', sans-serif; font-size: 16px; font-weight: 700;
+      color: #475569; letter-spacing: .02em;
+      animation: lo-blink 2s ease-in-out infinite;
+    }
+    @keyframes lo-blink { 0%,100%{opacity:.5} 50%{opacity:1} }
+
+    /* Progress bar */
+    .lo-bar-track {
+      position: relative; z-index: 1;
+      width: 280px; height: 3px;
+      background: rgba(255,255,255,.06); border-radius: 9999px; overflow: hidden;
+    }
+    .lo-bar-fill {
+      height: 100%; border-radius: 9999px;
+      background: linear-gradient(90deg, #059669, #10b981, #34d399, #a855f7);
+      background-size: 200% 100%;
+      animation: lo-bar 1.8s ease-in-out infinite, lo-bar-flow 2s linear infinite;
+      box-shadow: 0 0 12px rgba(16,185,129,.6);
+    }
+    @keyframes lo-bar {
+      0%   { width: 0%;   margin-left: 0; }
+      50%  { width: 70%;  margin-left: 15%; }
+      100% { width: 0%;   margin-left: 100%; }
+    }
+    @keyframes lo-bar-flow { 0%{background-position:0%} 100%{background-position:200%} }
+
+    /* Blobs */
+    .blob-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: .18; animation: drift 22s ease-in-out infinite; }
+    .blob-1 { width: 580px; height: 580px; background: radial-gradient(circle, #a855f7, transparent 70%); top: -160px; right: -100px; }
+    .blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, #10b981, transparent 70%); bottom: -140px; left: -80px; animation-delay: -9s; }
+    .blob-3 { width: 280px; height: 280px; background: radial-gradient(circle, #a855f7, transparent 70%); top: 55%; left: 35%; opacity: .08; animation-delay: -15s; }
+    @keyframes drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      40%      { transform: translate(24px,-18px) scale(1.05); }
+      70%      { transform: translate(-16px,16px) scale(.95); }
+    }
+
+    /* Background glow */
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 65% 50% at 85% 35%, rgba(168,85,247,.07) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 50% at 15% 65%, rgba(16,185,129,.06) 0%, transparent 60%);
+    }
+
+    /* Nav */
+    .nav-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,8,16,.88);
+      backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: 0 28px; height: 58px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .nav-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 9999px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      color: #94a3b8; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
+      text-decoration: none; flex-shrink: 0;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: all .22s;
+    }
+    .nav-back:hover {
+      color: #f1f5f9; border-color: rgba(168,85,247,.4);
+      background: rgba(168,85,247,.06);
+      box-shadow: 0 0 18px rgba(168,85,247,.18);
+    }
+    .nav-center-badge {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 8px 20px; border-radius: 9999px;
+      background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.18);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 0 28px rgba(16,185,129,.1);
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 800;
+      color: #f1f5f9; letter-spacing: -.01em;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .nav-center-badge svg { color: #10b981; filter: drop-shadow(0 0 7px rgba(16,185,129,.7)); }
+    .nav-center-badge .nb-accent { color: #10b981; }
+    #nav-auth { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+
+    /* Page header */
+    .page-header {
+      position: relative; z-index: 1;
+      padding: 52px 24px 40px; text-align: center;
+    }
+    .step-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 16px; border-radius: 9999px;
+      background: rgba(168,85,247,.08); border: 1px solid rgba(168,85,247,.22);
+      color: #c084fc; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      font-family: 'Sora', sans-serif; margin-bottom: 20px;
+    }
+    .step-dot { width: 6px; height: 6px; border-radius: 50%; background: #a855f7; box-shadow: 0 0 8px #a855f7; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.6)} }
+
+    .page-title {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(28px, 4.5vw, 52px);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.05; margin-bottom: 10px;
+    }
+    .page-title span {
+      background: linear-gradient(90deg, #a855f7, #c084fc, #10b981, #a855f7);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      animation: flow 5s linear infinite;
+    }
+    @keyframes flow { 0%{background-position:0%} 100%{background-position:300%} }
+
+    .page-sub { font-size: 15px; color: #475569; max-width: 420px; margin: 0 auto 32px; line-height: 1.6; }
+
+    /* Progress */
+    .progress-track {
       display: flex; align-items: center; justify-content: center;
-      animation: ssl-pulse 2s ease-in-out infinite;
+      font-size: 13px; font-family: 'Sora', sans-serif; font-weight: 700;
     }
-    @keyframes ssl-pulse {
-      0%,100% { transform: scale(1); opacity: .9; }
-      50%      { transform: scale(1.1); opacity: 1; }
+    .pr-node { display: flex; align-items: center; gap: 8px; }
+    .pr-node.done  { color: #34d399; }
+    .pr-node.active { color: #a855f7; }
+    .pr-node.inactive { color: #334155; }
+    .pr-circle {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; flex-shrink: 0;
     }
-    .ssl-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-    .ssl-sub   { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
-    .ssl-tip {
-      font-size: 13px; color: var(--text-muted); font-style: italic;
-      max-width: 360px; text-align: center; line-height: 1.6;
-      min-height: 44px;
-      animation: ssl-fade .6s ease;
+    .pr-node.done .pr-circle    { background: linear-gradient(135deg,#059669,#34d399); color: #021a12; box-shadow: 0 0 14px rgba(52,211,153,.4); }
+    .pr-node.active .pr-circle  { background: linear-gradient(135deg,#7c3aed,#a855f7); color: #fff; box-shadow: 0 0 16px rgba(168,85,247,.55); }
+    .pr-node.inactive .pr-circle{ background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1); color: #334155; }
+    .pr-line { width: 48px; height: 2px; margin: 0 10px; background: rgba(255,255,255,.08); border-radius: 2px; }
+
+    /* Content */
+    .page-body {
+      position: relative; z-index: 1;
+      max-width: 900px; margin: 0 auto;
+      padding: 0 24px 100px;
+      display: flex; flex-direction: column; gap: 24px;
     }
-    @keyframes ssl-fade { from { opacity: 0; } to { opacity: 1; } }
-    .ssl-bar-track {
-      width: 200px; height: 3px; background: var(--surface-4);
-      border-radius: 99px; overflow: hidden; margin-top: 28px;
+
+    /* Cards */
+    .section-card {
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px; padding: 22px 24px;
+      transition: border-color .25s, box-shadow .25s;
     }
-    .ssl-bar-fill {
-      height: 100%; border-radius: 99px;
-      background: linear-gradient(90deg, var(--primary-dim), var(--primary));
-      width: 0%; transition: width .5s ease;
+    .section-card:focus-within {
+      border-color: rgba(168,85,247,.28);
+      box-shadow: 0 0 0 1px rgba(168,85,247,.1), 0 12px 40px rgba(0,0,0,.35);
     }
-    .ssl-dots { display: flex; gap: 7px; margin-top: 20px; }
-    .ssl-dots span {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--primary); opacity: .25;
-      animation: dot-pulse .9s ease-in-out infinite;
+
+    .sec-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .sec-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
     }
-    .ssl-dots span:nth-child(2) { animation-delay: .18s; }
-    .ssl-dots span:nth-child(3) { animation-delay: .36s; }
-    @keyframes dot-pulse {
-      0%,80%,100% { opacity: .2; transform: scale(.8); }
-      40%          { opacity: 1; transform: scale(1.15); }
+    .si-violet { background: rgba(168,85,247,.1);  border: 1px solid rgba(168,85,247,.22); }
+    .si-teal   { background: rgba(16,185,129,.1);  border: 1px solid rgba(16,185,129,.22); }
+    .si-amber  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2);  }
+    .si-sky    { background: rgba(56,189,248,.08); border: 1px solid rgba(56,189,248,.2);  }
+    .sec-title { font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 800; color: #f1f5f9; letter-spacing: -.02em; margin-bottom: 3px; }
+    .sec-sub   { font-size: 13px; color: #475569; }
+
+    /* Inputs */
+    .fi {
+      font-family: 'Noto Sans', sans-serif; font-size: 14px; color: #f1f5f9;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px; padding: 12px 15px; outline: none; width: 100%;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .fi:focus {
+      border-color: rgba(168,85,247,.5);
+      box-shadow: 0 0 0 3px rgba(168,85,247,.1), 0 0 20px rgba(168,85,247,.08);
+      background: rgba(168,85,247,.03);
+    }
+    .fi::placeholder { color: #334155; }
+
+    /* Adder row */
+    .adder-row { display: flex; gap: 10px; }
+    .adder-row .fi { flex: 1; }
+    .btn-add {
+      padding: 12px 22px; border-radius: 9999px;
+      font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 800;
+      white-space: nowrap; flex-shrink: 0; cursor: pointer;
+      background: rgba(168,85,247,.1); color: #a855f7;
+      border: 1px solid rgba(168,85,247,.25);
+      transition: all .22s cubic-bezier(.16,1,.3,1);
+    }
+    .btn-add:hover {
+      background: rgba(168,85,247,.18); border-color: rgba(168,85,247,.5);
+      box-shadow: 0 0 20px rgba(168,85,247,.2); transform: translateY(-1px);
+    }
+
+    /* Chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; min-height: 10px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9999px;
+      background: rgba(168,85,247,.08); border: 1px solid rgba(168,85,247,.22);
+      font-size: 12px; font-weight: 600; color: #e9d5ff;
+      font-family: 'Noto Sans', sans-serif;
+      animation: chip-in .2s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes chip-in { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+    .chip-x {
+      background: none; border: none; cursor: pointer; color: #c084fc;
+      font-size: 16px; line-height: 1; padding: 0; display: flex; align-items: center;
+      transition: color .15s;
+    }
+    .chip-x:hover { color: #f87171; }
+
+    /* Language dropdown */
+    .lang-select-wrap {
+      position: relative; display: inline-flex; align-items: center;
+    }
+    .lang-select-wrap .chevron {
+      position: absolute; right: 14px; pointer-events: none;
+      color: #475569; transition: color .2s;
+    }
+    .lang-select-wrap:has(.lang-select:focus) .chevron { color: #a855f7; }
+    .lang-select {
+      appearance: none; -webkit-appearance: none;
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 700;
+      color: #f1f5f9; letter-spacing: -.01em;
+      background: rgba(255,255,255,.05);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 9999px; padding: 11px 44px 11px 20px;
+      outline: none; cursor: pointer; min-width: 200px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.3);
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .lang-select option { background: #0f0f1e; color: #f1f5f9; font-family: 'Noto Sans', sans-serif; }
+    .lang-select:hover {
+      border-color: rgba(168,85,247,.35);
+      background: rgba(168,85,247,.05);
+    }
+    .lang-select:focus {
+      border-color: rgba(168,85,247,.6);
+      box-shadow: 0 0 0 3px rgba(168,85,247,.12), 0 0 24px rgba(168,85,247,.12);
+      background: rgba(168,85,247,.06);
+    }
+
+    /* Notes */
+    .fi-area {
+      font-family: 'Noto Sans', sans-serif; font-size: 14px; line-height: 1.75; color: #f1f5f9;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px; padding: 14px 16px; resize: vertical; min-height: 90px;
+      outline: none; width: 100%;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .fi-area:focus {
+      border-color: rgba(168,85,247,.5);
+      box-shadow: 0 0 0 3px rgba(168,85,247,.1), 0 0 20px rgba(168,85,247,.08);
+      background: rgba(168,85,247,.03);
+    }
+    .fi-area::placeholder { color: #334155; }
+
+    /* CTA bar */
+    .cta-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0 0; position: relative; z-index: 1;
+    }
+    .cta-hint { font-size: 12px; color: #334155; font-family: 'Noto Sans', sans-serif; }
+
+    .btn-start {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 15px 36px; border-radius: 9999px;
+      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 800;
+      letter-spacing: -.01em; cursor: pointer; border: none;
+      background: linear-gradient(135deg, #7c3aed 0%, #a855f7 60%, #c084fc 100%);
+      color: #f5f3ff;
+      box-shadow: 0 6px 28px rgba(168,85,247,.45), 0 0 60px rgba(168,85,247,.15);
+      transition: all .28s cubic-bezier(.16,1,.3,1);
+      position: relative;
+    }
+    .btn-start::after {
+      content: ''; position: absolute; inset: -2px; border-radius: 9999px;
+      background: linear-gradient(135deg, #a855f7, #10b981);
+      opacity: 0; z-index: -1; filter: blur(14px); transition: opacity .28s;
+    }
+    .btn-start:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(168,85,247,.6), 0 0 80px rgba(168,85,247,.2);
+    }
+    .btn-start:hover::after { opacity: .5; }
+    .btn-start:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    @media (max-width: 640px) {
+      .section-card { padding: 22px 18px; }
+      .cta-bar { flex-direction: column; gap: 14px; align-items: stretch; }
+      .btn-start { justify-content: center; }
     }
   </style>
 </head>
 <body>
-
-<!-- Full-page loading overlay shown while LLM starts the session -->
-<div id="session-start-loader">
-  <div class="ssl-icon">
-    <svg width="38" height="38" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-    </svg>
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="blob-scene" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
   </div>
-  <div class="ssl-title">Starting Diagnostic Session</div>
-  <div class="ssl-sub">Preparing your AI doctor…</div>
-  <div class="ssl-tip" id="ssl-tip">An apple a day keeps the doctor away.</div>
-  <div class="ssl-bar-track"><div class="ssl-bar-fill" id="ssl-bar"></div></div>
-  <div class="ssl-dots"><span></span><span></span><span></span></div>
-</div>
 
-<nav class="nav">
-  <button class="nav-back" onclick="window.location.href='/patient-info.html'">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-    Profile
-  </button>
-  <div class="nav-brand" style="margin-left:8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    AI Diagnostic Assistant
-  </div>
-  <div class="nav-spacer"></div>
-  <div class="steps">
-    <div class="step done"><div class="step-num">✓</div><span>Profile</span></div>
-    <div class="step-sep"></div>
-    <div class="step active"><div class="step-num">2</div><span>History</span></div>
-    <div class="step-sep"></div>
-    <div class="step"><div class="step-num">3</div><span>Session</span></div>
-    <div class="step-sep"></div>
-    <div class="step"><div class="step-num">4</div><span>Report</span></div>
-  </div>
-  <div class="spacer"></div>
-  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
+  <nav class="nav-bar">
+    <a href="/patient-info" class="nav-back">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </a>
+    <div class="nav-center-badge">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span class="nb-accent">Diff</span>Dx
+    </div>
+    <div id="nav-auth"></div>
+  </nav>
 
-</nav>
+  <header class="page-header">
+    <div class="step-pill"><div class="step-dot"></div> Step 2 of 3</div>
+    <h1 class="page-title"><span>Medical History</span></h1>
+    <p class="page-sub">Helps the AI avoid false positives and ask smarter questions</p>
+    <div class="progress-track">
+      <div class="pr-node done">
+        <div class="pr-circle">&#10003;</div>
+        <span>Patient Info</span>
+      </div>
+      <div class="pr-line"></div>
+      <div class="pr-node active">
+        <div class="pr-circle">2</div>
+        <span>Medical History</span>
+      </div>
+      <div class="pr-line"></div>
+      <div class="pr-node inactive">
+        <div class="pr-circle">3</div>
+        <span>Diagnostic Session</span>
+      </div>
+    </div>
+  </header>
 
-<div class="page">
-  <div class="section-title" style="margin-bottom:6px;">Step 2 of 3 — Medical History</div>
-  <p style="font-size:13px;color:var(--text-dim);margin-bottom:20px;">All fields are optional — add only what applies. Press <kbd style="background:var(--surface-3);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:11px;">Enter</kbd> or comma to add each item.</p>
+  <div class="page-body">
+    <form id="history-form" novalidate>
 
-  <form id="history-form" onsubmit="return false">
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
-
-      <!-- Past Medical History -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-          Past Medical History
-        </div>
-        <div class="form-group">
-          <div class="tag-input-wrap" onclick="focusTagInput('pmh-input')">
-            <div id="pmh-tags"></div>
-            <input id="pmh-input" class="tag-real-input" placeholder="e.g. hypertension, diabetes…"
-              onkeydown="tagKey(event,'pmh')" oninput="tagComma(event,'pmh')">
+      <!-- Known conditions -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-violet">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
           </div>
-          <div class="tag-hint">Type and press Enter or comma to add</div>
+          <div>
+            <div class="sec-title">Known Conditions</div>
+            <div class="sec-sub">Chronic illnesses or past diagnoses</div>
+          </div>
         </div>
+        <div class="adder-row">
+          <input class="fi" type="text" id="cond-input" placeholder="e.g. Hypertension, Type 2 Diabetes, Asthma…" />
+          <button type="button" class="btn-add" onclick="addItem('cond')">+ Add</button>
+        </div>
+        <div class="chips" id="cond-chips"></div>
       </div>
 
       <!-- Medications -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11M5 13H3m6 0h10m0 0v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6m14 0H5"/></svg>
-          Current Medications
-        </div>
-        <div class="form-group">
-          <div class="tag-input-wrap" onclick="focusTagInput('meds-input')">
-            <div id="meds-tags"></div>
-            <input id="meds-input" class="tag-real-input" placeholder="e.g. metformin 500mg, aspirin…"
-              onkeydown="tagKey(event,'meds')" oninput="tagComma(event,'meds')">
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-teal">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+            </svg>
           </div>
-          <div class="tag-hint">Type and press Enter or comma to add</div>
+          <div>
+            <div class="sec-title">Current Medications</div>
+            <div class="sec-sub">Include dosage if known</div>
+          </div>
         </div>
+        <div class="adder-row">
+          <input class="fi" type="text" id="med-input" placeholder="e.g. Metformin 500mg, Lisinopril 10mg…" />
+          <button type="button" class="btn-add" onclick="addItem('med')">+ Add</button>
+        </div>
+        <div class="chips" id="med-chips"></div>
       </div>
 
       <!-- Allergies -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          Allergies
-        </div>
-        <div class="form-group">
-          <div class="tag-input-wrap" onclick="focusTagInput('allergy-input')">
-            <div id="allergy-tags"></div>
-            <input id="allergy-input" class="tag-real-input" placeholder="e.g. penicillin, peanuts…"
-              onkeydown="tagKey(event,'allergy')" oninput="tagComma(event,'allergy')">
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-amber">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
           </div>
-          <div class="tag-hint">Type and press Enter or comma to add</div>
-        </div>
-      </div>
-
-      <!-- Family History -->
-      <div class="form-section">
-        <div class="form-section-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-          Family History
-        </div>
-        <div class="form-group">
-          <div class="tag-input-wrap" onclick="focusTagInput('family-input')">
-            <div id="family-tags"></div>
-            <input id="family-input" class="tag-real-input" placeholder="e.g. father: MI, mother: T2DM…"
-              onkeydown="tagKey(event,'family')" oninput="tagComma(event,'family')">
+          <div>
+            <div class="sec-title">Allergies</div>
+            <div class="sec-sub">Drug, food or environmental allergies</div>
           </div>
-          <div class="tag-hint">Type and press Enter or comma to add</div>
+        </div>
+        <div class="adder-row">
+          <input class="fi" type="text" id="allergy-input" placeholder="e.g. Penicillin, Peanuts, Latex…" />
+          <button type="button" class="btn-add" onclick="addItem('allergy')">+ Add</button>
+        </div>
+        <div class="chips" id="allergy-chips"></div>
+      </div>
+
+      <!-- Family history -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-sky">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sec-title">Family History</div>
+            <div class="sec-sub">Conditions in close relatives</div>
+          </div>
+        </div>
+        <div class="adder-row">
+          <input class="fi" type="text" id="family-input" placeholder="e.g. Heart disease (father), Cancer (mother)…" />
+          <button type="button" class="btn-add" onclick="addItem('family')">+ Add</button>
+        </div>
+        <div class="chips" id="family-chips"></div>
+      </div>
+
+      <!-- Language dropdown -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-sky">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m5 8 6 6"/>
+              <path d="m4 14 6-6 2-3"/>
+              <path d="M2 5h12"/>
+              <path d="M7 2h1"/>
+              <path d="m22 22-5-10-5 10"/>
+              <path d="M14 18h6"/>
+            </svg>
+          </div>
+          <div style="flex:1; display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+            <div>
+              <div class="sec-title">Session Language</div>
+              <div class="sec-sub">The AI will converse in your chosen language</div>
+            </div>
+            <div class="lang-select-wrap">
+              <select class="lang-select" id="lang-select">
+                <option value="en-IN">English</option>
+                <option value="hi-IN">हिंदी</option>
+                <option value="ta-IN">தமிழ்</option>
+                <option value="te-IN">తెలుగు</option>
+                <option value="kn-IN">ಕನ್ನಡ</option>
+                <option value="ml-IN">മലയാളം</option>
+                <option value="mr-IN">मराठी</option>
+                <option value="bn-IN">বাংলা</option>
+                <option value="gu-IN">ગુજરાતી</option>
+                <option value="pa-IN">ਪੰਜਾਬੀ</option>
+              </select>
+              <svg class="chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
-    </div>
-
-    <!-- Social History — full width -->
-    <div class="form-section">
-      <div class="form-section-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/></svg>
-        Social History
-      </div>
-      <div class="form-group">
-        <div class="tag-input-wrap" onclick="focusTagInput('social-input')">
-          <div id="social-tags"></div>
-          <input id="social-input" class="tag-real-input" placeholder="e.g. smoker 10 pack-years, drinks socially, sedentary job…"
-            onkeydown="tagKey(event,'social')" oninput="tagComma(event,'social')">
+      <!-- Additional notes -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-teal">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sec-title">Additional Notes</div>
+            <div class="sec-sub">Anything else the AI should know before starting</div>
+          </div>
         </div>
-        <div class="tag-hint">Type and press Enter or comma to add</div>
+        <textarea id="free-notes" class="fi-area"
+          placeholder="e.g. Symptoms started after a long flight. No recent infections. Recently under a lot of stress."></textarea>
       </div>
-    </div>
 
-    <!-- Free Notes -->
-    <div class="form-section">
-      <div class="form-section-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-        Additional Notes
+      <!-- CTA -->
+      <div class="cta-bar">
+        <span class="cta-hint">All fields on this page are optional</span>
+        <button type="submit" class="btn-start" id="start-btn">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Start Diagnosis
+        </button>
       </div>
-      <div class="form-group">
-        <label class="form-label">Anything else the doctor should know</label>
-        <textarea id="free-notes" class="form-textarea" rows="3"
-          placeholder="e.g. recent travel, recent surgery, relevant lifestyle details…"></textarea>
-      </div>
-    </div>
 
-    <div id="form-error" class="error-msg" style="display:none;margin-bottom:16px;"></div>
+    </form>
+  </div>
 
-    <div class="action-bar">
-      <button type="button" class="btn btn-ghost" onclick="window.location.href='/patient-info.html'">← Back</button>
-      <button type="button" class="btn btn-ghost" onclick="window.location.href='/book-slot.html'">Book Appointment →</button>
-      <button type="button" id="start-btn" class="btn btn-primary" onclick="handleStart()" style="min-width:210px;padding:12px 28px;font-size:15px;">
-        Start Diagnostic Session →
-      </button>
-    </div>
+  <script>
+    const lists = { cond: [], med: [], allergy: [], family: [] };
 
-  </form>
-</div>
+    function addItem(key) {
+      const inp = document.getElementById(key + '-input');
+      const val = inp.value.trim();
+      if (!val || lists[key].includes(val)) return;
+      lists[key].push(val);
+      renderChips(key);
+      inp.value = '';
+      inp.focus();
+    }
 
-<script>
-const API = '';
-const tagData = { pmh: [], meds: [], allergy: [], family: [], social: [] };
+    function removeItem(key, i) { lists[key].splice(i, 1); renderChips(key); }
 
-function focusTagInput(id) { document.getElementById(id).focus(); }
+    function renderChips(key) {
+      const c = document.getElementById(key + '-chips');
+      c.innerHTML = '';
+      lists[key].forEach((item, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'chip';
+        chip.innerHTML = `${item}<button class="chip-x" type="button" onclick="removeItem('${key}',${i})" aria-label="Remove">×</button>`;
+        c.appendChild(chip);
+      });
+    }
 
-function tagKey(e, key) {
-  if (e.key === 'Enter' || e.key === ',') {
-    e.preventDefault();
-    commitTag(key);
-  } else if (e.key === 'Backspace' && e.target.value === '') {
-    removeLastTag(key);
-  }
-}
-
-function tagComma(e, key) {
-  if (e.target.value.endsWith(',')) {
-    e.target.value = e.target.value.slice(0, -1);
-    commitTag(key);
-  }
-}
-
-function commitTag(key) {
-  const input = document.getElementById(`${key}-input`);
-  const val = input.value.trim();
-  if (!val) return;
-  tagData[key].push(val);
-  input.value = '';
-  renderTags(key);
-}
-
-function removeTag(key, i) {
-  tagData[key].splice(i, 1);
-  renderTags(key);
-}
-
-function removeLastTag(key) {
-  if (tagData[key].length === 0) return;
-  tagData[key].pop();
-  renderTags(key);
-}
-
-function renderTags(key) {
-  const container = document.getElementById(`${key}-tags`);
-  container.innerHTML = tagData[key].map((v, i) => `
-    <span class="tag-chip">
-      ${escHtml(v)}
-      <button type="button" class="tag-chip-remove" onclick="removeTag('${key}',${i})">×</button>
-    </span>
-  `).join('');
-}
-
-const _SSL_TIPS = [
-  "An apple a day keeps the doctor away.",
-  "Early diagnosis is the best medicine.",
-  "Your health is your greatest wealth.",
-  "Prevention is better than cure.",
-  "Listen to your body — it knows best.",
-  "A good laugh and a long sleep are the best cures.",
-  "Take care of your body. It's the only place you have to live.",
-  "Walking is the best medicine.",
-  "Let food be thy medicine and medicine be thy food.",
-  "Sleep is the golden chain that ties health and our bodies together.",
-  "The first wealth is health.",
-  "A healthy outside starts from the inside.",
-];
-let _sslTimers = {};
-
-function showSessionLoader() {
-  const loader = document.getElementById('session-start-loader');
-  const tipEl  = document.getElementById('ssl-tip');
-  const barEl  = document.getElementById('ssl-bar');
-  loader.classList.add('active');
-
-  let tipIdx = Math.floor(Math.random() * _SSL_TIPS.length);
-  tipEl.textContent = _SSL_TIPS[tipIdx];
-  _sslTimers.tip = setInterval(() => {
-    tipIdx = (tipIdx + 1) % _SSL_TIPS.length;
-    tipEl.style.animation = 'none';
-    tipEl.offsetHeight;
-    tipEl.style.animation = '';
-    tipEl.textContent = _SSL_TIPS[tipIdx];
-  }, 2400);
-
-  let pct = 0;
-  _sslTimers.bar = setInterval(() => {
-    pct = Math.min(pct + (Math.random() * 10 + 3), 88);
-    barEl.style.width = pct + '%';
-  }, 500);
-}
-
-function hideSessionLoader() {
-  clearInterval(_sslTimers.tip);
-  clearInterval(_sslTimers.bar);
-  const loader = document.getElementById('session-start-loader');
-  const barEl  = document.getElementById('ssl-bar');
-  if (barEl) barEl.style.width = '100%';
-  loader.style.transition = 'opacity .3s ease';
-  loader.style.opacity = '0';
-  setTimeout(() => loader.classList.remove('active'), 320);
-}
-
-async function handleStart() {
-  const errEl  = document.getElementById('form-error');
-  const btn    = document.getElementById('start-btn');
-  errEl.style.display = 'none';
-
-  const profile = JSON.parse(sessionStorage.getItem('patientProfile') || 'null');
-  if (!profile) {
-    errEl.textContent = 'Patient profile not found. Please go back and fill in your profile.';
-    errEl.style.display = 'block';
-    return;
-  }
-
-  const history = {
-    medical:     tagData.pmh,
-    medications: tagData.meds,
-    allergies:   tagData.allergy,
-    family:      tagData.family,
-    social:      tagData.social,
-  };
-  const freeNotes = document.getElementById('free-notes').value.trim();
-  sessionStorage.setItem('patientHistory', JSON.stringify(history));
-  sessionStorage.setItem('patientFreeNotes', freeNotes);
-
-  btn.disabled = true;
-  showSessionLoader();
-  try {
-    const res = await fetch(`${API}/api/session/start-custom`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders() },
-      body: JSON.stringify({ ...profile, history, free_notes: freeNotes }),
+    ['cond','med','allergy','family'].forEach(key => {
+      document.getElementById(key + '-input').addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addItem(key); }
+      });
     });
-    if (!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    sessionStorage.setItem('sessionId', data.session_id);
-    sessionStorage.setItem('sessionStart', JSON.stringify(data));
-    localStorage.setItem('activeSessionId', data.session_id);
-    localStorage.setItem('activeSessionStart', JSON.stringify(data));
-    window.location.href = '/session.html';
-  } catch (e) {
-    hideSessionLoader();
-    btn.disabled = false;
-    errEl.textContent = 'Error starting session: ' + e.message;
-    errEl.style.display = 'block';
-  }
-}
 
-function escHtml(s) {
-  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-</script>
+    let selectedLang = 'en-IN';
+    document.getElementById('lang-select').addEventListener('change', e => {
+      selectedLang = e.target.value;
+    });
+
+    document.getElementById('history-form').addEventListener('submit', async e => {
+      e.preventDefault();
+      const btn = document.getElementById('start-btn');
+      btn.disabled = true;
+      document.getElementById('loading-overlay').classList.add('active');
+
+      const patientRaw = sessionStorage.getItem('patientInfo');
+      if (!patientRaw) {
+        alert('Patient info missing. Please go back and fill in Step 1.');
+        window.location.href = '/patient-info';
+        return;
+      }
+      const patient = JSON.parse(patientRaw);
+
+      const payload = {
+        age:              parseInt(patient.age) || null,
+        sex:              patient.sex || null,
+        bmi:              patient.bmi ? parseFloat(patient.bmi) : null,
+        chief_complaint:  patient.chief_complaint || '',
+        symptoms:         (patient.symptoms || []).map(s => ({ name: s, onset: '', severity: '', notes: '' })),
+        history: {
+          medical:      lists.cond,
+          medications:  lists.med,
+          allergies:    lists.allergy,
+          family:       lists.family,
+          social:       []
+        },
+        free_notes:       document.getElementById('free-notes').value.trim(),
+        session_language: selectedLang
+      };
+
+      try {
+        const res = await fetch('/api/session/start-custom', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (data.session_id) {
+          sessionStorage.setItem('sessionId', data.session_id);
+          sessionStorage.setItem('sessionStart', JSON.stringify(data));
+          window.location.href = '/session.html';
+        } else {
+          document.getElementById('loading-overlay').classList.remove('active');
+          alert(data.detail || data.error || 'Failed to start session. Please try again.');
+          btn.disabled = false;
+        }
+      } catch (err) {
+        document.getElementById('loading-overlay').classList.remove('active');
+        alert('Network error — please check your connection and try again.');
+        btn.disabled = false;
+      }
+    });
+  </script>
+  <!-- Loading overlay -->
+  <div class="loading-overlay" id="loading-overlay">
+    <div class="lo-glow"></div>
+    <div class="lo-logo">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      <span class="lo-logo-text">DiffDx</span>
+    </div>
+    <div class="lo-bar-track"><div class="lo-bar-fill"></div></div>
+    <div class="lo-message">Starting diagnosis…</div>
+  </div>
+
+  <script src="/auth.js"></script>
 </body>
 </html>

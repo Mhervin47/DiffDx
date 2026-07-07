@@ -254,3 +254,34 @@ async function _loadMsgBadge() {
 }
 
 document.addEventListener('DOMContentLoaded', initAuthNav);
+
+/** Auto-inject ambient gradient background on pages that don't already have one */
+function _injectAmbientBg() {
+  if (document.getElementById('_ambient-bg')) return;
+  if (document.querySelector('.bg-blobs, .blob-scene')) return; // already has background
+
+  const bg = document.createElement('div');
+  bg.id = '_ambient-bg';
+  bg.setAttribute('aria-hidden', 'true');
+  bg.style.cssText = 'position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;';
+  bg.innerHTML = `
+    <div style="position:absolute;inset:0;
+      background:linear-gradient(125deg,rgba(16,185,129,.14) 0%,transparent 35%,rgba(168,85,247,.11) 65%,transparent 100%);
+      background-size:300% 300%;animation:_amb-flow 14s linear infinite;"></div>
+    <div style="position:absolute;width:700px;height:700px;top:-220px;left:-200px;border-radius:50%;
+      filter:blur(90px);opacity:.58;
+      background:radial-gradient(circle,rgba(16,185,129,.45) 0%,transparent 70%);
+      animation:_amb-drift-1 18s ease-in-out infinite;"></div>
+    <div style="position:absolute;width:580px;height:580px;bottom:-180px;right:-160px;border-radius:50%;
+      filter:blur(80px);opacity:.52;
+      background:radial-gradient(circle,rgba(168,85,247,.45) 0%,transparent 70%);
+      animation:_amb-drift-2 22s ease-in-out infinite;"></div>
+    <div style="position:absolute;width:380px;height:380px;top:50%;left:50%;
+      transform:translate(-50%,-50%);border-radius:50%;
+      filter:blur(70px);opacity:.24;
+      background:radial-gradient(circle,rgba(168,85,247,.5) 0%,transparent 70%);
+      animation:_amb-drift-1 28s ease-in-out infinite reverse;"></div>
+  `;
+  document.body.insertBefore(bg, document.body.firstChild);
+}
+document.addEventListener('DOMContentLoaded', _injectAmbientBg);

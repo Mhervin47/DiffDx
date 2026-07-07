@@ -1579,15 +1579,45 @@
     /* Global font upgrade */
     body { font-family: 'Inter', var(--font); letter-spacing: -.01em; }
 
-    /* ── NAV ─────────────────────────────────────────────────── */
+    /* ── NAV — full-width flush strip for portal layout ────────── */
     .nav {
+      /* Override floating-pill defaults from styles.css */
+      position: sticky !important; top: 0 !important;
+      left: 0 !important; transform: none !important;
+      width: 100% !important; max-width: 100% !important; min-width: 0 !important;
+      border-radius: 0 !important;
+      padding: 0 24px !important;
       height: 56px;
-      background: rgba(10,14,26,.92);
-      backdrop-filter: blur(20px) saturate(1.8);
-      -webkit-backdrop-filter: blur(20px) saturate(1.8);
-      border-bottom: 1px solid rgba(0,180,216,.14);
-      box-shadow: 0 1px 0 rgba(0,180,216,.06), 0 4px 32px rgba(0,0,0,.4);
-      position: sticky; top: 0; z-index: 100;
+      z-index: 100;
+      /* Glassmorphism nav strip */
+      background: rgba(7,9,18,.96);
+      backdrop-filter: blur(28px) saturate(2.1);
+      -webkit-backdrop-filter: blur(28px) saturate(2.1);
+      border: none !important;
+      border-bottom: 1px solid rgba(0,180,216,.16) !important;
+      box-shadow:
+        0 1px 0 rgba(0,180,216,.1),
+        0 4px 48px rgba(0,0,0,.6),
+        0 0 0 0 transparent,
+        inset 0 -1px 0 rgba(0,180,216,.06),
+        inset 0 1px 0 rgba(255,255,255,.03);
+    }
+    /* Subtle nav gradient flow glow */
+    .nav::after {
+      content: '';
+      position: absolute; bottom: -1px; left: 0; width: 100%; height: 1px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(0,180,216,.5) 20%,
+        rgba(0,180,216,.8) 50%,
+        rgba(0,180,216,.5) 80%,
+        transparent 100%);
+      background-size: 200% 100%;
+      animation: nav-shimmer 4s linear infinite;
+    }
+    @keyframes nav-shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
     }
     .nav-brand {
       font-size: 15px; font-weight: 900; letter-spacing: -.03em; color: #fff;
@@ -1623,32 +1653,85 @@
 
     /* ── SIDEBAR ─────────────────────────────────────────────── */
     .sidebar {
-      background: #090d1a;
-      border-right: 1px solid rgba(255,255,255,.055);
+      background: linear-gradient(180deg,
+        #0c1120 0%,
+        #090d1a 30%,
+        #07090f 100%);
+      border-right: none;
       display: flex; flex-direction: column;
       overflow: hidden;
+      position: relative;
+    }
+    /* Glowing right-edge separator that fades downward */
+    .sidebar::after {
+      content: '';
+      position: absolute; top: 0; right: 0;
+      width: 1px; height: 100%;
+      background: linear-gradient(180deg,
+        rgba(0,180,216,.55) 0%,
+        rgba(0,180,216,.25) 25%,
+        rgba(0,180,216,.08) 60%,
+        transparent 100%);
+      pointer-events: none; z-index: 10;
     }
 
-    /* Doctor card */
+    /* Sidebar header (stats + filters area) */
+    .sidebar-header {
+      padding: 14px 16px 12px;
+      background: linear-gradient(180deg, rgba(0,180,216,.04) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(0,180,216,.08);
+      flex-shrink: 0;
+    }
+
+    /* Doctor card — animated gradient flow */
+    @keyframes card-gradient-flow {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
     .doctor-sidebar-card {
       padding: 16px 18px 14px;
-      background: linear-gradient(160deg, rgba(0,180,216,.13) 0%, rgba(0,119,168,.04) 60%, transparent 100%);
-      border-bottom: 1px solid rgba(0,180,216,.12);
+      background: linear-gradient(125deg,
+        rgba(0,180,216,.18) 0%,
+        rgba(0,119,168,.06) 35%,
+        rgba(10,185,129,.08) 65%,
+        rgba(0,180,216,.12) 100%);
+      background-size: 300% 300%;
+      animation: card-gradient-flow 8s ease infinite;
+      border-bottom: 1px solid rgba(0,180,216,.16);
       position: relative; overflow: hidden;
+      box-shadow: inset 0 -1px 0 rgba(0,180,216,.08);
     }
+    /* Top-right ambient orb */
     .doctor-sidebar-card::before {
       content: '';
-      position: absolute; top: -30px; right: -30px;
-      width: 100px; height: 100px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(0,180,216,.18) 0%, transparent 70%);
+      position: absolute; top: -40px; right: -40px;
+      width: 130px; height: 130px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(0,180,216,.28) 0%, transparent 70%);
       pointer-events: none;
+      animation: orb-breathe 6s ease-in-out infinite;
+    }
+    /* Bottom-left subtle emerald orb */
+    .doctor-sidebar-card::after {
+      content: '';
+      position: absolute; bottom: -20px; left: -20px;
+      width: 80px; height: 80px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(16,185,129,.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    @keyframes orb-breathe {
+      0%,100% { opacity: .7; transform: scale(1); }
+      50%      { opacity: 1; transform: scale(1.15); }
     }
     .doctor-avatar {
       width: 42px; height: 42px; border-radius: 12px;
-      background: linear-gradient(135deg, #0077a8, #00b4d8);
+      background: linear-gradient(135deg, #0077a8, #00b4d8, #00d4ff);
       font-size: 15px; font-weight: 900; color: #000d1a;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 0 0 1px rgba(0,180,216,.3), 0 4px 16px rgba(0,180,216,.3);
+      box-shadow:
+        0 0 0 1px rgba(0,180,216,.4),
+        0 4px 20px rgba(0,180,216,.4),
+        0 0 40px rgba(0,180,216,.15);
       flex-shrink: 0;
     }
     .doctor-info-name {
@@ -1682,7 +1765,11 @@
       background: linear-gradient(135deg, transparent 40%, rgba(0,180,216,.04));
       pointer-events: none;
     }
-    .stat-chip:hover { border-color: rgba(0,180,216,.35); background: rgba(0,180,216,.06); }
+    .stat-chip:hover {
+      border-color: rgba(0,180,216,.45);
+      background: rgba(0,180,216,.08);
+      box-shadow: 0 0 16px rgba(0,180,216,.1), inset 0 1px 0 rgba(255,255,255,.04);
+    }
     .stat-chip strong {
       display: block; font-size: 20px; font-weight: 900;
       color: var(--primary); line-height: 1.1; margin-bottom: 2px;
@@ -1769,6 +1856,9 @@
     .filter-chip.fc-emergency.active { background: rgba(239,68,68,.15); color: #f87171; border-color: rgba(239,68,68,.6); box-shadow: 0 0 10px rgba(239,68,68,.1); }
     .filter-chip.fc-urgent.active    { background: rgba(245,158,11,.12); color: #fbbf24; border-color: rgba(245,158,11,.55); }
     .filter-chip.fc-routine.active   { background: rgba(16,185,129,.12); color: #34d399; border-color: rgba(16,185,129,.5); }
+    .filter-chip.fc-completed        { border-color: rgba(148,163,184,.15); color: rgba(148,163,184,.5); }
+    .filter-chip.fc-completed:hover  { color: var(--text-dim); border-color: rgba(148,163,184,.3); }
+    .filter-chip.fc-completed.active { background: rgba(148,163,184,.1); color: #94a3b8; border-color: rgba(148,163,184,.45); }
 
     /* ── PATIENT LIST ITEMS ──────────────────────────────────── */
     .appt-list { flex: 1; overflow-y: auto; }
@@ -1833,7 +1923,10 @@
 
     /* ── MAIN PANEL ──────────────────────────────────────────── */
     .main-panel {
-      background: #07090f;
+      background:
+        radial-gradient(ellipse 60% 40% at 0% 0%, rgba(0,180,216,.04) 0%, transparent 100%),
+        radial-gradient(ellipse 40% 30% at 100% 100%, rgba(16,185,129,.03) 0%, transparent 100%),
+        #07090f;
       overflow-y: auto; padding: 0;
     }
 
@@ -1917,6 +2010,40 @@
     .brief-title { font-size: 12px; font-weight: 800; color: var(--primary); letter-spacing: .04em; text-transform: uppercase; }
     .brief-body { padding: 16px 18px; }
     .brief-dx-bar { background: linear-gradient(90deg, var(--primary-dim), var(--primary)); border-radius: 99px; }
+
+    /* Voice brief button */
+    .brief-voice-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 13px; border-radius: 99px;
+      background: rgba(0,180,216,.1); border: 1px solid rgba(0,180,216,.3);
+      color: var(--primary); font-size: 11px; font-weight: 700;
+      cursor: pointer; font-family: var(--font); transition: all .15s;
+      flex-shrink: 0; white-space: nowrap; margin-left: auto;
+    }
+    .brief-voice-btn:hover { background: rgba(0,180,216,.18); border-color: rgba(0,180,216,.55); }
+    .brief-voice-btn.speaking {
+      background: rgba(0,180,216,.2); border-color: rgba(0,180,216,.7);
+      animation: voice-btn-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes voice-btn-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(0,180,216,.4); }
+      50%      { box-shadow: 0 0 0 6px rgba(0,180,216,0); }
+    }
+    .brief-voice-bars {
+      display: inline-flex; align-items: center; gap: 2px; height: 12px;
+    }
+    .brief-voice-bars span {
+      width: 2px; border-radius: 1px; background: var(--primary);
+      animation: brief-bar .7s ease-in-out infinite;
+    }
+    .brief-voice-bars span:nth-child(1) { height: 6px; }
+    .brief-voice-bars span:nth-child(2) { height: 10px; animation-delay: .12s; }
+    .brief-voice-bars span:nth-child(3) { height: 8px;  animation-delay: .24s; }
+    .brief-voice-bars span:nth-child(4) { height: 5px;  animation-delay: .36s; }
+    @keyframes brief-bar {
+      0%,100% { transform: scaleY(.4); }
+      50%     { transform: scaleY(1); }
+    }
 
     /* DX callout */
     .dx-callout {
@@ -2166,7 +2293,7 @@
 </head>
 <body>
 
-<nav class="nav" style="position:relative;">
+<nav class="nav" style="position:sticky;top:0;">
   <div class="nav-brand">
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
     Medical<span>Convo</span>
@@ -2254,8 +2381,8 @@
           <span class="date-filter-chip"        data-df="past5"     onclick="setDateFilter('past5')">Past 5 Days</span>
           <span class="date-filter-chip"        data-df="yesterday" onclick="setDateFilter('yesterday')">Yesterday</span>
           <span class="date-filter-chip"        data-df="today"     onclick="setDateFilter('today')">Today</span>
-          <span class="date-filter-chip active" data-df="upcoming"  onclick="setDateFilter('upcoming')">Upcoming</span>
-          <span class="date-filter-chip"        data-df="all"       onclick="setDateFilter('all')">All</span>
+          <span class="date-filter-chip"        data-df="upcoming"  onclick="setDateFilter('upcoming')">Upcoming</span>
+          <span class="date-filter-chip active" data-df="all"       onclick="setDateFilter('all')">All</span>
         </div>
         <div class="search-bar">
           <input class="search-input" id="search-input" type="text" placeholder="Search patient or diagnosis…"
@@ -2266,6 +2393,7 @@
           <span class="filter-chip fc-emergency" data-filter="emergency" onclick="setFilter('emergency')">Emergency</span>
           <span class="filter-chip fc-urgent" data-filter="urgent" onclick="setFilter('urgent')">Urgent</span>
           <span class="filter-chip fc-routine" data-filter="routine" onclick="setFilter('routine')">Routine</span>
+          <span class="filter-chip fc-completed" id="fc-completed-chip" onclick="toggleCompleted()" title="Show seen, no-show, and cancelled appointments">Completed</span>
           <select id="tag-filter-select" class="tag-filter-btn" onchange="applyFilters()" title="Filter by tag" style="margin-left:4px;">
             <option value="">All Tags</option>
             <option value="high risk">High Risk</option>
@@ -2383,7 +2511,10 @@ let _appointments = [];
 let _activeApptId = null;
 let _doctorProfile = {};
 let _activeFilter = 'all';
-let _activeDateFilter = 'upcoming';
+let _activeDateFilter = 'all';
+let _showCompleted = false;   // hide seen/no_show/cancelled by default; toggled by UI chip
+const _briefTexts = {};       // apptId → spoken summary text for voice brief
+let _briefUtterance = null;   // current SpeechSynthesisUtterance
 // Dismissed appointments persist for the day via localStorage
 const _DISMISS_KEY = 'dismissed_appts_' + new Date().toISOString().slice(0, 10);
 
@@ -2550,17 +2681,17 @@ async function init() {
 }
 
 async function loadAppointments() {
+  const listEl = document.getElementById('appt-list');
   try {
     const res = await fetch(`${API}/api/doctor/appointments`, { headers: authHeaders() });
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     _appointments = await res.json();
     applyFilters();
-    updateStats(_appointments);
-    renderTodayWidget(_appointments);
-    _checkAppointmentNotifs(_appointments);
-  } catch {
-    document.getElementById('appt-list').innerHTML =
-      '<div class="no-results">Failed to load appointments.</div>';
+    try { updateStats(_appointments); } catch (_) {}
+    try { renderTodayWidget(_appointments); } catch (_) {}
+    try { _checkAppointmentNotifs(_appointments); } catch (_) {}
+  } catch (err) {
+    if (listEl) listEl.innerHTML = `<div class="no-results">Failed to load appointments. ${err.message || ''}</div>`;
   }
 }
 
@@ -2792,6 +2923,13 @@ function setFilter(f) {
   applyFilters();
 }
 
+function toggleCompleted() {
+  _showCompleted = !_showCompleted;
+  const chip = document.getElementById('fc-completed-chip');
+  if (chip) chip.classList.toggle('active', _showCompleted);
+  applyFilters();
+}
+
 function setDateFilter(df) {
   _activeDateFilter = df;
   document.querySelectorAll('.date-filter-chip').forEach(c => {
@@ -2815,8 +2953,16 @@ function _dateRangeFor(df) {
 }
 
 function applyFilters() {
-  const q = document.getElementById('search-input').value.trim().toLowerCase();
+  const q = (document.getElementById('search-input')?.value || '').trim().toLowerCase();
   let filtered = _appointments.filter(a => !_dismissedIds.has(a.appointment_id));
+
+  // Hide seen / no_show / cancelled unless the doctor explicitly asked to see them
+  if (!_showCompleted) {
+    filtered = filtered.filter(a => {
+      const s = a.status || 'upcoming';
+      return s !== 'seen' && s !== 'no_show' && s !== 'cancelled';
+    });
+  }
 
   // Date filter
   const range = _dateRangeFor(_activeDateFilter);
@@ -2860,6 +3006,12 @@ async function selectAppointment(apptId) {
   document.querySelectorAll('.appt-item').forEach(el => el.classList.remove('active'));
   document.getElementById('appt-item-' + apptId)?.classList.add('active');
 
+  // Stop any voice brief that's currently playing
+  if (_briefUtterance && window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    _briefUtterance = null;
+  }
+
   const panel = document.getElementById('main-panel');
   panel.innerHTML = '<div class="loading-panel"><div class="spinner"></div> Loading session data…</div>';
 
@@ -2878,7 +3030,7 @@ async function selectAppointment(apptId) {
         if (ch) ch.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0deg)';
       });
     });
-    // Animate diff evo bars after paint
+    // Animate bars + auto-dictate the clinical brief
     requestAnimationFrame(() => {
       panel.querySelectorAll('.diff-evo-fill[data-width]').forEach(el => {
         el.style.width = el.dataset.width + '%';
@@ -2886,6 +3038,8 @@ async function selectAppointment(apptId) {
       panel.querySelectorAll('.brief-dx-bar[data-width]').forEach(el => {
         el.style.width = el.dataset.width + '%';
       });
+      // Auto-play voice brief — small delay so browser audio context is ready
+      setTimeout(() => toggleBriefVoice(apptId), 600);
     });
   } catch (e) {
     panel.innerHTML = `<div style="padding:20px;color:var(--danger);">Error: ${escHtml(e.message)}</div>`;
@@ -3226,13 +3380,57 @@ function buildTranscriptBubbles(turnHistory) {
 const _planState = {};   // apptId → array of plan items
 
 function buildBrief(appt, report, routing, closing) {
-  const diff = report.final_differential || appt.differential || [];
-  const topDx = diff.slice(0, 3);
-  const aiSteps = closing?.recommended_next_steps || appt.ai_next_steps || [];
-  const complaint = report.patient?.chief_complaint || appt.chief_complaint || '—';
-  const apptId = appt.appointment_id;
+  const diff     = report.final_differential || appt.differential || [];
+  const topDx    = diff.slice(0, 4);
+  const aiSteps  = closing?.recommended_next_steps || appt.ai_next_steps || [];
+  const patient  = report.patient || {};
+  const complaint = patient.chief_complaint || appt.chief_complaint || '—';
+  const apptId   = appt.appointment_id;
 
-  // Seed plan state: prefer saved approved_plan, else build from AI steps
+  // Clinical data for the doctor
+  const age       = patient.demographics?.age ?? patient.age ?? appt.age;
+  const sex       = patient.demographics?.sex ?? patient.sex ?? appt.sex;
+  const bmi       = patient.demographics?.bmi ?? patient.bmi ?? appt.bmi;
+  const symptoms  = patient.symptoms || [];
+  const allergies = patient.history?.allergies || [];
+  const meds      = patient.history?.medications || [];
+  const medHx     = patient.history?.medical || [];
+  const ruledIn   = patient.ruled_in || [];
+  const ruledOut  = patient.ruled_out || [];
+  const freeNotes = patient.free_notes || '';
+  const finalDx   = report.final_diagnosis || appt.primary_diagnosis || '';
+  const confidence= routing.final_confidence;
+
+  // ── Build spoken summary (clinical, doctor-facing) ─────────────
+  const patientName = appt.patient_name || 'the patient';
+  const demoSpoken  = [age ? `${age} year old` : '', sex || ''].filter(Boolean).join(' ');
+  const sympSpoken  = symptoms.length
+    ? symptoms.slice(0, 4).map(s => {
+        const parts = [s.name];
+        if (s.onset)    parts.push(`onset ${s.onset}`);
+        if (s.severity) parts.push(s.severity);
+        return parts.join(', ');
+      }).join('; ')
+    : complaint;
+  const dxSpoken = topDx.length
+    ? topDx.map(d => `${d.dx} at ${Math.round((d.prob ?? 0) * 100)} percent`).join(', ')
+    : (finalDx || '');
+  const allergySpoken = allergies.length ? `Known allergies: ${allergies.slice(0,3).join(', ')}.` : '';
+  const medsSpoken    = meds.length      ? `Current medications: ${meds.slice(0,3).join(', ')}.` : '';
+  const confSpoken    = confidence != null ? `AI confidence ${Math.round(confidence * 100)} percent.` : '';
+
+  const topDxName = finalDx || topDx[0]?.dx || '';
+  _briefTexts[apptId] = [
+    `Patient: ${patientName}${demoSpoken ? ', ' + demoSpoken : ''}.`,
+    `Chief complaint: ${complaint}.`,
+    sympSpoken ? `Reported symptoms: ${sympSpoken}.` : '',
+    topDxName ? `Predicted diagnosis: ${topDxName}.` : '',
+    allergySpoken,
+    medsSpoken,
+    medHx.length ? `Past medical history: ${medHx.slice(0,3).join(', ')}.` : '',
+  ].filter(Boolean).join(' ');
+
+  // ── Seed plan state ────────────────────────────────────────────
   if (!_planState[apptId]) {
     if (appt.approved_plan && appt.approved_plan.length) {
       _planState[apptId] = appt.approved_plan.map(p => ({ ...p }));
@@ -3243,58 +3441,125 @@ function buildBrief(appt, report, routing, closing) {
     }
   }
 
+  // ── Render helpers ─────────────────────────────────────────────
   const dxRows = topDx.map((d, i) => {
     const pct = Math.round((d.prob ?? 0) * 100);
+    const col  = i === 0 ? 'var(--primary)' : i === 1 ? 'rgba(0,180,216,.7)' : 'rgba(0,180,216,.45)';
     return `
       <div class="brief-dx-row">
-        <span style="font-size:12px;color:var(--text-dim);width:16px;">${i + 1}.</span>
-        <span style="font-size:12px;color:var(--text);flex:1;">${escHtml(d.dx)}</span>
+        <span style="font-size:11px;color:var(--text-muted);width:14px;font-weight:700;">${i + 1}.</span>
+        <span style="font-size:13px;color:var(--text);flex:1;font-weight:${i===0?'700':'500'};">${escHtml(d.dx)}</span>
         <div class="brief-dx-bar-track">
-          <div class="brief-dx-bar" data-width="${pct}" style="width:0%"></div>
+          <div class="brief-dx-bar" data-width="${pct}" style="width:0%;background:linear-gradient(90deg,rgba(0,180,216,.3),${col});"></div>
         </div>
-        <span class="brief-dx-prob">${pct}%</span>
+        <span class="brief-dx-prob" style="color:${col};">${pct}%</span>
       </div>`;
   }).join('');
+
+  const symptomChips = symptoms.map(s => {
+    const sev = (s.severity || '').toLowerCase();
+    const cls = sev.includes('severe') ? 'severity-severe' : sev.includes('moderate') ? 'severity-moderate' : sev.includes('mild') ? 'severity-mild' : '';
+    const detail = [s.onset, s.severity].filter(Boolean).join(' · ');
+    return `<span class="profile-tag ${cls}" title="${escHtml(detail)}">${escHtml(s.name)}${detail ? `<span style="opacity:.6;font-size:10px;"> · ${escHtml(detail)}</span>` : ''}</span>`;
+  }).join('');
+
+  const pillList = (arr, color) => arr.map(v =>
+    `<span class="profile-tag" style="border-color:${color};color:${color};opacity:.85;">${escHtml(String(v))}</span>`
+  ).join('');
 
   return `
     <div class="brief-card">
       <div class="brief-header">
         <div class="brief-title">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/>
-            <line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
-          Pre-Consultation Brief
+          Clinical Brief
         </div>
-        <span style="font-size:11px;color:var(--text-muted);">AI Summary · Review before appointment</span>
+        <span style="font-size:11px;color:var(--text-muted);">AI diagnostic summary · auto-dictated on open</span>
+        <button class="brief-voice-btn" id="brief-voice-btn-${apptId}" onclick="toggleBriefVoice('${apptId}')" title="Read brief aloud">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+            <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+            <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+          </svg>
+          Play Brief
+        </button>
       </div>
       <div class="brief-body">
+
+        <!-- Row 1: Chief complaint + confidence -->
         <div>
           <div class="brief-label">Chief Complaint</div>
-          <div class="brief-value">${escHtml(complaint)}</div>
+          <div class="brief-value" style="font-size:14px;font-weight:600;color:#fff;">${escHtml(complaint)}</div>
         </div>
         <div>
-          <div class="brief-label">Specialist Routing</div>
+          <div class="brief-label">AI Confidence</div>
           <div class="brief-value">
-            ${routing.specialty ? escHtml(routing.specialty) : '—'}
-            ${routing.urgency ? `<span class="urgency-badge urgency-${routing.urgency}" style="margin-left:6px;font-size:10px;">${routing.urgency.toUpperCase()}</span>` : ''}
+            ${confidence != null
+              ? `<span style="font-size:22px;font-weight:900;color:var(--primary);letter-spacing:-.03em;">${Math.round(confidence * 100)}%</span>
+                 <span style="font-size:11px;color:var(--text-muted);margin-left:4px;">${finalDx ? escHtml(finalDx) : ''}</span>`
+              : (finalDx ? `<span style="font-size:13px;font-weight:600;">${escHtml(finalDx)}</span>` : '<span style="color:var(--text-muted);">—</span>')}
           </div>
         </div>
+
+        <!-- Row 2: Symptoms -->
+        ${symptoms.length ? `
         <div class="brief-col-full">
-          <div class="brief-label">Top Differential Diagnoses</div>
-          <div class="brief-dx-list">${dxRows || '<span style="color:var(--text-muted);font-size:12px;">No differential available.</span>'}</div>
+          <div class="brief-label">Reported Symptoms</div>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;">${symptomChips}</div>
+        </div>` : complaint !== '—' ? `
+        <div class="brief-col-full">
+          <div class="brief-label">Reported Symptoms</div>
+          <div class="brief-value">${escHtml(complaint)}</div>
+        </div>` : ''}
+
+        <!-- Row 3: Differential -->
+        <div class="brief-col-full">
+          <div class="brief-label">Differential Diagnoses</div>
+          <div class="brief-dx-list" style="margin-top:6px;">${dxRows || '<span style="color:var(--text-muted);font-size:12px;">No differential available.</span>'}</div>
         </div>
+
+        <!-- Row 4: Relevant history -->
+        ${(allergies.length || meds.length || medHx.length) ? `
+        <div class="brief-col-full" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:2px;">
+          ${allergies.length ? `<div>
+            <div class="brief-label" style="color:#ef4444;">Allergies</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${pillList(allergies, '#ef4444')}</div>
+          </div>` : ''}
+          ${meds.length ? `<div>
+            <div class="brief-label">Current Medications</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${pillList(meds, 'rgba(96,165,250,.8)')}</div>
+          </div>` : ''}
+          ${medHx.length ? `<div>
+            <div class="brief-label">Medical History</div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${pillList(medHx, 'rgba(167,139,250,.8)')}</div>
+          </div>` : ''}
+        </div>` : ''}
+
+        ${(ruledIn.length || ruledOut.length) ? `
+        <div class="brief-col-full" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:2px;">
+          ${ruledIn.length  ? `<div><div class="brief-label" style="color:#10b981;">Ruled In</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${pillList(ruledIn,  '#10b981')}</div></div>` : ''}
+          ${ruledOut.length ? `<div><div class="brief-label" style="color:var(--text-muted);">Ruled Out</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:3px;">${pillList(ruledOut, 'var(--text-muted)')}</div></div>` : ''}
+        </div>` : ''}
+
+        ${freeNotes ? `
         <div class="brief-col-full">
-          <div class="brief-label">AI Recommended Next Steps
+          <div class="brief-label">AI Session Notes</div>
+          <div class="brief-value" style="font-size:12px;color:var(--text-dim);">${escHtml(freeNotes)}</div>
+        </div>` : ''}
+
+        <!-- Doctor's plan -->
+        <div class="brief-col-full" style="margin-top:4px;padding-top:14px;border-top:1px solid rgba(255,255,255,.06);">
+          <div class="brief-label">Doctor's Plan
             <span style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--text-muted);font-size:11px;margin-left:6px;">
-              check to approve, edit text, or add your own instructions
+              approve, edit or add your own instructions for this patient
             </span>
           </div>
           <div class="plan-list" id="plan-list-${apptId}">${renderPlanList(apptId)}</div>
           <div class="plan-add-row">
             <input class="plan-add-input" id="plan-add-input-${apptId}"
-              placeholder="Add your own instruction…"
+              placeholder="Add instruction for patient…"
               onkeydown="if(event.key==='Enter') addPlanItem('${apptId}')">
             <button class="btn btn-secondary btn-sm" style="font-size:12px;padding:6px 14px;white-space:nowrap;"
               onclick="addPlanItem('${apptId}')">+ Add</button>
@@ -3302,12 +3567,73 @@ function buildBrief(appt, report, routing, closing) {
           <div class="plan-footer">
             <span class="plan-saved" id="plan-saved-${apptId}">Plan saved</span>
             <button class="btn btn-primary btn-sm" style="font-size:12px;padding:6px 16px;"
-              onclick="savePlan('${apptId}')">Approve &amp; Save Plan</button>
+              onclick="savePlan('${apptId}')">Save Plan</button>
           </div>
         </div>
+
       </div>
     </div>
   `;
+}
+
+// ---- Voice brief ----
+function toggleBriefVoice(apptId) {
+  // If already speaking, stop
+  if (_briefUtterance && window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    _briefUtterance = null;
+    _updateBriefVoiceBtn(apptId, false);
+    return;
+  }
+
+  const text = _briefTexts[apptId];
+  if (!text) return;
+
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate  = 0.92;
+  utt.pitch = 1.0;
+  utt.volume = 1.0;
+
+  // Prefer a natural English voice; voices may be async-loaded
+  const _pickVoice = () => {
+    const vs = window.speechSynthesis.getVoices();
+    return vs.find(v => v.name.includes('Google') && v.lang.startsWith('en'))
+        || vs.find(v => v.lang === 'en-US' && v.localService)
+        || vs.find(v => v.lang.startsWith('en'))
+        || null;
+  };
+  const voice = _pickVoice();
+  if (voice) utt.voice = voice;
+  // If voices not ready yet, speechSynthesis will use default — acceptable fallback
+
+  utt.onstart = () => _updateBriefVoiceBtn(apptId, true);
+  utt.onend   = () => { _updateBriefVoiceBtn(apptId, false); _briefUtterance = null; };
+  utt.onerror = () => { _updateBriefVoiceBtn(apptId, false); _briefUtterance = null; };
+
+  _briefUtterance = utt;
+  window.speechSynthesis.speak(utt);
+}
+
+function _updateBriefVoiceBtn(apptId, speaking) {
+  const btn = document.getElementById(`brief-voice-btn-${apptId}`);
+  if (!btn) return;
+  if (speaking) {
+    btn.classList.add('speaking');
+    btn.innerHTML = `
+      <div class="brief-voice-bars">
+        <span></span><span></span><span></span><span></span>
+      </div>
+      Stop`;
+  } else {
+    btn.classList.remove('speaking');
+    btn.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+        <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+        <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+      </svg>
+      Play Brief`;
+  }
 }
 
 function renderPlanList(apptId) {
@@ -3466,7 +3792,16 @@ async function setStatus(apptId, status, btn) {
   }
 }
 
-function saveDone(apptId) {
+async function saveDone(apptId) {
+  // Flush any unsaved prescriptions, test orders, notes, and plan to the server
+  const saves = [];
+  if ((_rxState[apptId] || []).length)     saves.push(saveRx(apptId).catch(() => {}));
+  if ((_testState[apptId] || []).length)   saves.push(saveTestOrders(apptId).catch(() => {}));
+  if ((_planState[apptId] || []).length)   saves.push(savePlan(apptId).catch(() => {}));
+  const notesEl = document.getElementById(`notes-${apptId}`);
+  if (notesEl && notesEl.value.trim())     saves.push(saveNotes(apptId).catch(() => {}));
+  if (saves.length) await Promise.all(saves);
+
   _dismissedIds.add(apptId);
   localStorage.setItem(_DISMISS_KEY, JSON.stringify([..._dismissedIds]));
   _activeApptId = null;

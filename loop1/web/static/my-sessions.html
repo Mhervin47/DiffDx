@@ -106,14 +106,26 @@
     .referral-urgency-soon { background:rgba(245,158,11,.12); color:#f59e0b; border:1px solid rgba(245,158,11,.3); }
 
     .rx-card {
-      display:grid; grid-template-columns:1fr auto; gap:4px 16px; align-items:start;
-      padding:10px 14px; background:var(--surface-3); border:1px solid var(--border);
-      border-radius:var(--radius); margin-bottom:7px;
+      display:flex; align-items:stretch; gap:0;
+      border:1px solid rgba(139,92,246,.2); border-radius:var(--radius);
+      margin-bottom:8px; overflow:hidden; background:rgba(139,92,246,.04);
     }
     .rx-card:last-child { margin-bottom:0; }
-    .rx-drug { font-size:13px; font-weight:600; color:var(--text); }
-    .rx-details { font-size:11px; color:var(--text-muted); margin-top:2px; }
-    .rx-duration { font-size:11px; color:var(--text-muted); text-align:right; white-space:nowrap; }
+    .rx-card-accent { width:3px; flex-shrink:0; background:linear-gradient(180deg,#8b5cf6,#6366f1); }
+    .rx-card-content { flex:1; display:grid; grid-template-columns:1fr auto; gap:2px 12px; align-items:start; padding:11px 14px; }
+    .rx-drug { font-size:13px; font-weight:700; color:var(--text); }
+    .rx-duration { font-size:11px; font-weight:600; color:#a78bfa; text-align:right; white-space:nowrap; padding-top:1px; }
+    .rx-badges { display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; grid-column:1/-1; }
+    .rx-badge {
+      font-size:10px; font-weight:600; padding:2px 7px; border-radius:99px;
+      background:rgba(139,92,246,.1); color:#a78bfa; border:1px solid rgba(139,92,246,.2);
+    }
+    .rx-notes { font-size:11px; color:var(--text-muted); margin-top:5px; font-style:italic; grid-column:1/-1; }
+    .rx-batch-label {
+      font-size:10px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+      color:var(--text-muted); padding:8px 0 5px; display:flex; align-items:center; gap:8px;
+    }
+    .rx-batch-label::after { content:''; flex:1; height:1px; background:var(--border); }
 
     .test-card {
       display:flex; align-items:center; gap:10px; padding:9px 14px;
@@ -200,11 +212,10 @@
     }
     .session-date { font-size: 11px; font-weight: 600; color: var(--text-muted); }
     .rx-card {
-      background: rgba(255,255,255,.03);
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 10px; padding: 11px 14px;
+      background: rgba(139,92,246,.04);
+      border: 1px solid rgba(139,92,246,.2);
+      border-radius: 10px; overflow:hidden;
     }
-    .rx-card:hover { border-color: rgba(0,180,216,.2); }
     .rx-drug { font-size: 13px; font-weight: 700; }
     .test-card {
       background: rgba(255,255,255,.03);
@@ -321,7 +332,9 @@
     /* ── Page tab toggle ────────────────────────────────── */
     .page-tab-bar {
       display: flex; gap: 4px; margin-bottom: 22px;
-      background: var(--surface-2); border: 1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.07);
       border-radius: 12px; padding: 4px;
     }
     .page-tab {
@@ -332,13 +345,14 @@
       display: flex; align-items: center; justify-content: center; gap: 7px;
     }
     .page-tab.active {
-      background: var(--surface-3); color: var(--text);
-      box-shadow: 0 1px 4px rgba(0,0,0,.25);
+      background: rgba(16,185,129,.1); color: #10b981;
+      border: 1px solid rgba(16,185,129,.2);
+      box-shadow: 0 0 16px rgba(16,185,129,.08);
     }
     .page-tab-badge {
       font-size: 10px; font-weight: 700; min-width: 17px; height: 17px;
       border-radius: 99px; display: inline-flex; align-items: center; justify-content: center;
-      padding: 0 5px; background: rgba(0,180,216,.15); color: var(--primary);
+      padding: 0 5px; background: rgba(16,185,129,.18); color: #10b981;
     }
 
     /* ── Appointments view ─────────────────────────────── */
@@ -414,14 +428,17 @@
     /* ── Quick-start shortcut ─────────────────────────── */
     .quick-start-bar {
       display: flex; align-items: center; gap: 14px;
-      background: rgba(0,180,216,.05); border: 1px solid rgba(0,180,216,.15);
+      background: rgba(16,185,129,.06);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(16,185,129,.18);
       border-radius: 14px; padding: 14px 18px; margin-bottom: 24px; cursor: pointer;
-      transition: background .15s, border-color .15s;
+      transition: background .15s, border-color .15s, box-shadow .15s;
     }
-    .quick-start-bar:hover { background: rgba(0,180,216,.09); border-color: rgba(0,180,216,.3); }
+    .quick-start-bar:hover { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.35); box-shadow: 0 0 24px rgba(16,185,129,.1); }
     .quick-start-icon {
       width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
-      background: rgba(0,180,216,.12); display: flex; align-items: center; justify-content: center;
+      background: rgba(16,185,129,.14); border: 1px solid rgba(16,185,129,.2);
+      display: flex; align-items: center; justify-content: center;
     }
     .quick-start-text { flex: 1; }
     .quick-start-title { font-size: 14px; font-weight: 700; color: var(--text); }
@@ -432,14 +449,26 @@
 
 <nav class="nav">
   <div class="nav-brand">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    Medical<span>Convo</span>
+    <svg width="26" height="26" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 6px rgba(16,185,129,.5))">
+      <defs>
+        <linearGradient id="ms-ring" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+        <linearGradient id="ms-ft" x1="13" y1="14" x2="19" y2="8" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
+        <linearGradient id="ms-fb" x1="13" y1="14" x2="19" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+      </defs>
+      <circle cx="14" cy="14" r="12.5" stroke="url(#ms-ring)" stroke-width="1.25" fill="rgba(16,185,129,.08)"/>
+      <line x1="6" y1="14" x2="13" y2="14" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+      <path d="M13 14 L19 8.5" stroke="url(#ms-ft)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M13 14 L19 19.5" stroke="url(#ms-fb)" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="20" cy="8.5" r="2" fill="#34d399"/>
+      <circle cx="20" cy="19.5" r="2" fill="#a855f7"/>
+    </svg>
+    <span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.03em;color:#f1f5f9;">Diff<span style="background:linear-gradient(90deg,#10b981,#34d399);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">/Dx</span></span>
   </div>
   <div class="nav-spacer"></div>
   <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
 </nav>
 
-<div class="page" style="max-width:840px;">
+<div class="page" style="max-width:840px; padding-top:104px;">
   <div class="patient-page-header">
     <div>
       <div class="patient-page-title">My Sessions</div>
@@ -588,8 +617,9 @@ function _checkPatientNotifs(appts) {
       );
     }
     // New prescription
-    if ((a.prescriptions || []).length > 0) {
-      const rxKey = 'rx-' + id + '-' + a.prescriptions.length;
+    const _validRxNotif = (a.prescriptions || []).filter(rx => rx.drug && rx.drug.trim());
+    if (_validRxNotif.length > 0) {
+      const rxKey = 'rx-' + id + '-' + _validRxNotif.length;
       _firePushNotif(rxKey,
         'Prescription Ready',
         `Dr. ${a.doctor_name || 'your doctor'} has added a prescription. Tap to view.`,
@@ -678,10 +708,27 @@ async function loadSessions() {
     const { sessions } = await sessRes.json();
     const notifData = notifRes.ok ? await notifRes.json() : { appointments: [] };
     const apptData = apptRes.ok ? await apptRes.json() : { appointments: [] };
-    // Map session_id → full appointment for refill / intake / upload features
+    // Map session_id → best appointment for displaying clinical data.
+    // Score: seen+data(25) > upcoming+no_data(20) > seen+no_data(10) > cancelled+data(5) > cancelled+no_data(0)
+    // upcoming+data(30) beats all. This ensures prescriptions/tests added by the
+    // doctor are visible on the session card even when a newer upcoming appointment
+    // exists for the same session (e.g. after reschedule or multiple bookings).
+    // The upcoming appointment still appears separately in the Appointments tab.
     _apptMap = {};
+    function _apptScore(a) {
+      const s = a.status || 'upcoming';
+      const hasData = ((a.prescriptions?.length > 0) || (a.test_orders?.length > 0) || !!a.referral || !!a.doctor_notes) ? 1 : 0;
+      if (s === 'cancelled') return hasData ? 5 : 0;
+      if (s === 'seen')      return hasData ? 25 : 10;
+      /* upcoming */         return hasData ? 30 : 20;
+    }
     for (const a of (apptData.appointments || [])) {
-      if (a.session_id) _apptMap[a.session_id] = a;
+      if (!a.session_id) continue;
+      const existing = _apptMap[a.session_id];
+      if (!existing) { _apptMap[a.session_id] = a; continue; }
+      const scoreA = _apptScore(a), scoreE = _apptScore(existing);
+      if (scoreA > scoreE) { _apptMap[a.session_id] = a; continue; }
+      if (scoreA === scoreE && (a.slot || '') > (existing.slot || '')) { _apptMap[a.session_id] = a; }
     }
     _checkPatientNotifs(apptData.appointments || []);
     _checkPatientMessages();
@@ -715,11 +762,11 @@ async function loadSessions() {
     // Sort and group: upcoming-appointment sessions first, then past
     const upcoming = sessions.filter(s => {
       const a = _apptMap[s.session_id];
-      return a && a.status === 'upcoming';
+      return a && (!a.status || a.status === 'upcoming');
     });
     const past = sessions.filter(s => {
       const a = _apptMap[s.session_id];
-      return !a || a.status !== 'upcoming';
+      return !a || (a.status && a.status !== 'upcoming');
     }).sort((a, b) => new Date(b.started_at) - new Date(a.started_at));
 
     function buildCard(s) {
@@ -734,7 +781,7 @@ async function loadSessions() {
       const appt = _apptMap[s.session_id];
       const apptId = appt ? appt.appointment_id : null;
       const isUpcoming = appt && (appt.status || 'upcoming') === 'upcoming';
-      const hasRx = appt && Array.isArray(appt.prescriptions) && appt.prescriptions.length > 0;
+      const hasRx = appt && Array.isArray(appt.prescriptions) && appt.prescriptions.some(rx => rx.drug && rx.drug.trim());
       const refilled = appt && appt.refill_request;
       const intakeDone = appt && appt.intake;
       const isSeen = appt && appt.status === 'seen';
@@ -828,12 +875,41 @@ async function loadSessions() {
           </button>
         </div>
         ${proposalBanner}
-        ${appt && hasRx ? `
-        <div class="patient-panel" id="rx-panel-${apptId}">
+        ${appt && hasRx ? (() => {
+          const validRx = (appt.prescriptions || []).filter(rx => rx.drug && rx.drug.trim());
+          const history = appt.prescription_history || [];
+          const rxCount = validRx.length;
+          function _rxCard(rx) {
+            const badges = [rx.dose, rx.route, rx.frequency, rx.meal_timing].filter(Boolean);
+            return `<div class="rx-card">
+              <div class="rx-card-accent"></div>
+              <div class="rx-card-content">
+                <div class="rx-drug">${escHtml(rx.drug||'')}</div>
+                <div class="rx-duration">${escHtml(rx.duration||'')}</div>
+                ${badges.length ? `<div class="rx-badges">${badges.map(b => `<span class="rx-badge">${escHtml(b)}</span>`).join('')}</div>` : ''}
+                ${rx.notes ? `<div class="rx-notes">${escHtml(rx.notes)}</div>` : ''}
+              </div>
+            </div>`;
+          }
+          function _fmtBatchDate(iso) {
+            try { return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short'}); } catch { return ''; }
+          }
+          let rxBody;
+          if (history.length > 1) {
+            rxBody = history.map((batch, i) => {
+              const batchRx = (batch.prescriptions || []).filter(rx => rx.drug && rx.drug.trim());
+              if (!batchRx.length) return '';
+              const label = i === 0 ? `Original · ${_fmtBatchDate(batch.saved_at)}` : `Refill · ${_fmtBatchDate(batch.saved_at)}`;
+              return `<div class="rx-batch-label">${escHtml(label)}</div>${batchRx.map(_rxCard).join('')}`;
+            }).join('');
+          } else {
+            rxBody = validRx.map(_rxCard).join('');
+          }
+          return `<div class="patient-panel" id="rx-panel-${apptId}">
           <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);">
             <button class="patient-panel-toggle" style="border-bottom:none;flex:1;" onclick="togglePatientPanel('rx-panel-${apptId}')">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v11m0 0H5m4 0h10m-10 0a2 2 0 002 2h10a2 2 0 002-2m0-11v4"/></svg>
-              Prescriptions (${appt.prescriptions.length})
+              Prescriptions (${rxCount})
               <svg class="patient-panel-chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
             </button>
             <button onclick="downloadPrescription('${apptId}')" style="display:flex;align-items:center;gap:5px;padding:8px 12px;font-size:11px;font-weight:600;color:var(--primary);background:none;border:none;cursor:pointer;white-space:nowrap;flex-shrink:0;" title="Download prescription as PDF">
@@ -841,18 +917,9 @@ async function loadSessions() {
               Download
             </button>
           </div>
-          <div class="patient-panel-body" id="rx-body-${apptId}">
-            ${appt.prescriptions.map(rx => `
-              <div class="rx-card">
-                <div>
-                  <div class="rx-drug">${escHtml(rx.drug||'')}</div>
-                  <div class="rx-details">${[rx.dose, rx.route, rx.frequency].filter(Boolean).map(escHtml).join(' · ')}</div>
-                  ${rx.notes ? `<div class="rx-details" style="margin-top:2px;font-style:italic;">${escHtml(rx.notes)}</div>` : ''}
-                </div>
-                <div class="rx-duration">${escHtml(rx.duration||'')}</div>
-              </div>`).join('')}
-          </div>
-        </div>` : ''}
+          <div class="patient-panel-body" id="rx-body-${apptId}">${rxBody}</div>
+        </div>`;
+        })() : ''}
 
         ${appt && appt.test_orders && appt.test_orders.length ? `
         <div class="patient-panel" id="tests-panel-${apptId}">
@@ -969,8 +1036,12 @@ function switchApptSubTab(sub) {
 
 function _buildAppointmentsPanel(appts) {
   const now = new Date().toISOString();
-  // Show upcoming (active + recently cancelled within 30 days) and exclude old past
-  const upcoming = appts.filter(a => !a.is_followup && (a.status === 'upcoming' || a.status === 'cancelled') && a.slot >= new Date(Date.now() - 30*86400000).toISOString());
+  // Show upcoming, missed (past slot but still 'upcoming' status), and recently cancelled
+  const upcoming = appts.filter(a =>
+    !a.is_followup &&
+    (!a.status || a.status === 'upcoming' || a.status === 'cancelled') &&
+    a.slot >= new Date(Date.now() - 30*86400000).toISOString()
+  );
   const followups = appts.filter(a => a.is_followup);
 
   // Update badge count
@@ -1014,36 +1085,57 @@ function _buildUpcomingHtml(appts) {
       <div>No upcoming appointments</div>
     </div>`;
 
+  const nowIso = new Date().toISOString();
   return appts.sort((a, b) => (a.slot || '') < (b.slot || '') ? -1 : 1).map(a => {
     const isCancelled = a.status === 'cancelled';
+    const isMissed = !isCancelled && a.status === 'upcoming' && a.slot && a.slot < nowIso;
     const daysLabel = _daysUntil(a.slot);
     const preVisitDone = !!a.intake;
     const cancelledAt = a.cancelled_at ? ` on ${_fmtSlot(a.cancelled_at)}` : '';
+
+    let accentClass, iconStyle, iconSvg, titleStyle, badge;
+    if (isCancelled) {
+      accentClass = 'cancelled';
+      iconStyle = 'background:rgba(239,68,68,.1);color:#ef4444;box-shadow:inset 0 0 0 1px rgba(239,68,68,.2);';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`;
+      titleStyle = 'text-decoration:line-through;color:var(--text-muted);';
+      badge = `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);white-space:nowrap;flex-shrink:0;">✕ Cancelled</span>`;
+    } else if (isMissed) {
+      accentClass = 'missed';
+      iconStyle = 'background:rgba(245,158,11,.1);color:#f59e0b;box-shadow:inset 0 0 0 1px rgba(245,158,11,.2);';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      titleStyle = 'color:var(--text-muted);';
+      badge = `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(245,158,11,.12);color:#f59e0b;border:1px solid rgba(245,158,11,.25);white-space:nowrap;flex-shrink:0;">Missed</span>`;
+    } else {
+      accentClass = 'upcoming';
+      iconStyle = '';
+      iconSvg = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`;
+      titleStyle = '';
+      badge = `<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,180,216,.1);color:var(--primary);border:1px solid rgba(0,180,216,.2);white-space:nowrap;flex-shrink:0;">${escHtml((a.urgency || 'routine').replace(/_/g,' '))}</span>`;
+    }
+
     return `
     <div class="appt-card${isCancelled ? ' cancelled' : ''}">
-      <div class="appt-card-accent ${isCancelled ? 'cancelled' : 'upcoming'}"></div>
+      <div class="appt-card-accent ${accentClass}" style="${isMissed ? 'background:#f59e0b;' : ''}"></div>
       <div class="appt-card-header">
-        <div class="appt-card-icon ${isCancelled ? '' : 'upcoming'}" style="${isCancelled ? 'background:rgba(239,68,68,.1);color:#ef4444;box-shadow:inset 0 0 0 1px rgba(239,68,68,.2);' : ''}">
-          ${isCancelled
-            ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>`
-            : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>`}
+        <div class="appt-card-icon ${!isCancelled && !isMissed ? 'upcoming' : ''}" style="${iconStyle}">
+          ${iconSvg}
         </div>
         <div style="flex:1;min-width:0;">
-          <div class="appt-card-title" style="${isCancelled ? 'text-decoration:line-through;color:var(--text-muted);' : ''}">${escHtml(a.doctor_name || 'Doctor')}</div>
+          <div class="appt-card-title" style="${titleStyle}">${escHtml(a.doctor_name || 'Doctor')}</div>
           <div class="appt-card-meta">
             <span>${escHtml(a.specialty || '')}</span>
             ${a.primary_diagnosis ? `<span style="color:var(--success);font-weight:600;">${escHtml(a.primary_diagnosis)}</span>` : ''}
-            ${!isCancelled && daysLabel ? `<span style="color:var(--primary);font-weight:700;">${escHtml(daysLabel)}</span>` : ''}
+            ${!isCancelled && !isMissed && daysLabel ? `<span style="color:var(--primary);font-weight:700;">${escHtml(daysLabel)}</span>` : ''}
           </div>
         </div>
-        ${isCancelled
-          ? `<span style="font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;background:rgba(239,68,68,.12);color:#ef4444;border:1px solid rgba(239,68,68,.25);white-space:nowrap;flex-shrink:0;">✕ Cancelled</span>`
-          : `<span style="font-size:11px;font-weight:700;padding:3px 9px;border-radius:99px;background:rgba(0,180,216,.1);color:var(--primary);border:1px solid rgba(0,180,216,.2);white-space:nowrap;flex-shrink:0;">${escHtml((a.urgency || 'routine').replace(/_/g,' '))}</span>`}
+        ${badge}
       </div>
-      <div class="appt-card-slot" style="${isCancelled ? 'opacity:.5;text-decoration:line-through;' : ''}">
+      <div class="appt-card-slot" style="${isCancelled || isMissed ? 'opacity:.55;' : ''}">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         ${escHtml(_fmtSlot(a.slot))}
       </div>
+
       ${isCancelled ? `
         <div style="margin-top:8px;font-size:12px;color:#ef4444;display:flex;align-items:center;gap:5px;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -1059,8 +1151,25 @@ function _buildUpcomingHtml(appts) {
             Remove
           </button>
         </div>` : ''}
-      ${!isCancelled && a.doctor_summary ? `<div class="appt-card-notes upcoming-notes">${escHtml(a.doctor_summary)}</div>` : ''}
-      ${!isCancelled ? `<div class="appt-card-actions">
+
+      ${isMissed ? `
+        <div style="margin-top:8px;font-size:12px;color:#f59e0b;display:flex;align-items:center;gap:5px;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Appointment was not attended
+        </div>
+        <div class="appt-card-actions" style="margin-top:10px;">
+          <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Rebook
+          </button>
+          <button class="btn btn-ghost btn-sm" onclick="dismissAppt('${escHtml(a.appointment_id)}', this)" style="color:var(--danger);border-color:rgba(239,68,68,.3);">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            Delete
+          </button>
+        </div>` : ''}
+
+      ${!isCancelled && !isMissed && a.doctor_summary ? `<div class="appt-card-notes upcoming-notes">${escHtml(a.doctor_summary)}</div>` : ''}
+      ${!isCancelled && !isMissed ? `<div class="appt-card-actions">
         <a href="/pre-visit-intake.html?appt=${escHtml(a.appointment_id)}" class="btn btn-secondary btn-sm" style="text-decoration:none;">${preVisitDone ? 'Update Check-in' : 'Pre-visit Check-in'}</a>
         <button class="btn btn-ghost btn-sm reschedule-btn" onclick="openReschedule('${escHtml(a.appointment_id)}','${escHtml(a.doctor_id || '')}')">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px;"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
@@ -1192,7 +1301,7 @@ function openRefill(apptId) {
   const appt = Object.values(_apptMap).find(a => a.appointment_id === apptId);
   if (!appt) return;
   _refillApptId = apptId;
-  const rx = appt.prescriptions || [];
+  const rx = (appt.prescriptions || []).filter(r => r.drug && r.drug.trim());
   document.getElementById('refill-rx-list').innerHTML = rx.length
     ? rx.map(r => `<div class="rx-line"><span>${escHtml(r.drug || '')}</span><span class="rx-dose">${escHtml(r.dose || '')}${r.frequency ? ' · ' + escHtml(r.frequency) : ''}</span></div>`).join('')
     : `<div style="color:var(--text-muted);font-size:13px;">No prescriptions on file.</div>`;
@@ -1208,7 +1317,7 @@ async function sendRefill() {
     const res = await fetch(`/api/patient/appointments/${_refillApptId}/refill`, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', ...authHeaders() },
-      body: JSON.stringify({ medications: (appt && appt.prescriptions) || [], note: document.getElementById('refill-note').value }),
+      body: JSON.stringify({ medications: (appt && appt.prescriptions || []).filter(r => r.drug && r.drug.trim()), note: document.getElementById('refill-note').value }),
     });
     if (!res.ok) throw new Error((await res.json()).detail || 'Failed');
     if (appt) appt.refill_request = { note: document.getElementById('refill-note').value };

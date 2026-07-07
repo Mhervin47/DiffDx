@@ -446,6 +446,93 @@
       height: 100%; border-radius: 2px; background: var(--primary);
     }
 
+    /* ---- Patient Summary ---- */
+    .patient-summary-card {
+      background: rgba(16,185,129,.05);
+      border: 1px solid rgba(16,185,129,.18);
+      border-radius: 18px; padding: 22px 24px;
+      margin-bottom: 28px;
+    }
+    .patient-summary-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .patient-summary-label {
+      font-size: 10px; font-weight: 800; letter-spacing: .12em;
+      text-transform: uppercase; color: rgba(16,185,129,.8);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .patient-summary-text {
+      font-size: 15px; line-height: 1.75; color: var(--text);
+    }
+    .ps-listen-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 8px 18px; border-radius: 9999px; border: none; cursor: pointer;
+      font-size: 12px; font-weight: 700; font-family: var(--font);
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.25);
+      color: #10b981; transition: all .2s ease; white-space: nowrap; flex-shrink: 0;
+    }
+    .ps-listen-btn:hover {
+      background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.5);
+      box-shadow: 0 0 18px rgba(16,185,129,.2);
+    }
+    .ps-listen-btn.speaking {
+      background: rgba(239,68,68,.1); border-color: rgba(239,68,68,.35);
+      color: #f87171;
+    }
+    .ps-speaking-bars { display: flex; align-items: center; gap: 2px; height: 12px; }
+    .ps-speaking-bars span {
+      display: inline-block; width: 2px; background: #f87171; border-radius: 2px;
+      height: 100%; transform-origin: bottom;
+      animation: speak-bar .7s ease-in-out infinite;
+    }
+    .ps-speaking-bars span:nth-child(2) { animation-delay: .12s; height: 70%; }
+    .ps-speaking-bars span:nth-child(3) { animation-delay: .24s; }
+    @keyframes speak-bar { 0%,100%{transform:scaleY(.3)} 50%{transform:scaleY(1)} }
+
+    .ps-lang-row {
+      display: flex; align-items: center; gap: 8px; margin-top: 14px;
+      flex-wrap: wrap;
+    }
+    .ps-lang-label {
+      font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: rgba(16,185,129,.6); white-space: nowrap; flex-shrink: 0;
+    }
+    .ps-lang-select {
+      flex: 1; min-width: 0; max-width: 260px;
+      background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.2);
+      color: var(--text); border-radius: 9999px; padding: 5px 14px;
+      font-size: 12px; font-weight: 600; font-family: var(--font);
+      cursor: pointer; outline: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2310b981' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 28px; transition: border-color .15s;
+    }
+    .ps-lang-select:focus { border-color: rgba(16,185,129,.5); }
+    .ps-translating {
+      font-size: 11px; color: rgba(16,185,129,.6); display: none;
+      align-items: center; gap: 5px;
+    }
+    .ps-translating.show { display: flex; }
+    @keyframes ps-dot { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+    .ps-translating span { animation: ps-dot 1.2s ease-in-out infinite; }
+    .ps-translating span:nth-child(2) { animation-delay: .2s; }
+    .ps-translating span:nth-child(3) { animation-delay: .4s; }
+
+    /* ---- Differential Evolution toggle ---- */
+    .diff-evo-toggle {
+      width: 100%; display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.07);
+      border-radius: 12px; padding: 12px 16px; cursor: pointer;
+      font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
+      color: var(--text-muted); font-family: var(--font);
+      transition: border-color .18s, background .18s;
+    }
+    .diff-evo-toggle:hover {
+      border-color: rgba(16,185,129,.25); background: rgba(16,185,129,.04);
+      color: var(--text);
+    }
+
     /* ---- Differential Evolution ---- */
     .diff-evo-turn {
       margin-bottom: 16px; padding: 14px 16px;
@@ -736,6 +823,12 @@
     @media print {
       /* Force color rendering */
       * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      /* Always expand diff evolution in print */
+      .diff-evo-body { display: block !important; }
+      .diff-evo-toggle { display: none !important; }
+      /* Hide listen button and lang row in print */
+      .ps-listen-btn { display: none !important; }
+      .ps-lang-row { display: none !important; }
 
       /* Reset dark theme to light */
       :root {
@@ -942,31 +1035,26 @@
 </head>
 <body>
 
-<nav class="nav">
-  <button class="nav-back" onclick="window.location.href='/session.html'">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-    Session
-  </button>
-  <div class="nav-brand" style="margin-left:8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    AI Diagnostic Assistant
+<nav class="nav" style="display:flex;align-items:center;padding:0 20px;gap:12px;">
+  <!-- left -->
+  <div style="flex:1;display:flex;align-items:center;">
+    <button class="nav-back" onclick="window.location.href='/session/'+(sessionStorage.getItem('sessionId')||'')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      Session
+    </button>
   </div>
-  <div class="nav-spacer"></div>
-  <div class="steps">
-    <div class="step done"><div class="step-num">✓</div><span>Profile</span></div>
-    <div class="step-sep"></div>
-    <div class="step done"><div class="step-num">✓</div><span>History</span></div>
-    <div class="step-sep"></div>
-    <div class="step done"><div class="step-num">✓</div><span>Book</span></div>
-    <div class="step-sep"></div>
-    <div class="step done"><div class="step-num">✓</div><span>Session</span></div>
-    <div class="step-sep"></div>
-    <div class="step active"><div class="step-num">5</div><span>Report</span></div>
-  </div>
-  <div class="spacer"></div>
-  <span class="badge badge-green">Session Complete</span>
-  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin:0 8px;"></div>
 
+  <!-- center — DiffDx badge, always truly centered -->
+  <div style="flex-shrink:0;display:flex;align-items:center;gap:7px;padding:7px 20px;border-radius:9999px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.18);box-shadow:0 0 24px rgba(16,185,129,.08);font-size:14px;font-weight:800;letter-spacing:-.02em;color:#f1f5f9;">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+    Diff<span style="color:#10b981;">Dx</span>
+  </div>
+
+  <!-- right -->
+  <div style="flex:1;display:flex;align-items:center;justify-content:flex-end;gap:8px;">
+    <span class="badge badge-green" style="white-space:nowrap;">Session Complete</span>
+    <div id="nav-auth" style="display:flex;align-items:center;gap:6px;"></div>
+  </div>
 </nav>
 
 <div class="page" id="content">
@@ -1045,6 +1133,7 @@ if (!sessionId) window.location.href = '/';
 // Modal state
 let _pendingDoctor = null;
 let _pendingSlot = null;
+let _routingDoctors = {}; // id → doctor object
 
 // load() is defined further below (extended version with symptom history + download)
 
@@ -1475,6 +1564,8 @@ function buildNextSteps(r) {
   const urgencyClass = `urgency-${r.urgency}`;
   const urgencyLabel = r.urgency.toUpperCase();
 
+  // Store doctors in lookup map so we don't embed large JSON in onclick attributes
+  (r.doctors || []).forEach(d => { _routingDoctors[d.id] = d; });
   const doctorCards = (r.doctors || []).map(d => `
     <div class="doctor-card">
       <div class="doctor-card-header">
@@ -1486,7 +1577,7 @@ function buildNextSteps(r) {
         </div>
       </div>
       <div class="doctor-card-footer">
-        <button class="book-btn" onclick="openModal(${JSON.stringify(d).replace(/"/g,'&quot;')})">
+        <button class="book-btn" onclick="openModal('${escHtml(d.id)}')">
           Book Appointment
         </button>
       </div>
@@ -1588,7 +1679,10 @@ function buildNextSteps(r) {
   `;
 }
 
-function openModal(doctor, preselectedSlot) {
+function openModal(doctorOrId, preselectedSlot) {
+  // Accept either a doctor ID string (from onclick) or a full doctor object (legacy callers)
+  const doctor = typeof doctorOrId === 'string' ? _routingDoctors[doctorOrId] : doctorOrId;
+  if (!doctor) return;
   _pendingDoctor = doctor;
   _pendingSlot = preselectedSlot || null;
 
@@ -1604,11 +1698,14 @@ function openModal(doctor, preselectedSlot) {
 function _showSlotModal(doctor, preselectedSlot) {
   document.getElementById('modal-doctor-name').textContent = doctor.name;
   document.getElementById('modal-doctor-hospital').textContent = doctor.hospital;
+  const nowPrefix = new Date().toISOString().slice(0, 16);
+  const futureSlots = (doctor.available_slots || []).filter(s => s >= nowPrefix).sort();
   const slotList = document.getElementById('slot-list');
-  slotList.innerHTML = (doctor.available_slots || []).map(s => {
+  slotList.innerHTML = futureSlots.map(s => {
     const pre = preselectedSlot === s;
     return `<button class="slot-btn${pre ? ' selected' : ''}" onclick="selectSlot(this, '${s}')">${formatSlot(s)}</button>`;
   }).join('') || '<div style="color:var(--text-muted);font-size:13px;">No available slots.</div>';
+  if (preselectedSlot) _pendingSlot = preselectedSlot;
   document.getElementById('confirm-book-btn').disabled = !preselectedSlot;
   document.getElementById('slot-modal').classList.remove('hidden');
 }
@@ -1853,6 +1950,9 @@ function buildReport(d) {
       </div>
     </div>
 
+    <!-- PATIENT SUMMARY -->
+    ${closing ? buildPatientSummary(closing, d.final_diagnosis) : ''}
+
     <!-- CLOSING STATEMENT -->
     ${closing ? buildClosing(closing) : ''}
 
@@ -1929,6 +2029,184 @@ function buildReport(d) {
         Download
       </button>
       <button id="btn-pdf" class="btn btn-secondary">Print / Export PDF ↓</button>
+    </div>
+  `;
+}
+
+// ---- Patient Summary ----
+let _psSpeaking = false;
+let _psUtterance = null;
+
+function _buildSummaryText(c, finalDx) {
+  const dx = finalDx || c.leading_diagnosis || 'a condition';
+  const steps = (c.recommended_next_steps || []);
+  let text = `Based on your answers, the most likely explanation for your symptoms is ${dx}. `;
+  if (c.differential_summary) text += c.differential_summary + ' ';
+  if (steps.length) {
+    text += 'Here are the recommended next steps: ';
+    text += steps.map((s, i) => `${i + 1}. ${s}`).join('. ') + '.';
+  }
+  return text.trim();
+}
+
+// BCP-47 lang codes per language code
+const _psLangMap = {
+  en: 'en-US', hi: 'hi-IN', ta: 'ta-IN', te: 'te-IN', ml: 'ml-IN',
+  kn: 'kn-IN', bn: 'bn-IN', mr: 'mr-IN', gu: 'gu-IN', pa: 'pa-IN',
+  ur: 'ur-PK', ar: 'ar-SA', es: 'es-ES', fr: 'fr-FR', de: 'de-DE',
+  pt: 'pt-BR', zh: 'zh-CN', ja: 'ja-JP', ko: 'ko-KR', ru: 'ru-RU',
+};
+
+function _speakText(text, langCode) {
+  const bcp47 = _psLangMap[langCode] || 'en-US';
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.rate = 0.9; utt.pitch = 1.0; utt.volume = 1.0;
+  utt.lang = bcp47;
+  const voices = window.speechSynthesis.getVoices();
+  const voice =
+    voices.find(v => v.lang === bcp47 && v.localService) ||
+    voices.find(v => v.lang === bcp47) ||
+    voices.find(v => v.lang.startsWith(langCode)) ||
+    (langCode === 'en' ? (voices.find(v => v.lang.startsWith('en') && v.localService) || voices.find(v => v.lang.startsWith('en'))) : null) ||
+    null;
+  if (voice) utt.voice = voice;
+  utt.onstart = () => { _psSpeaking = true; _updatePsBtn(true); };
+  utt.onend   = () => { _psSpeaking = false; _updatePsBtn(false); };
+  utt.onerror = () => { _psSpeaking = false; _updatePsBtn(false); };
+  _psUtterance = utt;
+  window.speechSynthesis.speak(utt);
+}
+
+async function togglePatientSummaryAudio() {
+  const btn = document.getElementById('ps-listen-btn');
+  if (_psSpeaking) {
+    window.speechSynthesis.cancel();
+    _psSpeaking = false;
+    _updatePsBtn(false);
+    return;
+  }
+  const text = btn?.dataset.summary || '';
+  if (!text) return;
+  const langSel = document.getElementById('ps-lang-select');
+  const langCode = langSel?.value || 'en';
+
+  if (langCode === 'en') {
+    _speakText(text, 'en');
+    return;
+  }
+
+  // Translate then speak
+  const transEl = document.getElementById('ps-translating');
+  if (transEl) transEl.classList.add('show');
+  if (btn) { btn.disabled = true; }
+  try {
+    // Split into chunks ≤ 500 chars (MyMemory free limit per request)
+    const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+    const chunks = [];
+    let cur = '';
+    for (const s of sentences) {
+      if ((cur + s).length > 480) { if (cur) chunks.push(cur.trim()); cur = s; }
+      else cur += s;
+    }
+    if (cur.trim()) chunks.push(cur.trim());
+
+    const translated = await Promise.all(chunks.map(async chunk => {
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|${langCode}`;
+      const r = await fetch(url);
+      if (!r.ok) return chunk;
+      const d = await r.json();
+      return d?.responseData?.translatedText || chunk;
+    }));
+    if (transEl) transEl.classList.remove('show');
+    if (btn) btn.disabled = false;
+    _speakText(translated.join(' '), langCode);
+  } catch {
+    if (transEl) transEl.classList.remove('show');
+    if (btn) btn.disabled = false;
+    // Fall back to English
+    _speakText(text, 'en');
+  }
+}
+
+function _updatePsBtn(speaking) {
+  const btn = document.getElementById('ps-listen-btn');
+  if (!btn) return;
+  if (speaking) {
+    btn.classList.add('speaking');
+    btn.innerHTML = `<div class="ps-speaking-bars"><span></span><span></span><span></span></div> Stop`;
+  } else {
+    btn.classList.remove('speaking');
+    btn.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg> Listen`;
+  }
+}
+
+function buildPatientSummary(c, finalDx) {
+  const dx = finalDx || c.leading_diagnosis || 'a condition';
+  const steps = (c.recommended_next_steps || []);
+  const summaryText = _buildSummaryText(c, finalDx);
+
+  const stepsHtml = steps.length ? `
+    <div style="margin-top:14px;">
+      <div style="font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:rgba(16,185,129,.7);margin-bottom:8px;">Recommended Next Steps</div>
+      <ol style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;">
+        ${steps.map(s => `<li style="font-size:14px;line-height:1.6;color:var(--text-dim);">${escHtml(s)}</li>`).join('')}
+      </ol>
+    </div>` : '';
+
+  const langOptions = [
+    { code: 'en', label: 'English' },
+    { code: 'hi', label: 'हिन्दी' },
+    { code: 'ta', label: 'தமிழ்' },
+    { code: 'te', label: 'తెలుగు' },
+    { code: 'ml', label: 'മലയാളം' },
+    { code: 'kn', label: 'ಕನ್ನಡ' },
+    { code: 'bn', label: 'বাংলা' },
+    { code: 'mr', label: 'मराठी' },
+    { code: 'gu', label: 'ગુજરાતી' },
+    { code: 'pa', label: 'ਪੰਜਾਬੀ' },
+    { code: 'ur', label: 'اردو' },
+    { code: 'ar', label: 'العربية' },
+    { code: 'es', label: 'Español' },
+    { code: 'fr', label: 'Français' },
+    { code: 'de', label: 'Deutsch' },
+    { code: 'pt', label: 'Português' },
+    { code: 'zh', label: '中文' },
+    { code: 'ja', label: '日本語' },
+    { code: 'ko', label: '한국어' },
+    { code: 'ru', label: 'Русский' },
+  ];
+
+  return `
+    <div class="patient-summary-card">
+      <div class="patient-summary-header">
+        <div class="patient-summary-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Summary
+        </div>
+        <button class="ps-listen-btn" id="ps-listen-btn"
+          data-summary="${escHtml(summaryText)}"
+          onclick="togglePatientSummaryAudio()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          Listen
+        </button>
+      </div>
+      <div class="patient-summary-text">
+        The most likely explanation for your symptoms is <strong style="color:#10b981;">${escHtml(dx)}</strong>.
+        ${c.differential_summary ? `<span style="color:var(--text-dim);"> ${escHtml(c.differential_summary)}</span>` : ''}
+      </div>
+      ${stepsHtml}
+      <div class="ps-lang-row">
+        <span class="ps-lang-label">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align:middle;margin-right:3px;"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          Language
+        </span>
+        <select class="ps-lang-select" id="ps-lang-select" onchange="window.speechSynthesis.cancel();_psSpeaking=false;_updatePsBtn(false);">
+          ${langOptions.map(l => `<option value="${l.code}">${l.label}</option>`).join('')}
+        </select>
+        <div class="ps-translating" id="ps-translating">
+          Translating<span>.</span><span>.</span><span>.</span>
+        </div>
+      </div>
     </div>
   `;
 }
@@ -2031,7 +2309,6 @@ function toggleRationale(id, btn) {
 function buildDiffEvolution(turnHistory) {
   if (turnHistory.length < 2) return '';
 
-  // Collect unique dx names (top 3 per turn, max 5 total)
   const allDx = [];
   for (const t of turnHistory) {
     for (const d of (t.differential || []).slice(0, 3)) {
@@ -2039,14 +2316,10 @@ function buildDiffEvolution(turnHistory) {
     }
   }
   const topDx = allDx.slice(0, 5);
-
-  // Single primary colour, dimming by rank so bars stay readable
-  const _BASE = 'var(--primary)';
   const _OPACITIES = [1, 0.7, 0.5, 0.36, 0.25];
   const opacityMap = {};
   topDx.forEach((dx, i) => { opacityMap[dx] = _OPACITIES[i] ?? 0.2; });
 
-  // Legend — all same colour, differentiated by label only
   const legend = topDx.map((dx, i) =>
     `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;color:var(--text-dim);margin-right:14px;margin-bottom:6px;">
        <span style="width:10px;height:10px;border-radius:2px;background:var(--primary);opacity:${_OPACITIES[i]};flex-shrink:0;"></span>
@@ -2054,7 +2327,6 @@ function buildDiffEvolution(turnHistory) {
      </span>`
   ).join('');
 
-  // Per-turn blocks
   const turnBlocks = turnHistory.map((t, i) => {
     const probMap = {};
     for (const d of (t.differential || [])) probMap[d.dx] = d.prob ?? 0;
@@ -2085,11 +2357,33 @@ function buildDiffEvolution(turnHistory) {
 
   return `
     <div class="report-section">
-      <div class="report-section-title">Differential Evolution</div>
-      <div style="margin-bottom:14px;flex-wrap:wrap;display:flex;">${legend}</div>
-      ${turnBlocks}
+      <!-- collapsible toggle header -->
+      <button class="diff-evo-toggle" id="diff-evo-toggle" onclick="toggleDiffEvo()" aria-expanded="false">
+        <span style="display:flex;align-items:center;gap:8px;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Differential Evolution
+        </span>
+        <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:400;color:var(--text-muted);">
+          ${turnHistory.length} turns
+          <svg class="diff-evo-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transition:transform .25s ease;"><polyline points="6 9 12 15 18 9"/></svg>
+        </span>
+      </button>
+      <div class="diff-evo-body" id="diff-evo-body" style="display:none;padding-top:16px;">
+        <div style="margin-bottom:14px;flex-wrap:wrap;display:flex;">${legend}</div>
+        ${turnBlocks}
+      </div>
     </div>
   `;
+}
+
+function toggleDiffEvo() {
+  const body = document.getElementById('diff-evo-body');
+  const btn  = document.getElementById('diff-evo-toggle');
+  const chev = btn?.querySelector('.diff-evo-chevron');
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'block';
+  if (chev) chev.style.transform = open ? '' : 'rotate(180deg)';
+  if (btn)  btn.setAttribute('aria-expanded', String(!open));
 }
 
 function buildTable(turns, agg) {
@@ -2202,6 +2496,7 @@ function escHtml(s) {
 
 // ---- Own doctor search ----
 let _allDoctors = null;
+let _ownDoctors = {}; // id → doctor object for booking lookups
 let _recommendedSpecialty = '';
 let _mismatchDoctor = null;
 let _ownDocFilter = 'all';
@@ -2300,10 +2595,12 @@ async function _renderOwnDoctors(query) {
   const pageSlice = list.slice(_ownDocPage * _DOCS_PER_PAGE, (_ownDocPage + 1) * _DOCS_PER_PAGE);
 
   const bookedSet = new Set();
+  const nowIso = new Date().toISOString().slice(0, 16);
   const cards = pageSlice.map(d => {
+    _ownDoctors[d.id] = d; // register for lookup
     const isMismatch = _recommendedSpecialty && d.specialty !== _recommendedSpecialty;
     const freeSlots  = (d.available_slots || [])
-      .filter(s => s >= new Date().toISOString() && !bookedSet.has(s))
+      .filter(s => s >= nowIso && !bookedSet.has(s))
       .slice(0, 3);
     const initials = d.name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
     const slotChips = freeSlots.length
@@ -2312,7 +2609,7 @@ async function _renderOwnDoctors(query) {
           const lbl = dt.toLocaleDateString('en-GB', {weekday:'short', day:'numeric', month:'short'})
                     + ' ' + dt.toLocaleTimeString('en-GB', {hour:'2-digit', minute:'2-digit'});
           return `<button class="own-doctor-slot-chip"
-            onclick="bookOwnDoctor(${JSON.stringify(d).replace(/"/g,'&quot;')}, '${s}')">${lbl}</button>`;
+            onclick="bookOwnDoctor('${escHtml(d.id)}', '${s}')">${lbl}</button>`;
         }).join('')
       : '<span class="own-doctor-no-slots">No upcoming slots available</span>';
 
@@ -2328,7 +2625,7 @@ async function _renderOwnDoctors(query) {
       <div class="own-doctor-slots">${slotChips}</div>
       <div class="own-doctor-card-actions">
         <button class="book-btn" style="width:auto;padding:6px 18px;font-size:12px;"
-          onclick="bookOwnDoctor(${JSON.stringify(d).replace(/"/g,'&quot;')}, null)">
+          onclick="bookOwnDoctor('${escHtml(d.id)}', null)">
           Choose Slot
         </button>
       </div>
@@ -2359,7 +2656,9 @@ function ownDocGoPage(page) {
   _renderOwnDoctors(query);
 }
 
-function bookOwnDoctor(doctor, preselectedSlot) {
+function bookOwnDoctor(doctorOrId, preselectedSlot) {
+  const doctor = typeof doctorOrId === 'string' ? (_ownDoctors[doctorOrId] || _routingDoctors[doctorOrId]) : doctorOrId;
+  if (!doctor) return;
   if (doctor.specialty === _recommendedSpecialty || !_recommendedSpecialty) {
     openModal(doctor, preselectedSlot);
     return;

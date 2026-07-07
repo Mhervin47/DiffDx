@@ -5,378 +5,473 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DiffDx — Sign In</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/auth.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800;900&family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
-    body { display: flex; flex-direction: column; min-height: 100vh; }
-    .auth-wrap {
-      flex: 1; display: flex; align-items: center; justify-content: center;
-      padding: 40px 24px;
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #080810;
+      font-family: 'Noto Sans', sans-serif;
+      color: #f1f5f9;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    /* Role picker shown first */
-    .role-picker {
-      background: var(--surface-1); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); width: 100%; max-width: 460px;
-      padding: 36px 32px 32px; text-align: center;
+    /* Blobs */
+    .blob-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(100px); opacity: .22; animation: drift 20s ease-in-out infinite; }
+    .blob-1 { width: 700px; height: 700px; background: radial-gradient(circle, #10b981, transparent 70%); top: -200px; left: -160px; }
+    .blob-2 { width: 560px; height: 560px; background: radial-gradient(circle, #a855f7, transparent 70%); bottom: -180px; right: -100px; animation-delay: -8s; }
+    @keyframes drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      33%      { transform: translate(30px,-24px) scale(1.06); }
+      66%      { transform: translate(-20px,20px) scale(.94); }
     }
-    .role-picker-brand {
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      color: var(--primary); font-weight: 700; font-size: 20px; margin-bottom: 8px;
+
+    /* Nav pill */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 32px;
     }
-    .role-picker-sub {
-      font-size: 13px; color: var(--text-muted); margin-bottom: 32px;
+    .back-btn {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 9px 18px; border-radius: 9999px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.11);
+      color: #94a3b8; font-family: 'Sora', sans-serif;
+      font-size: 13px; font-weight: 700; text-decoration: none;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      transition: all .2s;
     }
-    .role-cards {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 24px;
+    .back-btn:hover {
+      color: #f1f5f9;
+      border-color: rgba(16,185,129,.4);
+      box-shadow: 0 0 18px rgba(16,185,129,.2), 0 0 6px rgba(16,185,129,.12);
+      background: rgba(16,185,129,.06);
     }
-    .role-card {
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 24px 16px;
-      cursor: pointer; transition: border-color .15s, background .15s;
-      display: flex; flex-direction: column; align-items: center; gap: 10px;
+
+    .nav-badge {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 10px 22px; border-radius: 9999px;
+      background: rgba(16,185,129,.06);
+      border: 1px solid rgba(16,185,129,.2);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 0 32px rgba(16,185,129,.12), 0 0 60px rgba(16,185,129,.06);
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 800;
+      color: #f1f5f9; letter-spacing: -.01em;
     }
-    .role-card:hover { border-color: var(--primary); background: var(--surface-3); }
-    .role-card-icon {
-      width: 52px; height: 52px; border-radius: 50%;
+    .nav-badge svg { color: #10b981; filter: drop-shadow(0 0 8px rgba(16,185,129,.7)); }
+    .nav-badge-text { color: #10b981; }
+
+    /* Page layout */
+    .page {
+      position: relative; z-index: 1;
+      min-height: 100vh;
       display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-    }
-    .role-card-icon.patient { background: rgba(0,180,216,.15); }
-    .role-card-icon.doctor  { background: rgba(78,222,163,.12); }
-    .role-card-label { font-size: 15px; font-weight: 700; color: var(--text); }
-    .role-card-desc  { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
-    .role-guest {
-      font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border);
-      padding-top: 18px;
-    }
-    .role-guest a { color: var(--primary); cursor: pointer; }
-    .role-guest a:hover { text-decoration: underline; }
-
-    /* Auth card shown after role selected */
-    .auth-card {
-      background: var(--surface-1); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); width: 100%; max-width: 420px;
-      overflow: hidden; display: none;
-    }
-    .auth-card.visible { display: block; }
-
-    .auth-header {
-      padding: 24px 28px 0;
-      display: flex; align-items: center; gap: 10px;
-    }
-    .auth-back {
-      background: none; border: none; color: var(--text-muted);
-      cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 5px;
-      padding: 4px 0; margin-bottom: 4px;
-    }
-    .auth-back:hover { color: var(--text); }
-    .auth-role-title {
-      font-size: 18px; font-weight: 700; margin-top: 10px; margin-bottom: 2px;
-    }
-    .auth-role-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 0; }
-
-    .doctor-notice {
-      margin: 16px 28px 0;
-      background: rgba(78,222,163,.07); border: 1px solid rgba(78,222,163,.2);
-      border-radius: var(--radius); padding: 10px 14px;
-      font-size: 12px; color: var(--success); display: flex; align-items: flex-start; gap: 8px;
+      padding: 80px 24px 40px;
     }
 
-    .tab-row {
-      display: grid; grid-template-columns: 1fr 1fr;
-      border-bottom: 1px solid var(--border); margin-top: 20px;
+    /* Role picker card */
+    .glass-card {
+      width: 100%; max-width: 460px;
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 24px;
+      box-shadow: 0 40px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
+      padding: 40px 36px 32px;
+      text-align: center;
     }
-    .tab-row.single { grid-template-columns: 1fr; }
-    .tab-btn {
-      padding: 12px; text-align: center; font-size: 13px; font-weight: 600;
-      cursor: pointer; color: var(--text-muted); border: none; background: none;
-      border-bottom: 2px solid transparent; margin-bottom: -1px;
-      transition: color .15s, border-color .15s;
-    }
-    .tab-btn:hover { color: var(--text); }
-    .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
 
-    .tab-content { display: none; padding: 24px 28px 28px; }
-    .tab-content.active { display: block; }
+    .card-brand {
+      display: flex; align-items: center; justify-content: center; gap: 9px;
+      font-family: 'Sora', sans-serif; font-size: 22px; font-weight: 900;
+      letter-spacing: -.04em; color: #f1f5f9; margin-bottom: 8px;
+    }
+    .card-brand svg { color: #10b981; filter: drop-shadow(0 0 10px rgba(16,185,129,.7)); }
+    .card-brand span { color: #10b981; }
 
-    .form-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
-    .form-label { font-size: 12px; font-weight: 600; color: var(--text-dim); letter-spacing: .04em; }
-    .form-input {
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-      font-family: var(--font); font-size: 14px;
-      padding: 10px 14px; outline: none; width: 100%;
-      transition: border-color .15s;
+    .card-sub {
+      font-size: 14px; color: #475569;
+      font-family: 'Noto Sans', sans-serif; margin-bottom: 32px;
     }
-    .form-input:focus { border-color: var(--primary); }
-    .form-input::placeholder { color: var(--text-muted); }
 
-    .submit-btn { width: 100%; padding: 12px; font-size: 15px; margin-top: 6px; }
-    .submit-btn.doctor-btn {
-      background: var(--success); color: #051424;
-    }
-    .submit-btn.doctor-btn:hover { opacity: .88; }
+    /* Role cards */
+    .role-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
 
-    .form-footer {
-      text-align: center; font-size: 12px; color: var(--text-muted); margin-top: 16px;
-    }
-    .form-footer a { color: var(--primary); cursor: pointer; }
-    .form-footer a:hover { text-decoration: underline; }
-    .auth-error {
-      background: rgba(255,107,107,.1); border: 1px solid rgba(255,107,107,.25);
-      border-radius: var(--radius); color: var(--danger);
-      font-size: 13px; padding: 10px 14px; margin-bottom: 14px; display: none;
-    }
-    .auth-success {
-      background: rgba(78,222,163,.08); border: 1px solid rgba(78,222,163,.2);
-      border-radius: var(--radius); color: var(--success);
-      font-size: 13px; padding: 10px 14px; margin-bottom: 14px; display: none;
-    }
-    .guest-bar {
-      border-top: 1px solid var(--border); padding: 14px 28px;
-      text-align: center; font-size: 12px; color: var(--text-muted);
-    }
-    .guest-bar a { color: var(--primary); cursor: pointer; }
-    .guest-bar a:hover { text-decoration: underline; }
-
-    /* ── premium login overrides ── */
-    .role-picker {
-      background: rgba(255,255,255,.025);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
-      backdrop-filter: blur(12px);
-    }
-    .role-picker-brand {
-      font-weight: 900; font-size: 22px; letter-spacing: -.04em;
-    }
-    .role-picker-brand svg {
-      filter: drop-shadow(0 0 10px rgba(0,180,216,.9));
-    }
-    .role-picker-sub { font-size: 13px; }
     .role-card {
       background: rgba(255,255,255,.03);
       border: 1px solid rgba(255,255,255,.08);
-      border-radius: 14px; padding: 22px 14px;
-      transition: all .18s;
+      border-radius: 16px; padding: 24px 14px;
+      cursor: pointer; transition: all .22s cubic-bezier(.16,1,.3,1);
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
     }
     .role-card:hover {
-      border-color: rgba(0,180,216,.5);
-      background: rgba(0,180,216,.06);
-      transform: translateY(-2px);
-      box-shadow: 0 8px 24px rgba(0,0,0,.3), 0 0 20px rgba(0,180,216,.1);
+      background: rgba(16,185,129,.05);
+      border-color: rgba(16,185,129,.35);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0,0,0,.4), 0 0 24px rgba(16,185,129,.1);
     }
-    .role-card-icon { border-radius: 14px; width: 56px; height: 56px; }
-    .role-card-icon.patient {
-      background: rgba(0,180,216,.12); border: 1px solid rgba(0,180,216,.22);
-      box-shadow: 0 0 16px rgba(0,180,216,.1);
+    .role-card.doc:hover {
+      background: rgba(168,85,247,.05);
+      border-color: rgba(168,85,247,.35);
+      box-shadow: 0 12px 32px rgba(0,0,0,.4), 0 0 24px rgba(168,85,247,.1);
     }
-    .role-card-icon.doctor {
-      background: rgba(78,222,163,.1); border: 1px solid rgba(78,222,163,.2);
-      box-shadow: 0 0 16px rgba(78,222,163,.08);
-    }
-    .role-card-label { font-size: 14px; font-weight: 800; }
 
-    .auth-card {
-      background: rgba(255,255,255,.025);
-      border: 1px solid rgba(255,255,255,.08);
-      border-radius: 18px;
-      box-shadow: 0 32px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.04);
+    .role-icon {
+      width: 52px; height: 52px; border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
     }
-    .auth-role-title { font-size: 20px; font-weight: 900; letter-spacing: -.03em; }
-    .tab-btn { font-weight: 700; font-size: 12px; letter-spacing: .02em; }
-    .tab-btn.active { color: var(--primary); }
-    .form-input {
+    .role-icon.patient {
+      background: rgba(16,185,129,.1); border: 1px solid rgba(16,185,129,.22);
+    }
+    .role-icon.doctor {
+      background: rgba(168,85,247,.1); border: 1px solid rgba(168,85,247,.22);
+    }
+
+    .role-label { font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 800; color: #f1f5f9; }
+    .role-desc  { font-size: 12px; color: #475569; line-height: 1.5; font-family: 'Noto Sans', sans-serif; }
+
+    .divider {
+      border: none; border-top: 1px solid rgba(255,255,255,.07);
+      margin-bottom: 20px;
+    }
+
+    .guest-line {
+      font-size: 13px; color: #334155; font-family: 'Noto Sans', sans-serif;
+    }
+    .guest-line a {
+      color: #10b981; cursor: pointer; text-decoration: none;
+      transition: color .15s;
+    }
+    .guest-line a:hover { color: #34d399; }
+
+    /* Auth card (step 2) */
+    .auth-card {
+      display: none; width: 100%; max-width: 420px;
+      background: rgba(255,255,255,.04);
+      backdrop-filter: blur(24px) saturate(1.4); -webkit-backdrop-filter: blur(24px) saturate(1.4);
+      border: 1px solid rgba(255,255,255,.09);
+      border-radius: 24px;
+      box-shadow: 0 40px 100px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04) inset;
+      overflow: hidden;
+    }
+    .auth-card.show { display: block; }
+
+    .auth-head {
+      padding: 28px 28px 0;
+    }
+    .back-link {
+      display: inline-flex; align-items: center; gap: 5px;
+      font-size: 12px; color: #475569; cursor: pointer;
+      font-family: 'Sora', sans-serif; font-weight: 700;
+      background: none; border: none; padding: 0 0 14px;
+      transition: color .15s;
+    }
+    .back-link:hover { color: #94a3b8; }
+
+    .auth-title {
+      font-family: 'Sora', sans-serif; font-size: 20px; font-weight: 900;
+      letter-spacing: -.03em; color: #f1f5f9; margin-bottom: 4px;
+    }
+    .auth-title.doc { color: #a855f7; }
+    .auth-subtitle { font-size: 13px; color: #475569; margin-bottom: 0; }
+
+    /* Tabs */
+    .tabs {
+      display: grid; grid-template-columns: 1fr 1fr;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      margin-top: 20px;
+    }
+    .tabs.single { grid-template-columns: 1fr; }
+    .tab-btn {
+      padding: 12px; font-size: 12px; font-weight: 800;
+      letter-spacing: .03em; text-align: center;
+      cursor: pointer; color: #334155; border: none; background: none;
+      border-bottom: 2px solid transparent; margin-bottom: -1px;
+      font-family: 'Sora', sans-serif; transition: color .15s, border-color .15s;
+    }
+    .tab-btn:hover { color: #64748b; }
+    .tab-btn.active { color: #10b981; border-bottom-color: #10b981; }
+    .tab-btn.active.doc { color: #a855f7; border-bottom-color: #a855f7; }
+
+    /* Form */
+    .tab-pane { display: none; padding: 24px 28px 28px; }
+    .tab-pane.active { display: block; }
+
+    .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px; }
+    .field label {
+      font-size: 11px; font-weight: 800; letter-spacing: .06em;
+      color: #334155; font-family: 'Sora', sans-serif; text-transform: uppercase;
+    }
+    .field input {
       background: rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.09);
-      border-radius: 10px; font-size: 14px;
+      border-radius: 10px; color: #f1f5f9;
+      font-family: 'Noto Sans', sans-serif; font-size: 14px;
+      padding: 11px 14px; outline: none; width: 100%;
+      transition: border-color .15s, box-shadow .15s, background .15s;
     }
-    .form-input:focus {
-      border-color: rgba(0,180,216,.55);
-      background: rgba(0,180,216,.04);
-      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
+    .field input::placeholder { color: #334155; }
+    .field input:focus {
+      border-color: rgba(16,185,129,.5);
+      background: rgba(16,185,129,.03);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.08);
     }
-    .form-label { font-weight: 700; font-size: 11px; letter-spacing: .06em; }
-    .submit-btn { border-radius: 10px; font-weight: 800; font-size: 14px; }
-    .doctor-notice { border-radius: 10px; font-size: 12px; }
-    .auth-error   { border-radius: 10px; }
-    .auth-success { border-radius: 10px; }
+    .field input.doc:focus {
+      border-color: rgba(168,85,247,.5);
+      background: rgba(168,85,247,.03);
+      box-shadow: 0 0 0 3px rgba(168,85,247,.08);
+    }
+
+    .submit-btn {
+      width: 100%; padding: 13px; border-radius: 9999px;
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 800;
+      border: none; cursor: pointer; margin-top: 6px;
+      transition: all .25s cubic-bezier(.16,1,.3,1);
+    }
+    .submit-btn.patient-btn {
+      background: linear-gradient(135deg, #059669, #10b981);
+      color: #021a12;
+      box-shadow: 0 4px 20px rgba(16,185,129,.4);
+    }
+    .submit-btn.patient-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(16,185,129,.55);
+    }
+    .submit-btn.doc-btn {
+      background: linear-gradient(135deg, #7c3aed, #a855f7);
+      color: #f5f3ff;
+      box-shadow: 0 4px 20px rgba(168,85,247,.4);
+    }
+    .submit-btn.doc-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(168,85,247,.55);
+    }
+    .submit-btn:disabled { opacity: .6; transform: none; cursor: not-allowed; }
+
+    .form-note {
+      text-align: center; font-size: 12px; color: #334155;
+      margin-top: 14px; font-family: 'Noto Sans', sans-serif;
+    }
+    .form-note a { color: #10b981; cursor: pointer; text-decoration: none; }
+    .form-note a:hover { color: #34d399; }
+
+    .alert {
+      border-radius: 10px; font-size: 13px;
+      padding: 10px 14px; margin-bottom: 14px; display: none;
+      font-family: 'Noto Sans', sans-serif;
+    }
+    .alert-err {
+      background: rgba(239,68,68,.08); border: 1px solid rgba(239,68,68,.2);
+      color: #fca5a5;
+    }
+    .alert-ok {
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      color: #6ee7b7;
+    }
+
+    .doctor-notice {
+      margin: 14px 28px 0;
+      background: rgba(168,85,247,.06); border: 1px solid rgba(168,85,247,.18);
+      border-radius: 10px; padding: 10px 14px;
+      font-size: 12px; color: #c084fc; line-height: 1.5;
+      display: flex; align-items: flex-start; gap: 8px;
+      font-family: 'Noto Sans', sans-serif;
+    }
+    .doctor-notice svg { flex-shrink: 0; margin-top: 1px; }
+
+    .guest-footer {
+      border-top: 1px solid rgba(255,255,255,.07);
+      padding: 14px 28px; text-align: center;
+      font-size: 12px; color: #334155; font-family: 'Noto Sans', sans-serif;
+    }
+    .guest-footer a { color: #10b981; cursor: pointer; text-decoration: none; }
+    .guest-footer a:hover { color: #34d399; }
   </style>
 </head>
 <body>
 
-<nav class="nav">
-  <button class="nav-back" onclick="window.location.href='/'">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+<div class="blob-scene" aria-hidden="true">
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+</div>
+
+<header class="topbar">
+  <a href="/" class="back-btn">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
     Home
-  </button>
-  <div class="nav-brand" style="margin-left:8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    AI Diagnostic Assistant
+  </a>
+  <div class="nav-badge">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+    </svg>
+    <span class="nav-badge-text">Diff</span>Dx
   </div>
-  <div class="nav-spacer"></div>
-</nav>
+  <div style="width:90px"></div>
+</header>
 
-<div class="auth-wrap">
+<main class="page">
 
-  <!-- Step 1: Role picker -->
-  <div class="role-picker" id="role-picker">
-    <div class="role-picker-brand">
-      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-      DiffDx
+  <!-- Step 1: role picker -->
+  <div class="glass-card" id="role-picker">
+    <div class="card-brand">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      Diff<span>Dx</span>
     </div>
-    <div class="role-picker-sub">Who are you signing in as?</div>
+    <p class="card-sub">Who are you signing in as?</p>
 
-    <div class="role-cards">
+    <div class="role-grid">
       <div class="role-card" onclick="selectRole('patient')">
-        <div class="role-card-icon patient">🧑‍⚕️</div>
-        <div class="role-card-label">Patient</div>
-        <div class="role-card-desc">Start a diagnostic session and get specialist recommendations</div>
+        <div class="role-icon patient">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <div class="role-label">Patient</div>
+        <div class="role-desc">Start a diagnostic session and track your history</div>
       </div>
-      <div class="role-card" onclick="selectRole('doctor')">
-        <div class="role-card-icon doctor">👨‍⚕️</div>
-        <div class="role-card-label">Doctor</div>
-        <div class="role-card-desc">View your appointment queue and AI session transcripts</div>
+      <div class="role-card doc" onclick="selectRole('doctor')">
+        <div class="role-icon doctor">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4.8 2.3A.3.3 0 105 2H4a2 2 0 00-2 2v5a6 6 0 006 6 6 6 0 006-6V4a2 2 0 00-2-2h-1a.2.2 0 10.3.3"/>
+            <path d="M8 15v1a6 6 0 006 6v0a6 6 0 006-6v-4"/>
+            <circle cx="20" cy="10" r="2"/>
+          </svg>
+        </div>
+        <div class="role-label">Doctor</div>
+        <div class="role-desc">Access your portal and AI session transcripts</div>
       </div>
     </div>
 
-    <div class="role-guest">
-      Just browsing? <a onclick="window.location.href='/patient-info.html'">Continue as guest</a> — sessions won't be saved.
-    </div>
+    <hr class="divider">
+    <p class="guest-line">Just browsing? <a onclick="window.location.href='/patient-info'">Continue as guest</a></p>
   </div>
 
-  <!-- Step 2: Patient auth card -->
+  <!-- Step 2: patient auth -->
   <div class="auth-card" id="patient-card">
-    <div class="auth-header">
-      <div>
-        <button class="auth-back" onclick="backToRolePicker()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </button>
-        <div class="auth-role-title">Patient Login</div>
-        <div class="auth-role-sub">Sign in to save sessions and track your history</div>
-      </div>
+    <div class="auth-head">
+      <button class="back-link" onclick="backToRolePicker()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <div class="auth-title">Patient Login</div>
+      <div class="auth-subtitle">Sign in to save sessions and track your history</div>
     </div>
 
-    <div class="tab-row">
+    <div class="tabs">
       <button class="tab-btn active" id="tab-signin" onclick="showTab('signin')">Sign In</button>
       <button class="tab-btn" id="tab-register" onclick="showTab('register')">Create Account</button>
     </div>
 
-    <!-- Patient Sign In -->
-    <div class="tab-content active" id="content-signin">
-      <div class="auth-error" id="signin-error"></div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="signin-email" class="form-input" type="email" placeholder="your@email.com" autocomplete="email">
+    <div class="tab-pane active" id="pane-signin">
+      <div class="alert alert-err" id="signin-error"></div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="signin-email" placeholder="your@email.com" autocomplete="email">
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="signin-password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="signin-password" placeholder="••••••••" autocomplete="current-password"
           onkeydown="if(event.key==='Enter') doSignIn()">
       </div>
-      <button class="btn btn-primary submit-btn" onclick="doSignIn()" id="signin-btn">Sign In</button>
-      <div class="form-footer">
-        No account? <a onclick="showTab('register')">Create one</a>
-      </div>
+      <button class="submit-btn patient-btn" id="signin-btn" onclick="doSignIn()">Sign In</button>
+      <p class="form-note">No account? <a onclick="showTab('register')">Create one</a></p>
     </div>
 
-    <!-- Patient Register -->
-    <div class="tab-content" id="content-register">
-      <div class="auth-error" id="reg-error"></div>
-      <div class="auth-success" id="reg-success"></div>
-      <div class="form-group">
-        <label class="form-label">Full Name</label>
-        <input id="reg-name" class="form-input" type="text" placeholder="Jane Smith" autocomplete="name">
+    <div class="tab-pane" id="pane-register">
+      <div class="alert alert-err" id="reg-error"></div>
+      <div class="alert alert-ok" id="reg-success"></div>
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Jane Smith" autocomplete="name">
       </div>
-      <div class="form-group">
-        <label class="form-label">Email</label>
-        <input id="reg-email" class="form-input" type="email" placeholder="your@email.com" autocomplete="email">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="your@email.com" autocomplete="email">
       </div>
-      <div class="form-group">
-        <label class="form-label">Password <span style="color:var(--text-muted);font-weight:400;">(min 6 chars)</span></label>
-        <input id="reg-password" class="form-input" type="password" placeholder="••••••••" autocomplete="new-password"
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="reg-password" placeholder="Min 6 characters" autocomplete="new-password"
           onkeydown="if(event.key==='Enter') doRegister()">
       </div>
-      <button class="btn btn-primary submit-btn" onclick="doRegister()" id="reg-btn">Create Account</button>
-      <div class="form-footer">
-        Already have an account? <a onclick="showTab('signin')">Sign in</a>
-      </div>
+      <button class="submit-btn patient-btn" id="reg-btn" onclick="doRegister()">Create Account</button>
+      <p class="form-note">Already have an account? <a onclick="showTab('signin')">Sign in</a></p>
     </div>
 
-    <div class="guest-bar">
-      Just browsing? <a onclick="window.location.href='/patient-info.html'">Continue as guest</a>
+    <div class="guest-footer">
+      Just browsing? <a onclick="window.location.href='/patient-info'">Continue as guest</a>
     </div>
   </div>
 
-  <!-- Step 2: Doctor auth card -->
+  <!-- Step 2: doctor auth -->
   <div class="auth-card" id="doctor-card">
-    <div class="auth-header">
-      <div>
-        <button class="auth-back" onclick="backToRolePicker()">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-          Back
-        </button>
-        <div class="auth-role-title" style="color:var(--success);">Doctor Login</div>
-        <div class="auth-role-sub">Access your portal and patient appointment queue</div>
-      </div>
+    <div class="auth-head">
+      <button class="back-link" onclick="backToRolePicker()">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <div class="auth-title doc">Doctor Login</div>
+      <div class="auth-subtitle">Access your portal and patient appointment queue</div>
     </div>
 
     <div class="doctor-notice">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px;">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
       </svg>
-      For registered medical staff only. Accounts are provisioned by the system — contact your administrator if you need access.
+      For registered medical staff only. Contact your administrator if you need access.
     </div>
 
-    <div class="tab-row single">
-      <button class="tab-btn active">Doctor Sign In</button>
+    <div class="tabs single">
+      <button class="tab-btn active doc">Doctor Sign In</button>
     </div>
 
-    <div class="tab-content active">
-      <div class="auth-error" id="doc-error"></div>
-      <div class="form-group">
-        <label class="form-label">Doctor Email</label>
-        <input id="doc-email" class="form-input" type="email" placeholder="doctor@hospital.com" autocomplete="email">
+    <div class="tab-pane active">
+      <div class="alert alert-err" id="doc-error"></div>
+      <div class="field">
+        <label>Doctor Email</label>
+        <input type="email" id="doc-email" placeholder="doctor@hospital.com" autocomplete="email" class="doc">
       </div>
-      <div class="form-group">
-        <label class="form-label">Password</label>
-        <input id="doc-password" class="form-input" type="password" placeholder="••••••••" autocomplete="current-password"
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="doc-password" placeholder="••••••••" autocomplete="current-password" class="doc"
           onkeydown="if(event.key==='Enter') doDocSignIn()">
       </div>
-      <button class="btn doctor-btn submit-btn" onclick="doDocSignIn()" id="doc-signin-btn">Sign In to Portal</button>
+      <button class="submit-btn doc-btn" id="doc-signin-btn" onclick="doDocSignIn()">Sign In to Portal</button>
     </div>
   </div>
 
-</div>
+</main>
 
+<script src="/auth.js"></script>
 <script>
-// Redirect if already logged in (respect role)
-if (getAuthToken()) {
-  const _u = getAuthUser();
+if (typeof getAuthToken === 'function' && getAuthToken()) {
+  const _u = typeof getAuthUser === 'function' ? getAuthUser() : null;
   window.location.replace(_u?.role === 'doctor' ? '/doctor-portal.html' : '/');
 }
 
-const _redirect = new URLSearchParams(location.search).get('next') || '/patient-info.html';
+const _redirect = new URLSearchParams(location.search).get('next') || '/patient-info';
 
 function selectRole(role) {
   document.getElementById('role-picker').style.display = 'none';
   if (role === 'doctor') {
-    document.getElementById('doctor-card').classList.add('visible');
+    document.getElementById('doctor-card').classList.add('show');
     setTimeout(() => document.getElementById('doc-email').focus(), 50);
   } else {
-    document.getElementById('patient-card').classList.add('visible');
+    document.getElementById('patient-card').classList.add('show');
     setTimeout(() => document.getElementById('signin-email').focus(), 50);
   }
 }
 
 function backToRolePicker() {
   document.getElementById('role-picker').style.display = '';
-  document.getElementById('patient-card').classList.remove('visible');
-  document.getElementById('doctor-card').classList.remove('visible');
-  // Clear errors
+  document.getElementById('patient-card').classList.remove('show');
+  document.getElementById('doctor-card').classList.remove('show');
   ['signin-error','reg-error','doc-error'].forEach(id => {
     const el = document.getElementById(id);
     if (el) { el.textContent = ''; el.style.display = 'none'; }
@@ -384,106 +479,67 @@ function backToRolePicker() {
 }
 
 function showTab(tab) {
-  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('#patient-card .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#patient-card .tab-pane').forEach(p => p.classList.remove('active'));
   document.getElementById('tab-' + tab).classList.add('active');
-  document.getElementById('content-' + tab).classList.add('active');
+  document.getElementById('pane-' + tab).classList.add('active');
 }
 
-function showError(id, msg) {
-  const el = document.getElementById(id);
-  el.textContent = msg; el.style.display = 'block';
-}
-function hideError(id) {
-  const el = document.getElementById(id);
-  if (el) el.style.display = 'none';
-}
+function showAlert(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.style.display = 'block'; }
+function hideAlert(id) { const el = document.getElementById(id); if (el) el.style.display = 'none'; }
 
 async function doSignIn() {
-  hideError('signin-error');
-  const email    = document.getElementById('signin-email').value.trim();
+  hideAlert('signin-error');
+  const email = document.getElementById('signin-email').value.trim();
   const password = document.getElementById('signin-password').value;
-  if (!email || !password) { showError('signin-error', 'Please enter email and password.'); return; }
-
+  if (!email || !password) { showAlert('signin-error', 'Please enter email and password.'); return; }
   const btn = document.getElementById('signin-btn');
   btn.disabled = true; btn.textContent = 'Signing in…';
-
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
     const data = await res.json();
-    if (!res.ok) { showError('signin-error', data.detail || 'Sign in failed.'); return; }
-    if (data.user?.role === 'doctor') {
-      // Doctor credentials entered in patient tab — redirect correctly
-      setAuth(data.token, data.user);
-      window.location.href = '/doctor-portal.html';
-    } else {
-      setAuth(data.token, data.user);
-      window.location.href = _redirect;
-    }
-  } catch (e) {
-    showError('signin-error', 'Network error: ' + e.message);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Sign In';
-  }
+    if (!res.ok) { showAlert('signin-error', data.detail || 'Sign in failed.'); return; }
+    if (typeof setAuth === 'function') setAuth(data.token, data.user);
+    window.location.replace(data.user?.role === 'doctor' ? '/doctor-portal.html' : _redirect);
+  } catch (e) { showAlert('signin-error', 'Network error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Sign In'; }
 }
 
 async function doDocSignIn() {
-  hideError('doc-error');
-  const email    = document.getElementById('doc-email').value.trim();
+  hideAlert('doc-error');
+  const email = document.getElementById('doc-email').value.trim();
   const password = document.getElementById('doc-password').value;
-  if (!email || !password) { showError('doc-error', 'Please enter email and password.'); return; }
-
+  if (!email || !password) { showAlert('doc-error', 'Please enter email and password.'); return; }
   const btn = document.getElementById('doc-signin-btn');
   btn.disabled = true; btn.textContent = 'Signing in…';
-
   try {
-    const res = await fetch('/api/auth/login', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ email, password }),
-    });
+    const res = await fetch('/api/auth/login', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({email,password}) });
     const data = await res.json();
-    if (!res.ok) { showError('doc-error', data.detail || 'Sign in failed.'); return; }
-    if (data.user?.role !== 'doctor') {
-      showError('doc-error', 'This account does not have doctor access. Use Patient Login instead.');
-      return;
-    }
-    setAuth(data.token, data.user);
-    window.location.href = '/doctor-portal.html';
-  } catch (e) {
-    showError('doc-error', 'Network error: ' + e.message);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Sign In to Portal';
-  }
+    if (!res.ok) { showAlert('doc-error', data.detail || 'Sign in failed.'); return; }
+    if (data.user?.role !== 'doctor') { showAlert('doc-error', 'This account does not have doctor access.'); return; }
+    if (typeof setAuth === 'function') setAuth(data.token, data.user);
+    window.location.replace('/doctor-portal.html');
+  } catch (e) { showAlert('doc-error', 'Network error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Sign In to Portal'; }
 }
 
 async function doRegister() {
-  hideError('reg-error');
-  document.getElementById('reg-success').style.display = 'none';
-  const name     = document.getElementById('reg-name').value.trim();
-  const email    = document.getElementById('reg-email').value.trim();
+  hideAlert('reg-error');
+  hideAlert('reg-success');
+  const name = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
   const password = document.getElementById('reg-password').value;
-  if (!name || !email || !password) { showError('reg-error', 'All fields are required.'); return; }
-
+  if (!name || !email || !password) { showAlert('reg-error', 'All fields are required.'); return; }
   const btn = document.getElementById('reg-btn');
   btn.disabled = true; btn.textContent = 'Creating account…';
-
   try {
-    const res = await fetch('/api/auth/register', {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({ name, email, password }),
-    });
+    const res = await fetch('/api/auth/register', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({name,email,password}) });
     const data = await res.json();
-    if (!res.ok) { showError('reg-error', data.detail || 'Registration failed.'); return; }
-    setAuth(data.token, data.user);
+    if (!res.ok) { showAlert('reg-error', data.detail || 'Registration failed.'); return; }
+    if (typeof setAuth === 'function') setAuth(data.token, data.user);
     window.location.href = _redirect;
-  } catch (e) {
-    showError('reg-error', 'Network error: ' + e.message);
-  } finally {
-    btn.disabled = false; btn.textContent = 'Create Account';
-  }
+  } catch (e) { showAlert('reg-error', 'Network error: ' + e.message); }
+  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
 }
 </script>
 </body>

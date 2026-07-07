@@ -1,362 +1,570 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DiffDx — Patient Profile</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patient Info — DiffDx</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/styles.css">
-  <script src="/auth.js"></script>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;700;800;900&family=Noto+Sans:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css" />
   <style>
-    .form-section {
-      background: var(--surface-2); border: 1px solid var(--border);
-      border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px;
-    }
-    .form-section-title {
-      font-size: 13px; font-weight: 700; text-transform: uppercase;
-      letter-spacing: .07em; color: var(--primary);
-      display: flex; align-items: center; gap: 8px;
-      margin-bottom: 20px; padding-bottom: 12px;
-      border-bottom: 1px solid var(--border);
-    }
-    .form-row { display: grid; gap: 14px; margin-bottom: 14px; }
-    .form-row-2 { grid-template-columns: 1fr 1fr; }
-    .form-row-3 { grid-template-columns: 1fr 1fr 1fr; }
-    .form-row-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
-    .form-group { display: flex; flex-direction: column; gap: 6px; }
-    .form-label {
-      font-size: 12px; font-weight: 600; color: var(--text-dim);
-      letter-spacing: .04em;
-    }
-    .form-label .req { color: var(--danger); margin-left: 2px; }
-    .form-input, .form-select, .form-textarea {
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius); color: var(--text);
-      font-family: var(--font); font-size: 14px;
-      padding: 10px 14px; outline: none;
-      transition: border-color .15s;
-      width: 100%;
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: var(--primary);
-    }
-    .form-input::placeholder, .form-textarea::placeholder { color: var(--text-muted); }
-    .form-select option { background: var(--surface-3); }
-    .form-textarea { resize: vertical; min-height: 80px; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    /* Sex selector */
-    .sex-group { display: flex; gap: 8px; }
-    .sex-btn {
-      flex: 1; padding: 10px; border-radius: var(--radius);
-      border: 1px solid var(--border); background: var(--surface-3);
-      color: var(--text-dim); font-size: 14px; font-weight: 600;
-      cursor: pointer; text-align: center; transition: all .15s;
-    }
-    .sex-btn:hover { border-color: var(--primary); color: var(--text); }
-    .sex-btn.active {
-      background: rgba(0,180,216,.15); border-color: var(--primary);
-      color: var(--primary);
+    body { background: #080810; color: #f1f5f9; font-family: 'Noto Sans', sans-serif; overflow-x: hidden; }
+
+    /* Blobs */
+    .blob-scene { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+    .blob { position: absolute; border-radius: 50%; filter: blur(110px); opacity: .18; animation: drift 22s ease-in-out infinite; }
+    .blob-1 { width: 600px; height: 600px; background: radial-gradient(circle, #10b981, transparent 70%); top: -180px; left: -120px; }
+    .blob-2 { width: 500px; height: 500px; background: radial-gradient(circle, #a855f7, transparent 70%); bottom: -140px; right: -80px; animation-delay: -9s; }
+    .blob-3 { width: 300px; height: 300px; background: radial-gradient(circle, #10b981, transparent 70%); top: 50%; left: 60%; opacity: .08; animation-delay: -16s; }
+    @keyframes drift {
+      0%,100% { transform: translate(0,0) scale(1); }
+      40%      { transform: translate(28px,-20px) scale(1.05); }
+      70%      { transform: translate(-16px,18px) scale(.95); }
     }
 
-    /* Symptoms */
-    .symptom-list { display: flex; flex-direction: column; gap: 12px; }
-    .symptom-row {
-      background: var(--surface-3); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 14px;
-      display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr auto;
-      gap: 10px; align-items: end;
+    /* Background sweep glow */
+    .bg-glow {
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
+      background:
+        radial-gradient(ellipse 70% 50% at 15% 40%, rgba(16,185,129,.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 85% 60%, rgba(168,85,247,.06) 0%, transparent 60%);
     }
-    .remove-btn {
-      background: none; border: none; cursor: pointer;
-      color: var(--text-muted); padding: 8px; border-radius: var(--radius);
-      transition: color .15s, background .15s;
-      display: flex; align-items: center;
-    }
-    .remove-btn:hover { color: var(--danger); background: rgba(255,107,107,.1); }
-    .add-symptom-btn {
-      background: none; border: 1px dashed var(--border);
-      border-radius: var(--radius); color: var(--text-dim);
-      font-size: 13px; padding: 10px; cursor: pointer;
-      width: 100%; text-align: center; transition: all .15s;
-    }
-    .add-symptom-btn:hover { border-color: var(--primary); color: var(--primary); }
 
-    .severity-select option { background: #1c2b3c; }
-    .action-bar { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
-    .required-note { font-size: 12px; color: var(--text-muted); margin-bottom: 20px; }
+    /* Nav override */
+    .nav-bar {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(8,8,16,.88);
+      backdrop-filter: blur(24px) saturate(1.8); -webkit-backdrop-filter: blur(24px) saturate(1.8);
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      padding: 0 28px; height: 58px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .nav-home {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 9999px;
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      color: #94a3b8; font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700;
+      text-decoration: none; flex-shrink: 0;
+      backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      transition: all .22s;
+    }
+    .nav-home:hover {
+      color: #f1f5f9; border-color: rgba(16,185,129,.4);
+      background: rgba(16,185,129,.06);
+      box-shadow: 0 0 18px rgba(16,185,129,.18);
+    }
+    .nav-center-badge {
+      display: inline-flex; align-items: center; gap: 9px;
+      padding: 8px 20px; border-radius: 9999px;
+      background: rgba(16,185,129,.06); border: 1px solid rgba(16,185,129,.18);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      box-shadow: 0 0 28px rgba(16,185,129,.1);
+      font-family: 'Sora', sans-serif; font-size: 14px; font-weight: 800;
+      color: #f1f5f9; letter-spacing: -.01em;
+      position: absolute; left: 50%; transform: translateX(-50%);
+      white-space: nowrap;
+    }
+    .nav-center-badge svg { color: #10b981; filter: drop-shadow(0 0 7px rgba(16,185,129,.7)); }
+    .nav-center-badge .nb-accent { color: #10b981; }
+    #nav-auth { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 
-    /* ── premium patient-info overrides ── */
-    .form-section {
-      background: rgba(255,255,255,.025);
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 16px; padding: 26px;
-      transition: border-color .15s;
+    /* Page header */
+    .page-header {
+      position: relative; z-index: 1;
+      padding: 52px 24px 40px; text-align: center;
     }
-    .form-section:hover { border-color: rgba(255,255,255,.11); }
-    .form-section-title {
-      font-size: 11px; font-weight: 800; letter-spacing: .09em;
-      border-bottom: 1px solid rgba(255,255,255,.06);
-      padding-bottom: 14px;
+
+    .step-pill {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 16px; border-radius: 9999px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      color: #34d399; font-size: 11px; font-weight: 700; letter-spacing: .06em;
+      font-family: 'Sora', sans-serif; margin-bottom: 20px;
     }
-    .form-input, .form-select, .form-textarea {
+    .step-dot { width: 6px; height: 6px; border-radius: 50%; background: #10b981; box-shadow: 0 0 8px #10b981; animation: pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.6)} }
+
+    .page-title {
+      font-family: 'Sora', sans-serif;
+      font-size: clamp(28px, 4.5vw, 52px);
+      font-weight: 900; letter-spacing: -.04em; line-height: 1.05;
+      margin-bottom: 10px;
+    }
+    .page-title span {
+      background: linear-gradient(90deg, #10b981, #34d399, #a855f7, #10b981);
+      background-size: 300% 100%;
+      -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+      animation: flow 5s linear infinite;
+    }
+    @keyframes flow { 0%{background-position:0%} 100%{background-position:300%} }
+
+    .page-sub { font-size: 15px; color: #475569; max-width: 420px; margin: 0 auto 32px; line-height: 1.6; }
+
+    /* Step progress */
+    .progress-track {
+      display: flex; align-items: center; justify-content: center; gap: 0; margin-top: 4px;
+    }
+    .pr-node { display: flex; align-items: center; gap: 8px; font-size: 13px; font-family: 'Sora', sans-serif; font-weight: 700; }
+    .pr-node.active { color: #10b981; }
+    .pr-node.inactive { color: #334155; }
+    .pr-circle {
+      width: 26px; height: 26px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; font-family: 'Sora', sans-serif;
+      flex-shrink: 0;
+    }
+    .pr-node.active .pr-circle {
+      background: linear-gradient(135deg, #059669, #10b981); color: #021a12;
+      box-shadow: 0 0 16px rgba(16,185,129,.55);
+    }
+    .pr-node.inactive .pr-circle {
+      background: rgba(255,255,255,.05); border: 1.5px solid rgba(255,255,255,.1); color: #334155;
+    }
+    .pr-line { width: 48px; height: 2px; margin: 0 10px; background: rgba(255,255,255,.08); border-radius: 2px; }
+
+    /* Content */
+    .page-body {
+      position: relative; z-index: 1;
+      max-width: 760px; margin: 0 auto;
+      padding: 0 24px 100px;
+      display: flex; flex-direction: column; gap: 20px;
+    }
+
+    /* Section cards */
+    .section-card {
       background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.09);
-      border-radius: 10px; font-size: 14px;
-    }
-    .form-input:focus, .form-select:focus, .form-textarea:focus {
-      border-color: rgba(0,180,216,.55);
-      background: rgba(0,180,216,.04);
-      box-shadow: 0 0 0 3px rgba(0,180,216,.1);
-    }
-    .form-label { font-weight: 700; font-size: 11px; letter-spacing: .06em; color: var(--text-muted); text-transform: uppercase; }
-    .sex-btn {
-      border-radius: 10px;
-      background: rgba(255,255,255,.03);
+      backdrop-filter: blur(20px) saturate(1.4); -webkit-backdrop-filter: blur(20px) saturate(1.4);
       border: 1px solid rgba(255,255,255,.08);
+      border-radius: 20px; padding: 28px 28px;
+      transition: border-color .25s, box-shadow .25s;
     }
-    .sex-btn:hover { border-color: rgba(0,180,216,.4); color: var(--primary); }
-    .sex-btn.active {
-      background: rgba(0,180,216,.12);
-      border-color: rgba(0,180,216,.5);
-      box-shadow: 0 0 12px rgba(0,180,216,.1);
+    .section-card:focus-within {
+      border-color: rgba(16,185,129,.28);
+      box-shadow: 0 0 0 1px rgba(16,185,129,.1), 0 20px 60px rgba(0,0,0,.4);
     }
-    .symptom-row {
+
+    .sec-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 24px; }
+    .sec-icon {
+      width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .si-teal   { background: rgba(16,185,129,.1);  border: 1px solid rgba(16,185,129,.22); }
+    .si-violet { background: rgba(168,85,247,.1);  border: 1px solid rgba(168,85,247,.22); }
+    .si-amber  { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.2);  }
+    .sec-title {
+      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 800;
+      color: #f1f5f9; letter-spacing: -.02em; margin-bottom: 3px;
+    }
+    .sec-sub { font-size: 13px; color: #475569; }
+
+    /* Field groups */
+    .field-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .field-row.two-col { grid-template-columns: 120px 1fr; }
+    .field { display: flex; flex-direction: column; gap: 7px; }
+    .field-label {
+      font-family: 'Sora', sans-serif; font-size: 10px; font-weight: 800;
+      color: #475569; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .req { color: #ef4444; }
+
+    .fi {
+      font-family: 'Noto Sans', sans-serif; font-size: 14px; color: #f1f5f9;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px; padding: 12px 15px; outline: none; width: 100%;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .fi:focus {
+      border-color: rgba(16,185,129,.5);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.1), 0 0 20px rgba(16,185,129,.08);
+      background: rgba(16,185,129,.03);
+    }
+    .fi::placeholder { color: #334155; }
+    select.fi { cursor: pointer; }
+    select.fi option { background: #0d0d1a; }
+
+    /* Segmented sex selector */
+    .sex-toggle { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .sex-opt { display: none; }
+    .sex-label {
+      display: flex; align-items: center; justify-content: center;
+      padding: 11px 8px; border-radius: 12px; cursor: pointer;
+      border: 1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.03);
-      border: 1px solid rgba(255,255,255,.07);
-      border-radius: 12px;
+      font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 700; color: #475569;
+      transition: all .2s;
     }
-    .add-symptom-btn {
-      border: 1.5px dashed rgba(255,255,255,.1);
-      border-radius: 12px; font-weight: 600;
+    .sex-opt:checked + .sex-label {
+      background: rgba(16,185,129,.12); border-color: rgba(16,185,129,.4);
+      color: #10b981; box-shadow: 0 0 16px rgba(16,185,129,.15);
     }
-    .add-symptom-btn:hover { border-color: rgba(0,180,216,.5); background: rgba(0,180,216,.04); }
+    .sex-label:hover { background: rgba(255,255,255,.06); color: #94a3b8; }
+
+    /* Textarea */
+    .fi-area {
+      font-family: 'Noto Sans', sans-serif; font-size: 14px; line-height: 1.75; color: #f1f5f9;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.09);
+      border-radius: 12px; padding: 14px 16px; resize: vertical; min-height: 100px;
+      outline: none; width: 100%;
+      transition: border-color .2s, box-shadow .2s, background .2s;
+    }
+    .fi-area:focus {
+      border-color: rgba(16,185,129,.5);
+      box-shadow: 0 0 0 3px rgba(16,185,129,.1), 0 0 20px rgba(16,185,129,.08);
+      background: rgba(16,185,129,.03);
+    }
+    .fi-area::placeholder { color: #334155; }
+
+    /* Symptom adder */
+    .sym-row { display: flex; gap: 10px; }
+    .sym-row .fi { flex: 1; }
+    .btn-add {
+      padding: 12px 22px; border-radius: 9999px;
+      font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 800;
+      white-space: nowrap; flex-shrink: 0; cursor: pointer;
+      background: rgba(16,185,129,.1); color: #10b981;
+      border: 1px solid rgba(16,185,129,.25);
+      transition: all .22s cubic-bezier(.16,1,.3,1);
+    }
+    .btn-add:hover {
+      background: rgba(16,185,129,.18); border-color: rgba(16,185,129,.5);
+      box-shadow: 0 0 20px rgba(16,185,129,.2); transform: translateY(-1px);
+    }
+
+    .sym-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; min-height: 20px; }
+    .sym-chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9999px;
+      background: rgba(16,185,129,.08); border: 1px solid rgba(16,185,129,.2);
+      font-size: 12px; font-weight: 600; color: #a7f3d0;
+      font-family: 'Noto Sans', sans-serif;
+      animation: chip-in .2s cubic-bezier(.16,1,.3,1);
+    }
+    @keyframes chip-in { from{opacity:0;transform:scale(.85)} to{opacity:1;transform:scale(1)} }
+    .chip-remove {
+      background: none; border: none; cursor: pointer; color: #6ee7b7;
+      font-size: 16px; line-height: 1; padding: 0; display: flex; align-items: center;
+      transition: color .15s;
+    }
+    .chip-remove:hover { color: #f87171; }
+    .sym-empty { font-size: 12px; color: #334155; font-style: italic; font-family: 'Noto Sans', sans-serif; margin-top: 4px; }
+
+    /* Bottom CTA bar */
+    .cta-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 0 0; position: relative; z-index: 1;
+    }
+    .cta-hint { font-size: 12px; color: #334155; font-family: 'Noto Sans', sans-serif; }
+
+    .btn-next {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 15px 36px; border-radius: 9999px;
+      font-family: 'Sora', sans-serif; font-size: 15px; font-weight: 800;
+      letter-spacing: -.01em; cursor: pointer; border: none;
+      background: linear-gradient(135deg, #059669 0%, #10b981 60%, #34d399 100%);
+      color: #021a12;
+      box-shadow: 0 6px 28px rgba(16,185,129,.45), 0 0 60px rgba(16,185,129,.15);
+      transition: all .28s cubic-bezier(.16,1,.3,1);
+      position: relative;
+    }
+    .btn-next::after {
+      content: ''; position: absolute; inset: -2px; border-radius: 9999px;
+      background: linear-gradient(135deg, #10b981, #a855f7);
+      opacity: 0; z-index: -1; filter: blur(14px); transition: opacity .28s;
+    }
+    .btn-next:hover {
+      transform: translateY(-3px) scale(1.02);
+      box-shadow: 0 12px 40px rgba(16,185,129,.6), 0 0 80px rgba(16,185,129,.2);
+    }
+    .btn-next:hover::after { opacity: .5; }
+    .btn-next:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    @media (max-width: 640px) {
+      .field-row { grid-template-columns: 1fr 1fr; }
+      .field-row.two-col { grid-template-columns: 90px 1fr; }
+      .section-card { padding: 22px 18px; }
+      .cta-bar { flex-direction: column; gap: 14px; align-items: stretch; }
+      .btn-next { justify-content: center; }
+    }
   </style>
 </head>
 <body>
-
-<nav class="nav">
-  <button class="nav-back" onclick="window.location.href='/'">
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
-    Home
-  </button>
-  <div class="nav-brand" style="margin-left:8px;">
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-    AI Diagnostic Assistant
+  <div class="bg-glow" aria-hidden="true"></div>
+  <div class="blob-scene" aria-hidden="true">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
   </div>
-  <div class="nav-spacer"></div>
-  <div class="steps">
-    <div class="step active"><div class="step-num">1</div><span>Profile</span></div>
-    <div class="step-sep"></div>
-    <div class="step"><div class="step-num">2</div><span>History</span></div>
-    <div class="step-sep"></div>
-    <div class="step"><div class="step-num">3</div><span>Session</span></div>
-    <div class="step-sep"></div>
-    <div class="step"><div class="step-num">4</div><span>Report</span></div>
-  </div>
-  <div class="spacer"></div>
-  <div id="nav-auth" style="display:flex;align-items:center;gap:6px;margin-right:8px;"></div>
 
-</nav>
+  <nav class="nav-bar">
+    <a href="/" class="nav-home">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Home
+    </a>
+    <div class="nav-center-badge" style="display:flex;align-items:center;gap:8px;background:none;border:none;padding:0;">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter:drop-shadow(0 0 6px rgba(16,185,129,.5))">
+        <defs>
+          <linearGradient id="pi-ring" x1="0" y1="0" x2="28" y2="28" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+          <linearGradient id="pi-ft" x1="13" y1="14" x2="19" y2="8" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#34d399"/></linearGradient>
+          <linearGradient id="pi-fb" x1="13" y1="14" x2="19" y2="20" gradientUnits="userSpaceOnUse"><stop offset="0%" stop-color="#10b981"/><stop offset="100%" stop-color="#a855f7"/></linearGradient>
+        </defs>
+        <circle cx="14" cy="14" r="12.5" stroke="url(#pi-ring)" stroke-width="1.25" fill="rgba(16,185,129,.08)"/>
+        <line x1="6" y1="14" x2="13" y2="14" stroke="#10b981" stroke-width="2" stroke-linecap="round"/>
+        <path d="M13 14 L19 8.5" stroke="url(#pi-ft)" stroke-width="2" stroke-linecap="round"/>
+        <path d="M13 14 L19 19.5" stroke="url(#pi-fb)" stroke-width="2" stroke-linecap="round"/>
+        <circle cx="20" cy="8.5" r="2" fill="#34d399"/>
+        <circle cx="20" cy="19.5" r="2" fill="#a855f7"/>
+      </svg>
+      <span style="font-family:'Sora',sans-serif;font-size:15px;font-weight:800;letter-spacing:-.03em;color:#f1f5f9;">Diff<span style="background:linear-gradient(90deg,#10b981,#34d399);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;">/Dx</span></span>
+    </div>
+    <div id="nav-auth"></div>
+  </nav>
 
-<div class="page">
-  <div class="section-title" style="margin-bottom:6px;">Step 1 of 3 — Patient Profile</div>
-  <div class="required-note">Fields marked <span style="color:var(--danger)">*</span> are required.</div>
-
-  <form id="profile-form" onsubmit="return false">
-
-    <!-- Demographics -->
-    <div class="form-section">
-      <div class="form-section-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        Patient Demographics
+  <header class="page-header">
+    <div class="step-pill"><div class="step-dot"></div> Step 1 of 3</div>
+    <h1 class="page-title">Tell us about <span>yourself</span></h1>
+    <p class="page-sub">Your details help the AI ask the right questions and build an accurate picture</p>
+    <div class="progress-track">
+      <div class="pr-node active">
+        <div class="pr-circle">1</div>
+        <span>Patient Info</span>
       </div>
+      <div class="pr-line"></div>
+      <div class="pr-node inactive">
+        <div class="pr-circle">2</div>
+        <span>Medical History</span>
+      </div>
+      <div class="pr-line"></div>
+      <div class="pr-node inactive">
+        <div class="pr-circle">3</div>
+        <span>Diagnostic Session</span>
+      </div>
+    </div>
+  </header>
 
-      <div class="form-row form-row-4">
-        <div class="form-group">
-          <label class="form-label">Age <span class="req">*</span></label>
-          <input id="age" class="form-input" type="number" min="0" max="120" placeholder="e.g. 45">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Sex <span class="req">*</span></label>
-          <div class="sex-group">
-            <div class="sex-btn" data-val="M" onclick="selectSex(this)">Male</div>
-            <div class="sex-btn" data-val="F" onclick="selectSex(this)">Female</div>
+  <div class="page-body">
+    <form id="patient-form" novalidate>
+
+      <!-- Basic info -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-violet">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
           </div>
-          <input type="hidden" id="sex">
+          <div>
+            <div class="sec-title">Basic Information</div>
+            <div class="sec-sub">Age, sex, and body measurements</div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">Occupation</label>
-          <input id="occupation" class="form-input" type="text" placeholder="e.g. teacher">
+
+        <!-- Row 1: Age + Sex -->
+        <div class="field-row two-col" style="margin-bottom:16px;">
+          <div class="field">
+            <label class="field-label" for="age">Age <span class="req">*</span></label>
+            <input class="fi" type="number" id="age" min="1" max="120" placeholder="e.g. 34" required />
+          </div>
+          <div class="field">
+            <label class="field-label">Sex <span class="req">*</span></label>
+            <div class="sex-toggle">
+              <input class="sex-opt" type="radio" name="sex" id="sex-m" value="M">
+              <label class="sex-label" for="sex-m">Male</label>
+              <input class="sex-opt" type="radio" name="sex" id="sex-f" value="F">
+              <label class="sex-label" for="sex-f">Female</label>
+              <input class="sex-opt" type="radio" name="sex" id="sex-o" value="other">
+              <label class="sex-label" for="sex-o">Other</label>
+            </div>
+          </div>
         </div>
-        <div class="form-group">
-          <label class="form-label">BMI</label>
-          <input id="bmi" class="form-input" type="number" step="0.1" min="10" max="60" placeholder="e.g. 24.5">
+
+        <!-- Row 2: Height + Weight + BMI -->
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label" for="height">Height <span style="color:#475569;font-weight:500;font-size:9px;text-transform:none;">(cm, optional)</span></label>
+            <input class="fi" type="number" id="height" min="50" max="250" step="0.5" placeholder="e.g. 170" oninput="calcBMI()" />
+          </div>
+          <div class="field">
+            <label class="field-label" for="weight">Weight <span style="color:#475569;font-weight:500;font-size:9px;text-transform:none;">(kg, optional)</span></label>
+            <input class="fi" type="number" id="weight" min="10" max="300" step="0.5" placeholder="e.g. 70" oninput="calcBMI()" />
+          </div>
+          <div class="field">
+            <label class="field-label">BMI <span style="color:#475569;font-weight:500;font-size:9px;text-transform:none;">(auto-calculated)</span></label>
+            <div id="bmi-display" style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;min-height:42px;">
+              <span id="bmi-value" style="font-size:16px;font-weight:700;color:#475569;">—</span>
+              <span id="bmi-label" style="font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px;display:none;"></span>
+            </div>
+            <input type="hidden" id="bmi" />
+          </div>
         </div>
       </div>
-    </div>
 
-    <!-- Chief Complaint -->
-    <div class="form-section">
-      <div class="form-section-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-        Chief Complaint <span style="color:var(--danger);font-weight:400;font-size:12px;margin-left:4px;">*</span>
+      <!-- Chief complaint -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-teal">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sec-title">Chief Complaint <span class="req">*</span></div>
+            <div class="sec-sub">What is bothering you the most today? Describe in your own words.</div>
+          </div>
+        </div>
+        <textarea id="chief_complaint" class="fi-area"
+          placeholder="e.g. I've had a pounding headache on the right side of my head for two days. It gets worse with light and movement..."
+          required></textarea>
       </div>
-      <div class="form-group">
-        <label class="form-label">Describe the main reason for this visit</label>
-        <textarea id="chief-complaint" class="form-textarea" rows="3"
-          placeholder="e.g. Chest pain and shortness of breath for 2 hours, started at rest…"></textarea>
+
+      <!-- Additional symptoms -->
+      <div class="section-card">
+        <div class="sec-head">
+          <div class="sec-icon si-amber">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+          </div>
+          <div>
+            <div class="sec-title">Additional Symptoms</div>
+            <div class="sec-sub">Add any other symptoms you are experiencing, one at a time</div>
+          </div>
+        </div>
+        <div class="sym-row">
+          <input class="fi" type="text" id="sym-input" placeholder="e.g. Nausea, Fatigue, Dizziness…" />
+          <button type="button" class="btn-add" id="sym-add-btn">+ Add</button>
+        </div>
+        <div class="sym-chips" id="sym-chips">
+          <span class="sym-empty">No symptoms added yet</span>
+        </div>
       </div>
-    </div>
 
-    <!-- Symptoms -->
-    <div class="form-section">
-      <div class="form-section-title">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Presenting Symptoms
+      <!-- CTA -->
+      <div class="cta-bar">
+        <span class="cta-hint"><span class="req">*</span> Required fields</span>
+        <button type="submit" class="btn-next" id="next-btn">
+          Continue to Medical History
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
       </div>
-      <div id="symptom-list" class="symptom-list"></div>
-      <button type="button" class="add-symptom-btn" onclick="addSymptom()" style="margin-top:12px;">
-        + Add Symptom
-      </button>
-    </div>
 
-    <div id="form-error" class="error-msg" style="display:none;margin-bottom:16px;"></div>
+    </form>
+  </div>
 
-    <div class="action-bar">
-      <button type="button" class="btn btn-ghost" onclick="window.location.href='/'">← Back</button>
-      <button type="button" class="btn btn-primary" onclick="handleNext()">
-        Review Medical History →
-      </button>
-    </div>
+  <script>
+    const symptoms = [];
 
-  </form>
-</div>
-
-<script>
-let selectedSex = '';
-
-function selectSex(el) {
-  document.querySelectorAll('.sex-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
-  selectedSex = el.dataset.val;
-  document.getElementById('sex').value = selectedSex;
-}
-
-let symptomCount = 0;
-
-function addSymptom(prefill = {}) {
-  const id = ++symptomCount;
-  const list = document.getElementById('symptom-list');
-  const div = document.createElement('div');
-  div.className = 'symptom-row';
-  div.id = `sym-${id}`;
-  div.innerHTML = `
-    <div class="form-group">
-      <label class="form-label">Symptom name</label>
-      <input class="form-input sym-name" placeholder="e.g. chest pain" value="${esc(prefill.name || '')}">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Onset</label>
-      <input class="form-input sym-onset" placeholder="e.g. 2 hours ago" value="${esc(prefill.onset || '')}">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Severity</label>
-      <select class="form-input form-select sym-severity">
-        <option value="">— select —</option>
-        <option value="mild" ${prefill.severity === 'mild' ? 'selected' : ''}>Mild</option>
-        <option value="moderate" ${prefill.severity === 'moderate' ? 'selected' : ''}>Moderate</option>
-        <option value="severe" ${prefill.severity === 'severe' ? 'selected' : ''}>Severe</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label class="form-label">Notes</label>
-      <input class="form-input sym-notes" placeholder="any additional detail" value="${esc(prefill.notes || '')}">
-    </div>
-    <button type="button" class="remove-btn" onclick="document.getElementById('sym-${id}').remove()" title="Remove">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-    </button>
-  `;
-  list.appendChild(div);
-}
-
-function collectSymptoms() {
-  const rows = document.querySelectorAll('.symptom-row');
-  const out = [];
-  for (const row of rows) {
-    const name = row.querySelector('.sym-name').value.trim();
-    if (!name) continue;
-    out.push({
-      name,
-      onset:    row.querySelector('.sym-onset').value.trim(),
-      severity: row.querySelector('.sym-severity').value,
-      notes:    row.querySelector('.sym-notes').value.trim(),
-    });
-  }
-  return out;
-}
-
-function handleNext() {
-  const errEl = document.getElementById('form-error');
-  errEl.style.display = 'none';
-
-  const age = document.getElementById('age').value.trim();
-  const complaint = document.getElementById('chief-complaint').value.trim();
-
-  const errs = [];
-  if (!age) errs.push('Age is required.');
-  if (!selectedSex) errs.push('Sex is required.');
-  if (!complaint) errs.push('Chief complaint is required.');
-
-  if (errs.length) {
-    errEl.textContent = errs.join(' ');
-    errEl.style.display = 'block';
-    errEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    return;
-  }
-
-  const profile = {
-    age: parseInt(age),
-    sex: selectedSex,
-    occupation: document.getElementById('occupation').value.trim() || null,
-    bmi: document.getElementById('bmi').value ? parseFloat(document.getElementById('bmi').value) : null,
-    chief_complaint: complaint,
-    symptoms: collectSymptoms(),
-  };
-
-  sessionStorage.setItem('patientProfile', JSON.stringify(profile));
-  window.location.href = '/history.html';
-}
-
-function esc(s) {
-  return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}
-
-// Autofill from saved user profile
-async function autofillFromProfile() {
-  if (!getAuthToken()) return;
-  try {
-    const res = await fetch('/api/auth/profile', { headers: authHeaders() });
-    if (!res.ok) return;
-    const p = await res.json();
-
-    if (p.age && !document.getElementById('age').value) {
-      document.getElementById('age').value = p.age;
+    // Pre-fill age + sex from saved profile
+    async function prefillFromProfile() {
+      try {
+        if (typeof authHeaders !== 'function') return;
+        const res = await fetch('/api/auth/profile', { headers: authHeaders() });
+        if (!res.ok) return;
+        const p = await res.json();
+        if (p.age && !document.getElementById('age').value) {
+          document.getElementById('age').value = p.age;
+        }
+        if (p.gender && !document.querySelector('input[name="sex"]:checked')) {
+          const g = p.gender.toLowerCase();
+          const sexVal = g.startsWith('male') || g === 'm' ? 'M'
+                       : g.startsWith('female') || g === 'f' ? 'F'
+                       : 'other';
+          const radio = document.querySelector(`input[name="sex"][value="${sexVal}"]`);
+          if (radio) radio.checked = true;
+        }
+      } catch (_) {}
     }
-    if (p.gender && !selectedSex) {
-      const g = p.gender.toLowerCase();
-      const sexVal = (g === 'male' || g === 'm') ? 'M' : (g === 'female' || g === 'f') ? 'F' : '';
-      if (sexVal) {
-        const btn = document.querySelector(`.sex-btn[data-val="${sexVal}"]`);
-        if (btn) selectSex(btn);
+
+    // Run after auth.js has loaded (auth.js is deferred after this inline script)
+    window.addEventListener('load', prefillFromProfile);
+
+    function renderChips() {
+      const c = document.getElementById('sym-chips');
+      c.innerHTML = '';
+      if (!symptoms.length) {
+        c.innerHTML = '<span class="sym-empty">No symptoms added yet</span>';
+        return;
+      }
+      symptoms.forEach((s, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'sym-chip';
+        chip.innerHTML = `${s}<button class="chip-remove" type="button" onclick="removeSym(${i})" aria-label="Remove">×</button>`;
+        c.appendChild(chip);
+      });
+    }
+
+    function removeSym(i) { symptoms.splice(i, 1); renderChips(); }
+
+    document.getElementById('sym-add-btn').addEventListener('click', () => {
+      const inp = document.getElementById('sym-input');
+      const val = inp.value.trim();
+      if (!val || symptoms.includes(val)) return;
+      symptoms.push(val);
+      renderChips();
+      inp.value = '';
+      inp.focus();
+    });
+
+    document.getElementById('sym-input').addEventListener('keydown', e => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('sym-add-btn').click(); }
+    });
+
+    function calcBMI() {
+      const h = parseFloat(document.getElementById('height').value);
+      const w = parseFloat(document.getElementById('weight').value);
+      const valEl   = document.getElementById('bmi-value');
+      const labelEl = document.getElementById('bmi-label');
+      const hiddenEl = document.getElementById('bmi');
+      if (h > 0 && w > 0) {
+        const bmi = (w / ((h / 100) ** 2)).toFixed(1);
+        hiddenEl.value = bmi;
+        valEl.textContent = bmi;
+        valEl.style.color = '#e2e8f0';
+        let cat, bg, color;
+        if      (bmi < 18.5) { cat = 'Underweight'; bg = 'rgba(59,130,246,.15)';  color = '#60a5fa'; }
+        else if (bmi < 25)   { cat = 'Normal';      bg = 'rgba(16,185,129,.15)';  color = '#10b981'; }
+        else if (bmi < 30)   { cat = 'Overweight';  bg = 'rgba(245,158,11,.15)';  color = '#f59e0b'; }
+        else                 { cat = 'Obese';        bg = 'rgba(239,68,68,.15)';   color = '#ef4444'; }
+        labelEl.textContent = cat;
+        labelEl.style.background = bg;
+        labelEl.style.color = color;
+        labelEl.style.border = `1px solid ${color.replace(')',', .3)')}`;
+        labelEl.style.display = 'inline-block';
+      } else {
+        hiddenEl.value = '';
+        valEl.textContent = '—';
+        valEl.style.color = 'var(--text-muted,#64748b)';
+        labelEl.style.display = 'none';
       }
     }
-  } catch (_) {}
-}
 
-// Add one blank symptom row by default, then autofill
-addSymptom();
-autofillFromProfile();
-</script>
+    document.getElementById('patient-form').addEventListener('submit', e => {
+      e.preventDefault();
+      const age = document.getElementById('age').value.trim();
+      const sex = document.querySelector('input[name="sex"]:checked')?.value || '';
+      const bmi = document.getElementById('bmi').value.trim();
+      const cc  = document.getElementById('chief_complaint').value.trim();
+
+      if (!age || !sex || !cc) {
+        const missing = [];
+        if (!age) missing.push('Age');
+        if (!sex) missing.push('Sex');
+        if (!cc)  missing.push('Chief Complaint');
+        alert('Please fill in: ' + missing.join(', '));
+        return;
+      }
+
+      sessionStorage.setItem('patientInfo', JSON.stringify({
+        age, sex, bmi: bmi || null,
+        chief_complaint: cc,
+        symptoms: [...symptoms]
+      }));
+
+      window.location.href = '/history';
+    });
+  </script>
+  <script src="/auth.js"></script>
 </body>
 </html>
