@@ -160,3 +160,5 @@ Covers session lifecycle, compressor, retrieval, safety screener, profile update
 ## Deployment
 
 Configured for Render via `render.yaml`. Connect the `Mhervin47/DiffDx` GitHub repo, set the environment variables in the Render dashboard, and deploy. Auto-deploys on every push to `main`. Uses PostgreSQL on Render in production and a local `diffx.db` SQLite file in development.
+
+For more details check this out https://mhervin47.github.io/DiffDx/
