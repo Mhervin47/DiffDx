@@ -642,7 +642,7 @@
       <div class="diffcard" aria-label="Example differential after four turns">
         <div class="dc-head">
           <span class="dc-title">Working differential — Actor-Critic state snapshot</span>
-          <span class="dc-turn">turn 04 · conf 0.42 · actor: llama-3.3-70b</span>
+          <span class="dc-turn">turn 04 · conf 0.42 · actor: llama-3.1-8b</span>
         </div>
         <div class="bar em"><span class="lab">Pulmonary embolism</span><span class="track"><span class="fill f-red" style="width:55%"></span></span><span class="val">0.55</span></div>
         <div class="bar"><span class="lab">Pneumonia</span><span class="track"><span class="fill f-teal" style="width:30%;animation-delay:.12s"></span></span><span class="val">0.30</span></div>
@@ -728,7 +728,7 @@
             <div class="comp-impl">doctor.py · doctor_v0_6.txt</div>
           </div>
           <div class="comp-body">
-            The policy that maps a <code>PatientProfile</code> state to a <code>DoctorTurnOutput</code> action. The actor is <strong>not fine-tuned</strong> — it is a prompted large language model (<code>groq/llama-3.3-70b-versatile</code> by default) guided by a versioned system prompt and three dynamically retrieved exemplars per turn. The prompt enforces a nine-step reasoning chain before any JSON is output. Base-rate calibration, evidence-based differential updating, mandatory diagnostic breadth, and plain-language communication are all hard-coded constraints in the prompt — they are not expected to emerge from the model's pretraining alone. This design lets the architecture collect high-quality training data now; the actor will be fine-tuned on that data in a future loop.
+            The policy that maps a <code>PatientProfile</code> state to a <code>DoctorTurnOutput</code> action. The actor is <strong>not fine-tuned</strong> — it is a prompted large language model (<code>llama-3.1-8b-instruct</code> by default) guided by a versioned system prompt and three dynamically retrieved exemplars per turn. The prompt enforces a nine-step reasoning chain before any JSON is output. Base-rate calibration, evidence-based differential updating, mandatory diagnostic breadth, and plain-language communication are all hard-coded constraints in the prompt — they are not expected to emerge from the model's pretraining alone. This design lets the architecture collect high-quality training data now; the actor will be fine-tuned on that data in a future loop.
           </div>
         </div>
         <div class="comp-item">
@@ -861,7 +861,7 @@
       <h3>The provider fallback chain</h3>
       <p>All LLM calls flow through a single interface. On 429 the next provider is tried immediately. On 5xx, exponential backoff via <code>tenacity</code> kicks in. The model that actually answered is always logged in <code>model_metadata</code> so sessions are reproducible and model-swaps are visible in the data.</p>
       <div class="chain">
-        <div class="chain-item">groq/llama-3.3-70b<span class="cl">primary</span></div>
+        <div class="chain-item">llama-3.1-8b-instruct<span class="cl">actor · primary</span></div>
         <div class="chain-arrow">→</div>
         <div class="chain-item">groq/llama-4-scout<span class="cl">429 fallback 1</span></div>
         <div class="chain-arrow">→</div>
@@ -1111,7 +1111,7 @@ score(e) = λ · sim(query, e) − (1 − λ) · max_sim(e, already_selected)
       <p>The critic is <strong>blind on two dimensions</strong>. It never sees the ground-truth diagnosis — so it cannot cheat by awarding high scores to turns that happened to approach the right answer. And it never sees the patient's actual response — so it scores the question as asked, before the answer lands. This is forward-looking evaluation: was this the highest-yield question to ask at this moment, given only what was known when the question was written?</p>
       <div class="callout amber">
         <p class="c-lab">Why a different model</p>
-        <p>The critic must be a different model from the actor. Self-scoring is not useful — a model consistently rates its own reasoning style highly regardless of actual quality. The default critic (<code>openrouter/google/gemma-4-31b-it:free</code>) and the doctor (<code>groq/llama-3.3-70b-versatile</code>) are different families. The <code>CRITIC_MODEL</code> environment variable overrides the default without touching code.</p>
+        <p>The critic must be a different model from the actor. Self-scoring is not useful — a model consistently rates its own reasoning style highly regardless of actual quality. The default critic (<code>llama-3.1-70b-instruct</code>) and the actor (<code>llama-3.1-8b-instruct</code>) are different scales of the same family — the size gap ensures the critic has meaningfully broader reasoning capacity than the model it is scoring. The <code>CRITIC_MODEL</code> environment variable overrides the default without touching code.</p>
       </div>
       <h3>TurnCritique schema</h3>
       <div class="schema-grid">
